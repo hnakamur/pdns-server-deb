@@ -134,11 +134,7 @@ case "$1" in
   ;;
 
   triggered)
-    if [ -x /usr/sbin/invoke-rc.d ]; then
-      invoke-rc.d pdns restart || exit $?
-    else
-      /etc/init.d/pdns restart || exit $?
-    fi
+    invoke-rc.d pdns restart || exit $?
 
     # Stop the debconf stuff
     db_stop || true

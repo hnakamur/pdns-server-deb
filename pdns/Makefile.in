@@ -70,9 +70,9 @@ EXTRA_PROGRAMS = pdns_recursor$(EXEEXT) sdig$(EXEEXT) saxfr$(EXEEXT) \
 	notify$(EXEEXT) dnsbulktest$(EXEEXT) nsec3dig$(EXEEXT) \
 	saxfr$(EXEEXT)
 @BOTAN110_TRUE@am__append_5 = botan110signers.cc botansigners.cc
-@BOTAN110_TRUE@am__append_6 = $(BOTAN110_LIBS) -lgmp -lrt
+@BOTAN110_TRUE@am__append_6 = $(BOTAN110_LIBS)
 @BOTAN18_TRUE@am__append_7 = botan18signers.cc botansigners.cc
-@BOTAN18_TRUE@am__append_8 = $(BOTAN18_LIBS) -lgmp
+@BOTAN18_TRUE@am__append_8 = $(BOTAN18_LIBS)
 @CRYPTOPP_TRUE@am__append_9 = cryptoppsigners.cc
 @CRYPTOPP_TRUE@am__append_10 = $(CRYPTOPP_LIBS)
 @SQLITE3_TRUE@am__append_11 = ssqlite3.cc ssqlite3.hh
@@ -81,9 +81,9 @@ EXTRA_PROGRAMS = pdns_recursor$(EXEEXT) sdig$(EXEEXT) saxfr$(EXEEXT) \
 @PKCS11_TRUE@am__append_14 = $(P11KIT1_LIBS)
 @LMDB_TRUE@am__append_15 = zone2lmdb
 @BOTAN110_TRUE@am__append_16 = botan110signers.cc botansigners.cc
-@BOTAN110_TRUE@am__append_17 = $(BOTAN110_LIBS) -lgmp -lrt
+@BOTAN110_TRUE@am__append_17 = $(BOTAN110_LIBS)
 @BOTAN18_TRUE@am__append_18 = botan18signers.cc botansigners.cc
-@BOTAN18_TRUE@am__append_19 = $(BOTAN18_LIBS) -lgmp
+@BOTAN18_TRUE@am__append_19 = $(BOTAN18_LIBS)
 @CRYPTOPP_TRUE@am__append_20 = cryptoppsigners.cc
 @CRYPTOPP_TRUE@am__append_21 = -lcryptopp
 @SQLITE3_TRUE@am__append_22 = ssqlite3.cc ssqlite3.hh
@@ -1176,7 +1176,7 @@ misc.cc unix_utility.cc qtype.cc
 pdns_control_LDFLAGS = $(THREADFLAGS)
 @UNIT_TESTS_TRUE@TESTS_ENVIRONMENT = env BOOST_TEST_LOG_LEVEL=message
 build_date = $(shell LC_TIME=C date '+%Y%m%d%H%M%S')
-build_host = $(shell id -u -n)@$(shell hostname -f)
+build_host = $(shell id -u -n)@$(shell hostname -f 2>/dev/null || hostname 2>/dev/null || echo localhost)
 # Do the test in shell, so we don't confuse automake with ifeq/ifneq.
 @RELEASE_BUILD_FALSE@pdns_version = $(shell test -z "$(git_version)" && echo UNKNOWN || echo "git-$(git_version)")
 @RELEASE_BUILD_TRUE@pdns_version = $(PACKAGE_VERSION)

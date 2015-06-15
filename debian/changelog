@@ -1,3 +1,11 @@
+pdns (3.4.5-1) unstable; urgency=medium
+
+  * New upstream version 3.4.5, remove patches applied upstream.
+  * Unconditionally rely on invoke-rc.d, available since sarge.
+  * Fix "empty paragraphs" in debian/copyright.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Tue, 09 Jun 2015 21:34:14 +0200
+
 pdns (3.4.4-2~bpo8+1) jessie-backports; urgency=medium
 
   * Rebuild for jessie-backports.

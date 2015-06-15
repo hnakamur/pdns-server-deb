@@ -41,7 +41,7 @@ License: Expat
 
 Files: install-sh
 Copyright: 1994 X Consortium
-License:
+License: .
  Permission is hereby granted, free of charge, to any person obtaining a copy
  of this software and associated documentation files (the "Software"), to deal
  in the Software without restriction, including without limitation the rights
@@ -69,7 +69,7 @@ License:
 
 Files: pdns/install-sh
 Copyright: 1991 by the Massachusetts Institute of Technology
-License:
+License: .
  Permission to use, copy, modify, distribute, and sell this software and its
  documentation for any purpose is hereby granted without fee, provided that
  the above copyright notice appear in all copies and that both that
