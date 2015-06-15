@@ -1,3 +1,9 @@
+pdns (3.4.5-1~bpo8+1) jessie-backports; urgency=medium
+
+  * Rebuild for jessie-backports.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 15 Jun 2015 23:42:14 +0200
+
 pdns (3.4.5-1) unstable; urgency=medium
 
   * New upstream version 3.4.5, remove patches applied upstream.
