@@ -81,8 +81,7 @@ Description: geo backend for PowerDNS
 
 Package: pdns-backend-mysql
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ucf (>= 0.28), ${shlibs:Depends}, ${misc:Depends}, dbconfig-common
-Recommends: mysql-client
+Depends: pdns-server (>= ${source:Version}), ucf (>= 0.28), ${shlibs:Depends}, ${misc:Depends}, dbconfig-common, mysql-client
 Suggests: mysql-server
 Provides: pdns-backend
 Description: generic MySQL backend for PowerDNS
@@ -96,8 +95,7 @@ Description: generic MySQL backend for PowerDNS
 
 Package: pdns-backend-pgsql
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ucf (>= 0.28), ${shlibs:Depends}, ${misc:Depends}, dbconfig-common
-Recommends: postgresql-client
+Depends: pdns-server (>= ${source:Version}), ucf (>= 0.28), ${shlibs:Depends}, ${misc:Depends}, dbconfig-common, postgresql-client
 Suggests: postgresql
 Provides: pdns-backend
 Description: generic PostgreSQL backend for PowerDNS
@@ -111,7 +109,7 @@ Description: generic PostgreSQL backend for PowerDNS
 
 Package: pdns-backend-sqlite3
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ucf (>= 0.28), ${shlibs:Depends}, ${misc:Depends}, sqlite3, dbconfig-common
+Depends: pdns-server (>= ${source:Version}), ucf (>= 0.28), ${shlibs:Depends}, ${misc:Depends}, dbconfig-common, sqlite3
 Provides: pdns-backend
 Description: sqlite 3 backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
