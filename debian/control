@@ -3,15 +3,52 @@ Section: net
 Priority: extra
 Standards-Version: 3.9.6
 Maintainer: Debian PowerDNS Maintainers <pkg-pdns-maintainers@lists.alioth.debian.org>
-Uploaders: Matthijs Möhlmann <matthijs@cacholong.nl>, Marc Haber <mh+debian-packages@zugschlus.de>, Christian Hofstaedtler <zeha@debian.org>
-Build-Depends: debhelper (>= 9~), dh-autoreconf, dh-systemd, po-debconf, libtool, flex, bison, libmysqlclient-dev, libpq-dev, libssl-dev, libpolarssl-dev, libgdbm-dev, libldap2-dev, libsqlite3-dev, dpkg-dev (>= 1.17.0~), libboost-dev, libboost-serialization-dev, libboost-program-options-dev, libboost-test-dev, autotools-dev, automake, autoconf, liblua5.1-0-dev, pkg-config, libcrypto++-dev, ragel, libgmp-dev, libbotan1.10-dev, libcurl4-openssl-dev, libzmq-dev, liblmdb-dev, libcdb-dev
+Uploaders: Matthijs Möhlmann <matthijs@cacholong.nl>,
+           Marc Haber <mh+debian-packages@zugschlus.de>,
+           Christian Hofstaedtler <zeha@debian.org>
+Build-Depends: autoconf,
+               automake,
+               autotools-dev,
+               bison,
+               debhelper (>= 9~),
+               dh-autoreconf,
+               dh-systemd,
+               dpkg-dev (>= 1.17.0~),
+               flex,
+               libboost-dev,
+               libboost-program-options-dev,
+               libboost-serialization-dev,
+               libboost-test-dev,
+               libbotan1.10-dev,
+               libcdb-dev,
+               libcrypto++-dev,
+               libcurl4-openssl-dev,
+               libgdbm-dev,
+               libgmp-dev,
+               libldap2-dev,
+               liblmdb-dev,
+               liblua5.1-0-dev,
+               libmysqlclient-dev,
+               libpolarssl-dev,
+               libpq-dev,
+               libsqlite3-dev,
+               libssl-dev,
+               libtool,
+               libzmq-dev,
+               pkg-config,
+               po-debconf,
+               ragel
 Vcs-Git: git://anonscm.debian.org/pkg-pdns/pdns.git
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-pdns/pdns.git
 Homepage: http://www.powerdns.com/
 
 Package: pdns-server
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, ucf (>= 0.28), adduser, lsb-base (>= 3.2-14)
+Depends: adduser,
+         lsb-base (>= 3.2-14),
+         ucf (>= 0.28),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Replaces: pdns
 Suggests: pdns-backend, pdns-recursor
 Description: extremely powerful and versatile nameserver
@@ -41,7 +78,7 @@ Description: debugging symbols for PowerDNS
 
 Package: pdns-backend-pipe
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Provides: pdns-backend
 Description: pipe/coprocess backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -51,11 +88,11 @@ Description: pipe/coprocess backend for PowerDNS
  .
  This package contains the pipe backend for the PowerDNS nameserver. This
  allows PowerDNS to retrieve domain info from a process that accepts
- questions on stdin and returns answers on stdout. 
+ questions on stdin and returns answers on stdout.
 
 Package: pdns-backend-ldap
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Provides: pdns-backend
 Description: LDAP backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -67,7 +104,7 @@ Description: LDAP backend for PowerDNS
 
 Package: pdns-backend-geo
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Provides: pdns-backend
 Description: geo backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -81,7 +118,12 @@ Description: geo backend for PowerDNS
 
 Package: pdns-backend-mysql
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ucf (>= 0.28), ${shlibs:Depends}, ${misc:Depends}, dbconfig-common, mysql-client
+Depends: dbconfig-common,
+         mysql-client,
+         pdns-server (>= ${source:Version}),
+         ucf (>= 0.28),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Suggests: mysql-server
 Provides: pdns-backend
 Description: generic MySQL backend for PowerDNS
@@ -95,7 +137,12 @@ Description: generic MySQL backend for PowerDNS
 
 Package: pdns-backend-pgsql
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ucf (>= 0.28), ${shlibs:Depends}, ${misc:Depends}, dbconfig-common, postgresql-client
+Depends: dbconfig-common,
+         pdns-server (>= ${source:Version}),
+         postgresql-client,
+         ucf (>= 0.28),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Suggests: postgresql
 Provides: pdns-backend
 Description: generic PostgreSQL backend for PowerDNS
@@ -109,7 +156,12 @@ Description: generic PostgreSQL backend for PowerDNS
 
 Package: pdns-backend-sqlite3
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ucf (>= 0.28), ${shlibs:Depends}, ${misc:Depends}, dbconfig-common, sqlite3
+Depends: dbconfig-common,
+         pdns-server (>= ${source:Version}),
+         sqlite3,
+         ucf (>= 0.28),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Provides: pdns-backend
 Description: sqlite 3 backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -121,7 +173,7 @@ Description: sqlite 3 backend for PowerDNS
 
 Package: pdns-backend-lua
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Provides: pdns-backend
 Description: Lua backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -133,7 +185,7 @@ Description: Lua backend for PowerDNS
 
 Package: pdns-backend-lmdb
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Provides: pdns-backend
 Description: lmdb backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -146,7 +198,7 @@ Description: lmdb backend for PowerDNS
 
 Package: pdns-backend-remote
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Provides: pdns-backend
 Description: remote backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -159,7 +211,7 @@ Description: remote backend for PowerDNS
 
 Package: pdns-backend-mydns
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Provides: pdns-backend
 Description: MyDNS compatibility backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -171,7 +223,7 @@ Description: MyDNS compatibility backend for PowerDNS
 
 Package: pdns-backend-tinydns
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${shlibs:Depends}, ${misc:Depends}
+Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Provides: pdns-backend
 Description: tinydns compatibility backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
