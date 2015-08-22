@@ -1,7 +1,6 @@
 debian/config/pdns usr/share/pdns-server/
 debian/config/pdns.local.conf usr/share/pdns-server/
 debian/config/pdns.simplebind.conf usr/share/pdns-server/
-debian/insserv.d/pdns-server etc/insserv.d/
 debian/resolvconf/pdns etc/resolvconf/update.d/
 usr/bin/dnsreplay
 usr/bin/dnsscope
