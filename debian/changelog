@@ -1,3 +1,23 @@
+pdns (3.4.5-3) unstable; urgency=medium
+
+  * Stop installing files into /etc/insserv.d:
+    As a fix for #585966, pdns-server started installing a configuration
+    file into /etc/insserv.conf.d. But in 2011 this has been changed so
+    the file went into /etc/insserv.d instead. As this hasn't been
+    noticed quite a long time I suspect nobody is actually relying on
+    pdns-server providing $named, and really nobody should rely on that.
+    After all, pdns-server is meant to provide authoritative services,
+    not recursion.
+  * Stop building with libcrypto++
+    All features are satisfied by building with botan1.10 anyway, and
+    upstream's binary packages also don't build with libcrypto++. This
+    should allow us building on armel again.
+  * autopkgtest: Stop pdns after testing
+  * Add autopkgtest for mysql backend
+  * Add autopkgtest for postgresql backend
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sun, 23 Aug 2015 16:39:41 +0000
+
 pdns (3.4.5-2) unstable; urgency=medium
 
   * Build pdns.conf at package build time
