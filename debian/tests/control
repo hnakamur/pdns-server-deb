@@ -5,3 +5,7 @@ Restrictions: needs-root
 Tests: smoke-mysql
 Depends: mysql-server, pdns-server, pdns-backend-mysql, dnsutils
 Restrictions: needs-root, isolation-container
+
+Tests: smoke-pgsql
+Depends: postgresql, pdns-server, pdns-backend-pgsql, dnsutils
+Restrictions: needs-root, isolation-container
