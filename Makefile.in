@@ -51,8 +51,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 @TOOLS_TRUE@am__append_1 = pdns/docs/dnsreplay.1 pdns/docs/dnsscope.1 \
-@TOOLS_TRUE@	pdns/docs/dnswasher.1 pdns/docs/dnstcpbench.1 \
-@TOOLS_TRUE@	pdns/docs/dnsdist.1
+@TOOLS_TRUE@	pdns/docs/dnswasher.1 pdns/docs/dnstcpbench.1
 subdir = .
 DIST_COMMON = README $(am__configure_deps) $(srcdir)/Makefile.am \
 	$(srcdir)/Makefile.in $(srcdir)/config.h.in \
@@ -391,7 +390,6 @@ EXTRA_DIST = README INSTALL NOTICE debian-pdns pdns.spec  \
 codedocs/doxygen.conf contrib/powerdns.solaris.init.d \
 contrib/systemd-pdns.service contrib/systemd-pdns-recursor.service \
 bootstrap build-scripts/semistaticg++ pdns/docs/dnstcpbench.1 \
-pdns/docs/dnsdist.1 \
 build-scripts/redhat/pdns-server-test.spec \
 pdns/named.conf.parsertest regression-tests/zones/unit.test
 
