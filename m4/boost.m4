@@ -22,7 +22,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 m4_define([_BOOST_SERIAL], [m4_translit([
-# serial 25
+# serial 24
 ], [#
 ], [])])
 
@@ -574,7 +574,7 @@ BOOST_FIND_LIB([chrono], [$1],
                 [boost/chrono.hpp],
                 [boost::chrono::thread_clock d;])
 if test $enable_static_boost = yes && test $boost_major_version -ge 135; then
-  BOOST_FILESYSTEM_LIBS="$BOOST_FILESYSTEM_LIBS $BOOST_SYSTEM_LIBS"
+  BOOST_CHRONO_LIBS="$BOOST_CHRONO_LIBS $BOOST_SYSTEM_LIBS"
 fi
 LIBS=$boost_filesystem_save_LIBS
 LDFLAGS=$boost_filesystem_save_LDFLAGS
@@ -1296,6 +1296,8 @@ if test x$boost_cv_inc_path != xno; then
   # I'm not sure about my test for `il' (be careful: Intel's ICC pre-defines
   # the same defines as GCC's).
   for i in \
+    _BOOST_mingw_test(5, 2) \
+    _BOOST_gcc_test(5, 2) \
     _BOOST_mingw_test(5, 1) \
     _BOOST_gcc_test(5, 1) \
     _BOOST_mingw_test(5, 0) \

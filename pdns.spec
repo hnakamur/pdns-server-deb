@@ -1,6 +1,6 @@
 BuildRoot: /tmp/pdns
 Name: pdns-static
-Version: 3.4.5
+Version: 3.4.6
 Release: 1
 Summary: extremely powerful and versatile nameserver
 License: GPL
@@ -60,7 +60,6 @@ These are the tools
 "/usr/bin/dnsreplay"
 "/usr/bin/dnsscan"
 "/usr/bin/dnsscope"
-"/usr/bin/dnsdist"
 "/usr/bin/dnstcpbench"
 "/usr/bin/dnswasher"
 "/usr/bin/nproxy"
@@ -70,4 +69,3 @@ These are the tools
 "/usr/share/man/man1/dnsscope.1"
 "/usr/share/man/man1/dnswasher.1"
 "/usr/share/man/man1/dnstcpbench.1"
-"/usr/share/man/man1/dnsdist.1"
