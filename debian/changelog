@@ -1,3 +1,9 @@
+pdns (3.4.6-1~bpo8+1) jessie-backports; urgency=medium
+
+  * Rebuild for jessie-backports.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Thu, 03 Sep 2015 12:11:30 +0000
+
 pdns (3.4.6-1) unstable; urgency=medium
 
   * New upstream release, fixes security issue: CVE-2015-5230
