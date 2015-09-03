@@ -60,7 +60,7 @@ sbin_PROGRAMS = pdns_server$(EXEEXT)
 bin_PROGRAMS = pdns_control$(EXEEXT) pdnssec$(EXEEXT) \
 	zone2sql$(EXEEXT) zone2ldap$(EXEEXT) zone2json$(EXEEXT) \
 	$(am__EXEEXT_1) $(am__EXEEXT_2)
-@TOOLS_TRUE@am__append_4 = dnsbulktest dnsreplay dnsscan dnsscope dnstcpbench dnswasher nproxy dnsdist nsec3dig saxfr
+@TOOLS_TRUE@am__append_4 = dnsbulktest dnsreplay dnsscan dnsscope dnstcpbench dnswasher nproxy nsec3dig saxfr
 EXTRA_PROGRAMS = pdns_recursor$(EXEEXT) sdig$(EXEEXT) saxfr$(EXEEXT) \
 	dnstcpbench$(EXEEXT) dnsdist$(EXEEXT) tsig-tests$(EXEEXT) \
 	speedtest$(EXEEXT) dnsscope$(EXEEXT) dnsgram$(EXEEXT) \
@@ -139,8 +139,7 @@ CONFIG_CLEAN_VPATH_FILES =
 @TOOLS_TRUE@am__EXEEXT_1 = dnsbulktest$(EXEEXT) dnsreplay$(EXEEXT) \
 @TOOLS_TRUE@	dnsscan$(EXEEXT) dnsscope$(EXEEXT) \
 @TOOLS_TRUE@	dnstcpbench$(EXEEXT) dnswasher$(EXEEXT) \
-@TOOLS_TRUE@	nproxy$(EXEEXT) dnsdist$(EXEEXT) nsec3dig$(EXEEXT) \
-@TOOLS_TRUE@	saxfr$(EXEEXT)
+@TOOLS_TRUE@	nproxy$(EXEEXT) nsec3dig$(EXEEXT) saxfr$(EXEEXT)
 @LMDB_TRUE@am__EXEEXT_2 = zone2lmdb$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(sbindir)" \
 	"$(DESTDIR)$(sysconfdir)"

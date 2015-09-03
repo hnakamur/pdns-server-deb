@@ -9,7 +9,7 @@ Release:        1
 Epoch:          0
 License:        GPL
 Group:          System/Servers
-Source:         http://downloads.powerdns.com/releases/pdns-3.4.5.tar.bz2
+Source:         http://downloads.powerdns.com/releases/pdns-3.4.6.tar.bz2
 
 BuildRequires:  autoconf automake
 BuildRequires:  gcc gcc-c++
@@ -30,7 +30,7 @@ BuildRoot:      %{_tmppath}/%{name}-%{version}-root
 PowerDNS testbuild
 
 %prep
-%setup -q -n pdns-3.4.5
+%setup -q -n pdns-3.4.6
 
 %build
 %configure \
