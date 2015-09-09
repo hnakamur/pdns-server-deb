@@ -42,8 +42,14 @@ override_dh_fixperms:
 	dh_fixperms
 	chmod 755 debian/pdns-server/etc/resolvconf/update.d/pdns
 
-override_dh_auto_install:
-	mkdir -p debian/pdns-server/usr/share/pdns-server
+# init script needs to be named pdns, not pdns-server
+override_dh_installinit:
+	dh_systemd_enable --name=pdns
+	dh_installinit --name=pdns
+	dh_systemd_start --restart-after-upgrade
+
+override_dh_install:
+	dh_install
 	./pdns/pdns_server --no-config --config | sed \
 		-e 's!# config-dir=.*!config-dir=/etc/powerdns!' \
 		-e 's!# daemon=.*!daemon=yes!' \
@@ -54,13 +60,6 @@ override_dh_auto_install:
 		-e 's!# setgid=.*!setgid=pdns!' \
 		-e 's!# setuid=.*!setuid=pdns!' \
 		> debian/pdns-server/usr/share/pdns-server/pdns.conf
-	dh_auto_install
-
-# init script needs to be named pdns, not pdns-server
-override_dh_installinit:
-	dh_systemd_enable --name=pdns
-	dh_installinit --name=pdns
-	dh_systemd_start --restart-after-upgrade
 
 # Verbose build (shows used compiler/linker and their flags)
 override_dh_auto_build-arch:
