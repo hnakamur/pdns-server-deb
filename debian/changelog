@@ -1,3 +1,13 @@
+pdns (3.4.6-2) unstable; urgency=medium
+
+  * Retroactively add CVE to 3.4.6-1 changelog
+  * Move pdns.conf creation to override_dh_install.
+    Purely cosmetic, but aligned with the upstream packaging.
+  * Replace geobackend with geoipbackend (Closes: #798566)
+  * Ship (more) tools as part of the new pdns-tools package
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Thu, 10 Sep 2015 21:51:38 +0000
+
 pdns (3.4.6-1) unstable; urgency=medium
 
   * New upstream release, fixes security issue: CVE-2015-5230
