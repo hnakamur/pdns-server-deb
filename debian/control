@@ -23,7 +23,6 @@ Build-Depends: autoconf,
                libcdb-dev,
                libgeoip-dev,
                libldap2-dev,
-               liblmdb-dev,
                liblua5.1-0-dev,
                libmysqlclient-dev,
                libmbedtls-dev,
@@ -204,19 +203,6 @@ Description: Lua backend for PowerDNS
  PowerDNS tries to emphasize speed and security.
  .
  This package contains the Lua backend for PowerDNS.
-
-Package: pdns-backend-lmdb
-Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
-Provides: pdns-backend
-Description: lmdb backend for PowerDNS
- PowerDNS is a versatile nameserver which supports a large number
- of different backends ranging from simple zonefiles to relational
- databases and load balancing/failover algorithms.
- PowerDNS tries to emphasize speed and security.
- .
- This package contains the Symas Lightning Memory-Mapped Database
- backend for PowerDNS.
 
 Package: pdns-backend-remote
 Architecture: any
