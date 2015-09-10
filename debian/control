@@ -77,6 +77,28 @@ Description: debugging symbols for PowerDNS
  This package contains debugging symbols for PowerDNS to assist in
  debugging, such as gdb. It is not required for normal operation.
 
+Package: pdns-tools
+Architecture: any
+Depends: ${misc:Depends}, ${shlibs:Depends}
+Description: Tools for DNS debugging by PowerDNS
+ PowerDNS is a versatile nameserver which supports a large number
+ of different backends ranging from simple zonefiles to relational
+ databases and load balancing/failover algorithms.
+ PowerDNS tries to emphasize speed and security.
+ .
+ This package contains several tools to debug DNS issues. These tools do not
+ require any part of the PowerDNS server components to work.
+ .
+ * dnsbulktest: A resolver stress-tester
+ * dnsgram: Show per 5-second statistics to study intermittent resolver issues
+ * dnsreplay: Replay a pcap with DNS queries
+ * dnsscan: Prints the query-type amounts in a pcap
+ * dnsscope: Calculates statistics without replaying traffic
+ * dnstcpbench: Perform TCP benchmarking of DNS servers
+ * dnswasher: Clean a pcap of identifying IP information
+ * nsec3dig: Calculate the correctness of NSEC3 proofs
+ * saxfr: AXFR zones and show extra information
+
 Package: pdns-backend-pipe
 Architecture: any
 Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}

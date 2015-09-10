@@ -49,6 +49,9 @@ override_dh_installinit:
 	dh_systemd_start --restart-after-upgrade
 
 override_dh_install:
+	make -C pdns sdig dnsgram
+	install -c pdns/sdig debian/tmp/usr/bin/sdig
+	install -c pdns/dnsgram debian/tmp/usr/bin/dnsgram
 	dh_install
 	./pdns/pdns_server --no-config --config | sed \
 		-e 's!# config-dir=.*!config-dir=/etc/powerdns!' \

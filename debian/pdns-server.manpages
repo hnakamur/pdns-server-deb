@@ -1,6 +1,3 @@
-debian/tmp/usr/share/man/man1/dnsreplay.1
-debian/tmp/usr/share/man/man1/dnsscope.1
-debian/tmp/usr/share/man/man1/dnswasher.1
 debian/tmp/usr/share/man/man1/pdns_control.1
 debian/tmp/usr/share/man/man1/pdns_server.1
 debian/tmp/usr/share/man/man1/pdnssec.1
