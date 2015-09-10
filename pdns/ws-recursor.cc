@@ -19,6 +19,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "ws-recursor.hh"
 #include "json.hh"
 #include <boost/foreach.hpp>
@@ -30,6 +33,7 @@
 #include "arguments.hh"
 #include "misc.hh"
 #include "syncres.hh"
+#include "dnsparser.hh"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -139,13 +143,14 @@ static void fillZone(const string& zonename, HttpResponse* resp)
   const SyncRes::AuthDomain& zone = iter->second;
 
   // id is the canonical lookup key, which doesn't actually match the name (in some cases)
-  string zoneId = apiZoneNameToId(iter->first);
+  string zoneId = apiZoneNameToId(iter->first.toString());
   Value jzoneid(zoneId.c_str(), doc.GetAllocator()); // copy
   doc.AddMember("id", jzoneid, doc.GetAllocator());
   string url = "/servers/localhost/zones/" + zoneId;
   Value jurl(url.c_str(), doc.GetAllocator()); // copy
   doc.AddMember("url", jurl, doc.GetAllocator());
-  doc.AddMember("name", iter->first.c_str(), doc.GetAllocator());
+  Value jname(iter->first.toString().c_str(), doc.GetAllocator()); // copy
+  doc.AddMember("name", jname, doc.GetAllocator());
   doc.AddMember("kind", zone.d_servers.empty() ? "Native" : "Forwarded", doc.GetAllocator());
   Value servers;
   servers.SetArray();
@@ -162,12 +167,11 @@ static void fillZone(const string& zonename, HttpResponse* resp)
   BOOST_FOREACH(const SyncRes::AuthDomain::records_t::value_type& rr, zone.d_records) {
     Value object;
     object.SetObject();
-    Value jname(rr.qname.c_str(), doc.GetAllocator()); // copy
+    Value jname(rr.qname.toString().c_str(), doc.GetAllocator()); // copy
     object.AddMember("name", jname, doc.GetAllocator());
     Value jtype(rr.qtype.getName().c_str(), doc.GetAllocator()); // copy
     object.AddMember("type", jtype, doc.GetAllocator());
     object.AddMember("ttl", rr.ttl, doc.GetAllocator());
-    object.AddMember("priority", rr.priority, doc.GetAllocator());
     Value jcontent(rr.content.c_str(), doc.GetAllocator()); // copy
     object.AddMember("content", jcontent, doc.GetAllocator());
     records.PushBack(object, doc.GetAllocator());
@@ -308,13 +312,13 @@ static void apiServerZones(HttpRequest* req, HttpResponse* resp)
     Value jdi;
     jdi.SetObject();
     // id is the canonical lookup key, which doesn't actually match the name (in some cases)
-    string zoneId = apiZoneNameToId(val.first);
+    string zoneId = apiZoneNameToId(val.first.toString());
     Value jzoneid(zoneId.c_str(), doc.GetAllocator()); // copy
     jdi.AddMember("id", jzoneid, doc.GetAllocator());
     string url = "/servers/localhost/zones/" + zoneId;
     Value jurl(url.c_str(), doc.GetAllocator()); // copy
     jdi.AddMember("url", jurl, doc.GetAllocator());
-    jdi.AddMember("name", val.first.c_str(), doc.GetAllocator());
+    jdi.AddMember("name", val.first.toString().c_str(), doc.GetAllocator());
     jdi.AddMember("kind", zone.d_servers.empty() ? "Native" : "Forwarded", doc.GetAllocator());
     Value servers;
     servers.SetArray();
@@ -376,14 +380,14 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp) {
   doc.SetArray();
 
   BOOST_FOREACH(const SyncRes::domainmap_t::value_type& val, *t_sstorage->domainmap) {
-    string zoneId = apiZoneNameToId(val.first);
-    if (pdns_ci_find(val.first, q) != string::npos) {
+    string zoneId = apiZoneNameToId(val.first.toString());
+    if (pdns_ci_find(val.first.toString(), q) != string::npos) {
       Value object;
       object.SetObject();
       object.AddMember("type", "zone", doc.GetAllocator());
       Value jzoneId(zoneId.c_str(), doc.GetAllocator()); // copy
       object.AddMember("zone_id", jzoneId, doc.GetAllocator());
-      Value jzoneName(val.first.c_str(), doc.GetAllocator()); // copy
+      Value jzoneName(val.first.toString().c_str(), doc.GetAllocator()); // copy
       object.AddMember("name", jzoneName, doc.GetAllocator());
       doc.PushBack(object, doc.GetAllocator());
     }
@@ -396,7 +400,7 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp) {
     const SyncRes::AuthDomain& zone = val.second;
 
     BOOST_FOREACH(const SyncRes::AuthDomain::records_t::value_type& rr, zone.d_records) {
-      if (pdns_ci_find(rr.qname, q) == string::npos && pdns_ci_find(rr.content, q) == string::npos)
+      if (pdns_ci_find(rr.qname.toString(), q) == string::npos && pdns_ci_find(rr.content, q) == string::npos)
         continue;
 
       Value object;
@@ -404,9 +408,9 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp) {
       object.AddMember("type", "record", doc.GetAllocator());
       Value jzoneId(zoneId.c_str(), doc.GetAllocator()); // copy
       object.AddMember("zone_id", jzoneId, doc.GetAllocator());
-      Value jzoneName(val.first.c_str(), doc.GetAllocator()); // copy
+      Value jzoneName(val.first.toString().c_str(), doc.GetAllocator()); // copy
       object.AddMember("zone_name", jzoneName, doc.GetAllocator());
-      Value jname(rr.qname.c_str(), doc.GetAllocator()); // copy
+      Value jname(rr.qname.toString().c_str(), doc.GetAllocator()); // copy
       object.AddMember("name", jname, doc.GetAllocator());
       Value jcontent(rr.content.c_str(), doc.GetAllocator()); // copy
       object.AddMember("content", jcontent, doc.GetAllocator());
@@ -421,7 +425,7 @@ static void apiServerFlushCache(HttpRequest* req, HttpResponse* resp) {
   if(req->method != "PUT")
     throw HttpMethodNotAllowedException();
 
-  string canon = toCanonic("", req->getvars["domain"]);
+  DNSName canon = req->getvars["domain"];
   int count = broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeCache, canon));
   count += broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeAndCountNegCache, canon));
   map<string, string> object;
@@ -462,112 +466,118 @@ void RecursorWebServer::jsonstat(HttpRequest* req, HttpResponse *resp)
     req->getvars.erase("command");
   }
 
-  map<string, string> stats; 
-  if(command == "domains") {
-    Document doc;
-    doc.SetArray();
-    BOOST_FOREACH(const SyncRes::domainmap_t::value_type& val, *t_sstorage->domainmap) {
-      Value jzone;
-      jzone.SetObject();
+  map<string, string> stats;
+  if(command == "get-query-ring") {
+    typedef pair<DNSName,uint16_t> query_t;
+    vector<query_t> queries;
+    bool filter=!req->getvars["public-filtered"].empty();
 
-      const SyncRes::AuthDomain& zone = val.second;
-      Value zonename(val.first.c_str(), doc.GetAllocator());
-      jzone.AddMember("name", zonename, doc.GetAllocator());
-      jzone.AddMember("type", "Zone", doc.GetAllocator());
-      jzone.AddMember("kind", zone.d_servers.empty() ? "Native" : "Forwarded", doc.GetAllocator());
-      Value servers;
-      servers.SetArray();
-      BOOST_FOREACH(const ComboAddress& server, zone.d_servers) {
-        Value value(server.toStringWithPort().c_str(), doc.GetAllocator());
-        servers.PushBack(value, doc.GetAllocator());
-      }
-      jzone.AddMember("servers", servers, doc.GetAllocator());
-      bool rdbit = zone.d_servers.empty() ? false : zone.d_rdForward;
-      jzone.AddMember("rdbit", rdbit, doc.GetAllocator());
+    if(req->getvars["name"]=="servfail-queries")
+      queries=broadcastAccFunction<vector<query_t> >(pleaseGetServfailQueryRing);
+    else if(req->getvars["name"]=="queries")
+      queries=broadcastAccFunction<vector<query_t> >(pleaseGetQueryRing);
 
-      doc.PushBack(jzone, doc.GetAllocator());
+    typedef map<query_t,unsigned int> counts_t;
+    counts_t counts;
+    unsigned int total=0;
+    BOOST_FOREACH(const query_t& q, queries) {
+      total++;
+      if(filter)
+	counts[make_pair(getRegisteredName(q.first), q.second)]++;
+      else
+	counts[make_pair(q.first, q.second)]++;
     }
+
+    typedef std::multimap<int, query_t> rcounts_t;
+    rcounts_t rcounts;
+
+    for(counts_t::const_iterator i=counts.begin(); i != counts.end(); ++i)
+      rcounts.insert(make_pair(-i->second, i->first));
+
+    Document doc;
+    doc.SetObject();
+    Value entries;
+    entries.SetArray();
+    unsigned int tot=0, totIncluded=0;
+    BOOST_FOREACH(const rcounts_t::value_type& q, rcounts) {
+      Value arr;
+
+      arr.SetArray();
+      totIncluded-=q.first;
+      arr.PushBack(-q.first, doc.GetAllocator());
+      arr.PushBack(q.second.first.toString().c_str(), doc.GetAllocator());
+      arr.PushBack(DNSRecordContent::NumberToType(q.second.second).c_str(), doc.GetAllocator());
+      entries.PushBack(arr, doc.GetAllocator());
+      if(tot++>=100)
+	break;
+    }
+    if(queries.size() != totIncluded) {
+      Value arr;
+      arr.SetArray();
+      arr.PushBack((unsigned int)(queries.size()-totIncluded), doc.GetAllocator());
+      arr.PushBack("", doc.GetAllocator());
+      arr.PushBack("", doc.GetAllocator());
+      entries.PushBack(arr, doc.GetAllocator());
+    }
+    doc.AddMember("entries", entries, doc.GetAllocator());
     resp->setBody(doc);
     return;
   }
-  else if(command == "zone") {
-    string arg_zone = req->getvars["zone"];
-    SyncRes::domainmap_t::const_iterator ret = t_sstorage->domainmap->find(arg_zone);
-    if (ret != t_sstorage->domainmap->end()) {
-      Document doc;
-      doc.SetObject();
-      Value root;
-      root.SetObject();
+  else if(command == "get-remote-ring") {
+    vector<ComboAddress> queries;
+    if(req->getvars["name"]=="remotes")
+      queries=broadcastAccFunction<vector<ComboAddress> >(pleaseGetRemotes);
+    else if(req->getvars["name"]=="servfail-remotes")
+      queries=broadcastAccFunction<vector<ComboAddress> >(pleaseGetServfailRemotes);
+    else if(req->getvars["name"]=="large-answer-remotes")
+      queries=broadcastAccFunction<vector<ComboAddress> >(pleaseGetLargeAnswerRemotes);
 
-      const SyncRes::AuthDomain& zone = ret->second;
-      Value zonename(ret->first.c_str(), doc.GetAllocator());
-      root.AddMember("name", zonename, doc.GetAllocator());
-      root.AddMember("type", "Zone", doc.GetAllocator());
-      root.AddMember("kind", zone.d_servers.empty() ? "Native" : "Forwarded", doc.GetAllocator());
-      Value servers;
-      servers.SetArray();
-      BOOST_FOREACH(const ComboAddress& server, zone.d_servers) {
-        Value value(server.toStringWithPort().c_str(), doc.GetAllocator());
-        servers.PushBack(value, doc.GetAllocator());
-      }
-      root.AddMember("servers", servers, doc.GetAllocator());
-      bool rdbit = zone.d_servers.empty() ? false : zone.d_rdForward;
-      root.AddMember("rdbit", rdbit, doc.GetAllocator());
-
-      Value records;
-      records.SetArray();
-      BOOST_FOREACH(const SyncRes::AuthDomain::records_t::value_type& rr, zone.d_records) {
-        Value object;
-        object.SetObject();
-        Value jname(rr.qname.c_str(), doc.GetAllocator()); // copy
-        object.AddMember("name", jname, doc.GetAllocator());
-        Value jtype(rr.qtype.getName().c_str(), doc.GetAllocator()); // copy
-        object.AddMember("type", jtype, doc.GetAllocator());
-        object.AddMember("ttl", rr.ttl, doc.GetAllocator());
-        object.AddMember("priority", rr.priority, doc.GetAllocator());
-        Value jcontent(rr.content.c_str(), doc.GetAllocator()); // copy
-        object.AddMember("content", jcontent, doc.GetAllocator());
-        records.PushBack(object, doc.GetAllocator());
-      }
-      root.AddMember("records", records, doc.GetAllocator());
-
-      doc.AddMember("zone", root, doc.GetAllocator());
-      resp->setBody(doc);
-      return;
-    } else {
-      resp->body = returnJsonError("Could not find domain '"+arg_zone+"'");
-      return;
+    typedef map<ComboAddress,unsigned int,ComboAddress::addressOnlyLessThan> counts_t;
+    counts_t counts;
+    unsigned int total=0;
+    BOOST_FOREACH(const ComboAddress& q, queries) {
+      total++;
+      counts[q]++;
     }
-  }
-  else if(command == "flush-cache") {
-    string canon=toCanonic("", req->getvars["domain"]);
-    int count = broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeCache, canon));
-    count+=broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeAndCountNegCache, canon));
-    stats["number"]=lexical_cast<string>(count);
-    resp->body = returnJsonObject(stats);
-    return;
-  }
-  else if(command == "config") {
-    vector<string> items = ::arg().list();
-    BOOST_FOREACH(const string& var, items) {
-      stats[var] = ::arg()[var];
+
+    typedef std::multimap<int, ComboAddress> rcounts_t;
+    rcounts_t rcounts;
+
+    for(counts_t::const_iterator i=counts.begin(); i != counts.end(); ++i)
+      rcounts.insert(make_pair(-i->second, i->first));
+
+
+    Document doc;
+    doc.SetObject();
+    Value entries;
+    entries.SetArray();
+    unsigned int tot=0, totIncluded=0;
+    BOOST_FOREACH(const rcounts_t::value_type& q, rcounts) {
+      totIncluded-=q.first;
+      Value arr;
+
+      arr.SetArray();
+      arr.PushBack(-q.first, doc.GetAllocator());
+      Value jname(q.second.toString().c_str(), doc.GetAllocator()); // copy
+      arr.PushBack(jname, doc.GetAllocator());
+      entries.PushBack(arr, doc.GetAllocator());
+      if(tot++>=100)
+	break;
     }
-    resp->body = returnJsonObject(stats);
-    return;
-  }
-  else if(command == "log-grep") {
-    // legacy parameter name hack
-    req->getvars["q"] = req->getvars["needle"];
-    apiServerSearchLog(req, resp);
-    return;
-  }
-  else if(command == "stats") {
-    stats = getAllStatsMap();
-    resp->body = returnJsonObject(stats);
+    if(queries.size() != totIncluded) {
+      Value arr;
+      arr.SetArray();
+      arr.PushBack((unsigned int)(queries.size()-totIncluded), doc.GetAllocator());
+      arr.PushBack("", doc.GetAllocator());
+      entries.PushBack(arr, doc.GetAllocator());
+    }
+
+    doc.AddMember("entries", entries, doc.GetAllocator());
+    resp->setBody(doc);
     return;
   } else {
     resp->status = 404;
-    resp->body = returnJsonError("Not found");
+    resp->body = returnJsonError("Command '"+command+"' not found");
   }
 }
 

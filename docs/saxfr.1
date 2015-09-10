@@ -1,0 +1,32 @@
+.TH "SAXFR" "1" "April 2015" "" ""
+.SH NAME
+.PP
+\f[B]saxfr\f[] \- Perform AXFRs and show information about it
+.SH SYNOPSIS
+.PP
+\f[B]saxfr\f[] \f[I]IPADDRESS\f[] \f[I]PORT\f[] \f[I]ZONE\f[]
+[\f[I]OPTIONS\f[]]
+.SH DESCRIPTION
+.PP
+\f[B]saxfr\f[] does a zone\-transfer (AXFR) of \f[I]ZONE\f[] from the
+nameserver at \f[I]IPADDRESS\f[] on port \f[I]PORT\f[] and displays the
+transferred zone with NSEC3 information truncated.
+See below how to show this information.
+.SH OPTIONS
+.TP
+.B showdetails
+Show all the data in the NSEC3 and DNSKEY RDATA.
+.RS
+.RE
+.TP
+.B showflags
+Show the NSEC3 flags in the RDATA.
+.RS
+.RE
+.TP
+.B unhash
+Unhash the NSEC3 names to the normal names.
+.RS
+.RE
+.SH AUTHORS
+PowerDNS.com BV.

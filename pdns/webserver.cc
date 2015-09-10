@@ -19,6 +19,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "utility.hh"
 #include "webserver.hh"
 #include "misc.hh"
@@ -84,11 +87,6 @@ void HttpResponse::setBody(rapidjson::Document& document)
   this->body = makeStringFromDocument(document);
 }
 
-int WebServer::B64Decode(const std::string& strInput, std::string& strOutput)
-{
-  return ::B64Decode(strInput, strOutput);
-}
-
 static void bareHandlerWrapper(WebServer::HandlerFunction handler, YaHTTP::Request* req, YaHTTP::Response* resp)
 {
   // wrapper to convert from YaHTTP::* to our subclasses
@@ -123,13 +121,14 @@ static void apiWrapper(WebServer::HandlerFunction handler, HttpRequest* req, Htt
   resp->headers["access-control-allow-origin"] = "*";
 
   if (api_key.empty()) {
-    L<<Logger::Debug<<"HTTP API Request \"" << req->url.path << "\": Authentication failed, API Key missing in config" << endl;
-    throw HttpUnauthorizedException();
+    L<<Logger::Error<<"HTTP API Request \"" << req->url.path << "\": Authentication failed, API Key missing in config" << endl;
+    throw HttpUnauthorizedException("X-API-Key");
   }
-  bool auth_ok = req->compareHeader("x-api-key", api_key);
+  bool auth_ok = req->compareHeader("x-api-key", api_key) || req->getvars["api-key"]==api_key;
+  
   if (!auth_ok) {
-    L<<Logger::Debug<<"HTTP Request \"" << req->url.path << "\": Authentication by API Key failed" << endl;
-    throw HttpUnauthorizedException();
+    L<<Logger::Error<<"HTTP Request \"" << req->url.path << "\": Authentication by API Key failed" << endl;
+    throw HttpUnauthorizedException("X-API-Key");
   }
 
   resp->headers["Content-Type"] = "application/json";
@@ -178,7 +177,7 @@ static void webWrapper(WebServer::HandlerFunction handler, HttpRequest* req, Htt
     bool auth_ok = req->compareAuthorization(web_password);
     if (!auth_ok) {
       L<<Logger::Debug<<"HTTP Request \"" << req->url.path << "\": Web Authentication failed" << endl;
-      throw HttpUnauthorizedException();
+      throw HttpUnauthorizedException("Basic");
     }
   }
 
@@ -270,7 +269,7 @@ HttpResponse WebServer::handleRequest(HttpRequest req)
   }
 
   // always set these headers
-  resp.headers["Server"] = "PowerDNS/"VERSION;
+  resp.headers["Server"] = "PowerDNS/" VERSION;
   resp.headers["Connection"] = "close";
 
   if (req.method == "HEAD") {

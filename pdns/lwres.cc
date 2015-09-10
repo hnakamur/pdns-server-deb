@@ -21,6 +21,9 @@
 */
 
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "utility.hh"
 #include "lwres.hh"
 #include <iostream>
@@ -49,7 +52,7 @@
 /** lwr is only filled out in case 1 was returned, and even when returning 1 for 'success', lwr might contain DNS errors
     Never throws! 
  */
-int asyncresolve(const ComboAddress& ip, const string& domain, int type, bool doTCP, bool sendRDQuery, int EDNS0Level, struct timeval* now, LWResult *lwr)
+int asyncresolve(const ComboAddress& ip, const DNSName& domain, int type, bool doTCP, bool sendRDQuery, int EDNS0Level, struct timeval* now, LWResult *lwr)
 {
   int len; 
   int bufsize=1500;
@@ -63,12 +66,12 @@ int asyncresolve(const ComboAddress& ip, const string& domain, int type, bool do
   
   string ping;
 
-  uint32_t nonce=dns_random(0xffffffff);
-  ping.assign((char*) &nonce, 4);
-
   if(EDNS0Level && !doTCP) {
     DNSPacketWriter::optvect_t opts;
     if(EDNS0Level > 1) {
+      uint32_t nonce=dns_random(0xffffffff);
+      ping.assign((char*) &nonce, 4);
+
       opts.push_back(make_pair(5, ping));
     }
 
@@ -78,11 +81,11 @@ int asyncresolve(const ComboAddress& ip, const string& domain, int type, bool do
   lwr->d_rcode = 0;
   lwr->d_pingCorrect = false;
   lwr->d_haveEDNS = false;
-
   int ret;
 
   DTime dt;
-  dt.setTimeval(*now);
+  dt.set();
+  *now=dt.getTimeval();
   errno=0;
   if(!doTCP) {
     int queryfd;
@@ -167,7 +170,7 @@ int asyncresolve(const ComboAddress& ip, const string& domain, int type, bool do
     }
 
     if(!pdns_iequals(domain, mdp.d_qname)) { 
-      if(!mdp.d_qname.empty() && domain.find((char)0) == string::npos) {// embedded nulls are too noisy, plus empty domains are too
+      if(!mdp.d_qname.empty() && domain.toString().find((char)0) == string::npos /* ugly */) {// embedded nulls are too noisy, plus empty domains are too
         L<<Logger::Notice<<"Packet purporting to come from remote server "<<ip.toString()<<" contained wrong answer: '" << domain << "' != '" << mdp.d_qname << "'" << endl;
       }
       // unexpected count has already been done @ pdns_recursor.cc
@@ -176,7 +179,6 @@ int asyncresolve(const ComboAddress& ip, const string& domain, int type, bool do
 
     for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i!=mdp.d_answers.end(); ++i) {          
       DNSResourceRecord rr;
-      rr.priority = 0;
       rr.qtype=i->first.d_type;
       rr.qname=i->first.d_label;
       rr.ttl=i->first.d_ttl;

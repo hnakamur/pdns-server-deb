@@ -19,11 +19,15 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "common_startup.hh"
 #include "ws-auth.hh"
 #include "secpoll-auth.hh"
 #include <sys/time.h>
 #include <sys/resource.h>
+#include "dynhandler.hh"
 #include <boost/foreach.hpp>
 
 bool g_anyToTcp;
@@ -39,6 +43,7 @@ UDPNameserver *N;
 int avg_latency;
 TCPNameserver *TN;
 vector<DNSDistributor*> g_distributors;
+AuthLua *LPE;
 
 ArgvMap &arg()
 {
@@ -55,6 +60,7 @@ void declareArguments()
   ::arg().setSwitch("log-dns-queries","If PDNS should log all incoming DNS queries")="no";
   ::arg().set("local-address","Local IP addresses to which we bind")="0.0.0.0";
   ::arg().setSwitch("local-address-nonexist-fail","Fail to start if one or more of the local-address's do not exist on this server")="yes";
+  ::arg().setSwitch("non-local-bind", "Enable binding to non-local addresses by using FREEBIND / BINDANY socket options")="no";
   ::arg().set("local-ipv6","Local IP address to which we bind")="";
   ::arg().setSwitch("reuseport","Enable higher performance on compliant kernels by using SO_REUSEPORT allowing each receiver thread to open its own socket")="no";
   ::arg().setSwitch("local-ipv6-nonexist-fail","Fail to start if one or more of the local-ipv6 addresses do not exist on this server")="yes";
@@ -86,7 +92,6 @@ void declareArguments()
   ::arg().set("queue-limit","Maximum number of milliseconds to queue a query")="1500"; 
   ::arg().set("recursor","If recursion is desired, IP address of a recursing nameserver")="no"; 
   ::arg().set("allow-recursion","List of subnets that are allowed to recurse")="0.0.0.0/0";
-  ::arg().set("pipebackend-abi-version","Version of the pipe backend ABI")="1";
   ::arg().set("udp-truncation-threshold", "Maximum UDP response size before we truncate")="1680";
   ::arg().set("disable-tcp","Do not listen to TCP queries")="no";
   
@@ -155,7 +160,8 @@ void declareArguments()
   ::arg().set("max-ent-entries", "Maximum number of empty non-terminals in a zone")="100000";
   ::arg().set("entropy-source", "If set, read entropy from this file")="/dev/urandom";
 
-  ::arg().set("lua-prequery-script", "Lua script with prequery handler")="";
+  ::arg().set("lua-prequery-script", "Lua script with prequery handler (DO NOT USE)")="";
+  ::arg().set("experimental-lua-policy-script", "Lua script for the policy engine")="";
 
   ::arg().setSwitch("traceback-handler","Enable the traceback handler (Linux only)")="yes";
   ::arg().setSwitch("direct-dnskey","Fetch DNSKEY RRs from backend during DNSKEY synthesis")="no";
@@ -169,10 +175,10 @@ void declareArguments()
   ::arg().set("security-poll-suffix","Domain name from which to query security update notifications")="secpoll.powerdns.com.";
 }
 
+static time_t s_start=time(0);
 static uint64_t uptimeOfProcess(const std::string& str)
 {
-  static time_t start=time(0);
-  return time(0) - start;
+  return time(0) - s_start;
 }
 
 static uint64_t getSysUserTimeMsec(const std::string& str)
@@ -195,10 +201,7 @@ try
   BOOST_FOREACH(DNSDistributor* d, g_distributors) {
     if(!d)
       continue;
-    int qcount, acount;
-    
-    d->getQueueSizes(qcount, acount);  // this does locking and other things, so don't get smart
-    totcount+=qcount;
+    totcount += d->getQueueSize();  // this does locking and other things, so don't get smart
   }
   return totcount;
 }
@@ -224,6 +227,8 @@ void declareStats(void)
   S.declare("udp-do-queries","Number of UDP queries received with DO bit");
   S.declare("udp-answers","Number of answers sent out over UDP");
   S.declare("udp-answers-bytes","Total size of answers sent out over UDP");
+  S.declare("udp4-answers-bytes","Total size of answers sent out over UDPv4");
+  S.declare("udp6-answers-bytes","Total size of answers sent out over UDPv6");
 
   S.declare("udp4-answers","Number of IPv4 answers sent out over UDP");
   S.declare("udp4-queries","Number of IPv4 UDP queries received");
@@ -238,6 +243,16 @@ void declareStats(void)
   S.declare("signatures", "Number of DNSSEC signatures made");
   S.declare("tcp-queries","Number of TCP queries received");
   S.declare("tcp-answers","Number of answers sent out over TCP");
+  S.declare("tcp-answers-bytes","Total size of answers sent out over TCP");
+  S.declare("tcp4-answers-bytes","Total size of answers sent out over TCPv4");
+  S.declare("tcp6-answers-bytes","Total size of answers sent out over TCPv6");
+
+  S.declare("tcp4-queries","Number of IPv4 TCP queries received");
+  S.declare("tcp4-answers","Number of IPv4 answers sent out over TCP");
+  
+  S.declare("tcp6-queries","Number of IPv6 TCP queries received");
+  S.declare("tcp6-answers","Number of IPv6 answers sent out over TCP");
+    
 
   S.declare("qsize-q","Number of questions waiting for database attention", getQCount);
 
@@ -252,7 +267,16 @@ void declareStats(void)
   S.declare("dnsupdate-refused", "DNS update packets that are refused.");
   S.declare("dnsupdate-changes", "DNS update changes to records in total.");
 
+  S.declare("incoming-notifications", "NOTIFY packets received.");
+
   S.declare("uptime", "Uptime of process in seconds", uptimeOfProcess);
+#ifdef __linux__
+  S.declare("udp-recvbuf-errors", "UDP 'recvbuf' errors", udpErrorStats);
+  S.declare("udp-sndbuf-errors", "UDP 'sndbuf' errors", udpErrorStats);
+  S.declare("udp-noport-errors", "UDP 'noport' errors", udpErrorStats);
+  S.declare("udp-in-errors", "UDP 'in' errors", udpErrorStats);
+#endif
+
   S.declare("sys-msec", "Number of msec spent in system time", getSysUserTimeMsec);
   S.declare("user-msec", "Number of msec spent in user time", getSysUserTimeMsec);
   S.declare("meta-cache-size", "Number of entries in the metadata cache", DNSSECKeeper::dbdnssecCacheSizes);
@@ -269,9 +293,9 @@ void declareStats(void)
   S.declareRing("servfail-queries","Queries that could not be answered due to backend errors");
   S.declareRing("unauth-queries","Queries for domains that we are not authoritative for");
   S.declareRing("logmessages","Log Messages");
-  S.declareRing("remotes","Remote server IP addresses");
-  S.declareRing("remotes-unauth","Remote hosts querying domains for which we are not auth");
-  S.declareRing("remotes-corrupt","Remote hosts sending corrupt packets");
+  S.declareComboRing("remotes","Remote server IP addresses");
+  S.declareComboRing("remotes-unauth","Remote hosts querying domains for which we are not auth");
+  S.declareComboRing("remotes-corrupt","Remote hosts sending corrupt packets");
 }
 
 int isGuarded(char **argv)
@@ -281,16 +305,16 @@ int isGuarded(char **argv)
   return !!p;
 }
 
-void sendout(const AnswerData<DNSPacket> &AD)
+void sendout(DNSPacket* a)
 {
-  if(!AD.A)
+  if(!a)
     return;
   
-  N->send(AD.A);
+  N->send(a);
 
-  int diff=AD.A->d_dt.udiff();
+  int diff=a->d_dt.udiff();
   avg_latency=(int)(0.999*avg_latency+0.001*diff);
-  delete AD.A;  
+  delete a;  
 }
 
 //! The qthread receives questions over the internet via the Nameserver class, and hands them to the Distributor for further processing
@@ -350,8 +374,8 @@ void *qthread(void *number)
      if(P->d.qr)
        continue;
 
-    S.ringAccount("queries", P->qdomain+"/"+P->qtype.getName());
-    S.ringAccount("remotes",P->getRemote());
+    S.ringAccount("queries", P->qdomain.toString()+"/"+P->qtype.getName());
+    S.ringAccount("remotes",P->d_remote);
     if(logDNSQueries) {
       string remote;
       if(P->hasEDNSSubnet()) 
@@ -379,9 +403,20 @@ void *qthread(void *number)
         cached.d.id=P->d.id;
         cached.commitD(); // commit d to the packet                        inlined
 
-        NS->send(&cached);   // answer it then                              inlined
-        diff=P->d_dt.udiff();
-        avg_latency=(int)(0.999*avg_latency+0.001*diff); // 'EWMA'
+        int policyres = PolicyDecision::PASS;
+        if(LPE)
+        {
+          // FIXME: cached does not have qdomainwild/qdomainzone because packetcache entries
+          // go through tostring/noparse
+          policyres = LPE->police(&question, &cached);
+        }
+
+        if (policyres == PolicyDecision::PASS) {
+          NS->send(&cached);   // answer it then                              inlined
+          diff=P->d_dt.udiff();
+          avg_latency=(int)(0.999*avg_latency+0.001*diff); // 'EWMA'
+        }
+        // FIXME implement truncate
 
         continue;
       }
@@ -396,7 +431,12 @@ void *qthread(void *number)
     if(logDNSQueries) 
       L<<"packetcache MISS"<<endl;
 
-    distributor->question(P, &sendout); // otherwise, give to the distributor
+    try {
+      distributor->question(P, &sendout); // otherwise, give to the distributor
+    }
+    catch(DistributorFatal& df) { // when this happens, we have leaked loads of memory. Bailing out time.
+      _exit(1);
+    }
   }
   return 0;
 }
@@ -431,10 +471,7 @@ void mainthread()
    DNSPacket::s_udpTruncationThreshold = std::max(512, ::arg().asNum("udp-truncation-threshold"));
    DNSPacket::s_doEDNSSubnetProcessing = ::arg().mustDo("edns-subnet-processing");
 
-   try {
-     doSecPoll(true); // this must be BEFORE chroot
-   }
-   catch(...) {}
+   secPollParseResolveConf();
 
    if(!::arg()["chroot"].empty()) {  
      triggerLoadOfLibraries();
@@ -454,11 +491,18 @@ void mainthread()
   AuthWebServer webserver;
   Utility::dropUserPrivs(newuid);
 
+  // We need to start the Recursor Proxy before doing secpoll, see issue #2453
   if(::arg().mustDo("recursor")){
     DP=new DNSProxy(::arg()["recursor"]);
     DP->onlyFrom(::arg()["allow-recursion"]);
     DP->go();
   }
+
+  try {
+    doSecPoll(true);
+  }
+  catch(...) {}
+
   // NOW SAFE TO CREATE THREADS!
   dl->go();
 
@@ -469,6 +513,11 @@ void mainthread()
 
   if(::arg().mustDo("slave") || ::arg().mustDo("master"))
     Communicator.go(); 
+
+  if(!::arg()["experimental-lua-policy-script"].empty()){
+    LPE=new AuthLua(::arg()["experimental-lua-policy-script"]);
+    L<<Logger::Warning<<"Loaded Lua policy script "<<::arg()["experimental-lua-policy-script"]<<endl;
+  }
 
   if(TN)
     TN->go(); // tcp nameserver launch

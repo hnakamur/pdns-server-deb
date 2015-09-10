@@ -1,8 +1,12 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "utility.hh"
 #include "rec_channel.hh"
 #include <boost/lexical_cast.hpp>
 #include <boost/bind.hpp>
 #include <vector>
+
 #include "misc.hh"
 #include "recursor_cache.hh"
 #include "syncres.hh"
@@ -12,6 +16,7 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/foreach.hpp>
+#include "version.hh"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -22,8 +27,9 @@
 #include <sys/time.h>
 #include "lock.hh"
 #include "responsestats.hh"
-#include "version_generated.h"
 
+#include "secpoll-recursor.hh"
+#include "pubsuffix.hh"
 #include "namespaces.hh"
 pthread_mutex_t g_carbon_config_lock=PTHREAD_MUTEX_INITIALIZER;
 
@@ -143,7 +149,7 @@ static uint64_t dumpNegCache(SyncRes::negcache_t& negcache, int fd)
   BOOST_FOREACH(const NegCacheEntry& neg, sidx)
   {
     ++count;
-    fprintf(fp, "%s IN %s %d VIA %s\n", neg.d_name.c_str(), neg.d_qtype.getName().c_str(), (unsigned int) (neg.d_ttd - now), neg.d_qname.c_str());
+    fprintf(fp, "%s IN %s %d VIA %s\n", neg.d_name.toString().c_str(), neg.d_qtype.getName().c_str(), (unsigned int) (neg.d_ttd - now), neg.d_qname.toString().c_str());
   }
   fclose(fp);
   return count;
@@ -221,14 +227,14 @@ string doDumpEDNSStatus(T begin, T end)
   return "done\n";
 }
 
-uint64_t* pleaseWipeCache(const std::string& canon)
+uint64_t* pleaseWipeCache(const DNSName& canon)
 {
   // clear packet cache too
   return new uint64_t(t_RC->doWipeCache(canon) + t_packetCache->doWipePacketCache(canon));
 }
 
 
-uint64_t* pleaseWipeAndCountNegCache(const std::string& canon)
+uint64_t* pleaseWipeAndCountNegCache(const DNSName& canon)
 {
   uint64_t res = t_sstorage->negcache.count(tie(canon));
   pair<SyncRes::negcache_t::iterator, SyncRes::negcache_t::iterator> range=t_sstorage->negcache.equal_range(tie(canon));
@@ -241,7 +247,7 @@ string doWipeCache(T begin, T end)
 {
   int count=0, countNeg=0;
   for(T i=begin; i != end; ++i) {
-    string canon=toCanonic("", *i);
+    DNSName canon=DNSName(*i);
     count+= broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeCache, canon));
     countNeg+=broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeAndCountNegCache, canon));
   }
@@ -311,7 +317,7 @@ static string* pleaseGetCurrentQueries()
   for(MT_t::waiters_t::iterator mthread=MT->d_waiters.begin(); mthread!=MT->d_waiters.end() && n < 100; ++mthread, ++n) {
     const PacketID& pident = mthread->key;
     ostr << (fmt 
-             % pident.domain % DNSRecordContent::NumberToType(pident.type) 
+             % pident.domain.toString() /* ?? */ % DNSRecordContent::NumberToType(pident.type) 
              % pident.remote.toString() % (pident.sock ? 'Y' : 'n')
              % (pident.fd == -1 ? 'Y' : 'n')
              );
@@ -509,6 +515,7 @@ RecursorControlParser::RecursorControlParser()
 
   addGetStat("client-parse-errors", &g_stats.clientParseError);
   addGetStat("server-parse-errors", &g_stats.serverParseError);
+  addGetStat("too-old-drops", &g_stats.tooOldDrops);
 
   addGetStat("answers0-1", &g_stats.answers0_1);
   addGetStat("answers1-10", &g_stats.answers1_10);
@@ -537,6 +544,7 @@ RecursorControlParser::RecursorControlParser()
   addGetStat("failed-host-entries", boost::bind(getFailedHostsSize));
 
   addGetStat("concurrent-queries", boost::bind(getConcurrentQueries)); 
+  addGetStat("security-status", &g_security_status);
   addGetStat("outgoing-timeouts", &SyncRes::s_outgoingtimeouts);
   addGetStat("tcp-outqueries", &SyncRes::s_tcpoutqueries);
   addGetStat("all-outqueries", &SyncRes::s_outqueries);
@@ -547,6 +555,13 @@ RecursorControlParser::RecursorControlParser()
   addGetStat("unreachables", &SyncRes::s_unreachables);
   addGetStat("chain-resends", &g_stats.chainResends);
   addGetStat("tcp-clients", boost::bind(TCPConnection::getCurrentConnections));
+
+#ifdef __linux__
+  addGetStat("udp-recvbuf-errors", boost::bind(udpErrorStats, "udp-recvbuf-errors"));
+  addGetStat("udp-sndbuf-errors", boost::bind(udpErrorStats, "udp-sndbuf-errors"));
+  addGetStat("udp-noport-errors", boost::bind(udpErrorStats, "udp-noport-errors"));
+  addGetStat("udp-in-errors", boost::bind(udpErrorStats, "udp-in-errors"));
+#endif
 
   addGetStat("edns-ping-matches", &g_stats.ednsPingMatches);
   addGetStat("edns-ping-mismatches", &g_stats.ednsPingMismatches);
@@ -583,30 +598,90 @@ static void doExit()
 
 static void doExitNicely()
 {
-  //extern void printCallers();
-  // printCallers();
   doExitGeneric(true);
 }
 
-vector<ComboAddress>* pleaseGetRemotes()
+vector<pair<DNSName, uint16_t> >* pleaseGetQueryRing()
 {
-  return new vector<ComboAddress>(t_remotes->remotes);
+  typedef pair<DNSName,uint16_t> query_t;
+  vector<query_t >* ret = new vector<query_t>();
+  if(!t_queryring)
+    return ret;
+  ret->reserve(t_queryring->size());
+
+  BOOST_FOREACH(const query_t& q, *t_queryring) {
+    ret->push_back(q);
+  }
+  return ret;
+}
+vector<pair<DNSName,uint16_t> >* pleaseGetServfailQueryRing()
+{
+  typedef pair<DNSName,uint16_t> query_t;
+  vector<query_t>* ret = new vector<query_t>();
+  if(!t_servfailqueryring)
+    return ret;
+  ret->reserve(t_queryring->size());
+  BOOST_FOREACH(const query_t& q, *t_servfailqueryring) {
+    ret->push_back(q);
+  }
+  return ret;
 }
 
-string doTopRemotes()
+
+
+typedef boost::function<vector<ComboAddress>*()> pleaseremotefunc_t;
+typedef boost::function<vector<pair<DNSName,uint16_t> >*()> pleasequeryfunc_t;
+
+vector<ComboAddress>* pleaseGetRemotes()
+{
+  vector<ComboAddress>* ret = new vector<ComboAddress>();
+  if(!t_remotes)
+    return ret;
+
+  ret->reserve(t_remotes->size());
+  BOOST_FOREACH(const ComboAddress& ca, *t_remotes) {
+    ret->push_back(ca);
+  }
+  return ret;
+}
+
+vector<ComboAddress>* pleaseGetServfailRemotes()
+{
+  vector<ComboAddress>* ret = new vector<ComboAddress>();
+  if(!t_servfailremotes)
+    return ret;
+  ret->reserve(t_servfailremotes->size());
+  BOOST_FOREACH(const ComboAddress& ca, *t_servfailremotes) {
+    ret->push_back(ca);
+  }
+  return ret;
+}
+
+vector<ComboAddress>* pleaseGetLargeAnswerRemotes()
+{
+  vector<ComboAddress>* ret = new vector<ComboAddress>();
+  if(!t_largeanswerremotes)
+    return ret;
+  ret->reserve(t_largeanswerremotes->size());
+  BOOST_FOREACH(const ComboAddress& ca, *t_largeanswerremotes) {
+    ret->push_back(ca);
+  }
+  return ret;
+}
+
+string doGenericTopRemotes(pleaseremotefunc_t func)
 {
   typedef map<ComboAddress, int, ComboAddress::addressOnlyLessThan> counts_t;
   counts_t counts;
 
-  vector<ComboAddress> remotes=broadcastAccFunction<vector<ComboAddress> >(pleaseGetRemotes);
+  vector<ComboAddress> remotes=broadcastAccFunction<vector<ComboAddress> >(func);
     
   unsigned int total=0;
-  for(RemoteKeeper::remotes_t::const_iterator i = remotes.begin(); i != remotes.end(); ++i)
-    if(i->sin4.sin_family) {
-      total++;
-      counts[*i]++;
-    }
-
+  BOOST_FOREACH(const ComboAddress& ca, remotes) {
+    total++;
+    counts[ca]++;
+  }
+  
   typedef std::multimap<int, ComboAddress> rcounts_t;
   rcounts_t rcounts;
   
@@ -614,13 +689,103 @@ string doTopRemotes()
     rcounts.insert(make_pair(-i->second, i->first));
 
   ostringstream ret;
-  ret<<"Over last "<<total<<" queries:\n";
+  ret<<"Over last "<<total<<" entries:\n";
   format fmt("%.02f%%\t%s\n");
-  int limit=0;
-  if(total)
-    for(rcounts_t::const_iterator i=rcounts.begin(); i != rcounts.end() && limit < 20; ++i, ++limit)
+  int limit=0, accounted=0;
+  if(total) {
+    for(rcounts_t::const_iterator i=rcounts.begin(); i != rcounts.end() && limit < 20; ++i, ++limit) {
       ret<< fmt % (-100.0*i->first/total) % i->second.toString();
+      accounted+= -i->first;
+    }
+    ret<< '\n' << fmt % (100.0*(total-accounted)/total) % "rest";
+  }
+  return ret.str();
+}
 
+namespace {
+  typedef vector<vector<string> > pubs_t;
+  pubs_t g_pubs;
+}
+
+void sortPublicSuffixList()
+{
+  for(const char** p=&g_pubsuffix; *p; ++p) {
+    string low=toLower(*p);
+
+    vector<string> parts;
+    stringtok(parts, low, ".");
+    reverse(parts.begin(), parts.end());
+    g_pubs.push_back(parts);
+  }
+  sort(g_pubs.begin(), g_pubs.end());
+}
+
+DNSName getRegisteredName(const DNSName& dom)
+{
+  auto parts=dom.getRawLabels();
+  if(parts.size()<=2)
+    return dom;
+  reverse(parts.begin(), parts.end());
+  BOOST_FOREACH(string& str, parts) { str=toLower(str); };
+
+  // uk co migweb 
+  string last;
+  while(!parts.empty()) {
+    if(parts.size()==1 || binary_search(g_pubs.begin(), g_pubs.end(), parts)) {
+  
+      string ret=last;
+      if(!ret.empty())
+	ret+=".";
+      
+      BOOST_REVERSE_FOREACH(const std::string& p, parts) {
+	ret+=p+".";
+      }
+      return ret;
+    }
+
+    last=parts[parts.size()-1];
+    parts.resize(parts.size()-1);
+  }
+  return "??";
+}
+
+static DNSName nopFilter(const DNSName& name)
+{
+  return name;
+}
+
+string doGenericTopQueries(pleasequeryfunc_t func, boost::function<DNSName(const DNSName&)> filter=nopFilter)
+{
+  typedef pair<DNSName,uint16_t> query_t;
+  typedef map<query_t, int> counts_t;
+  counts_t counts;
+  vector<query_t> queries=broadcastAccFunction<vector<query_t> >(func);
+    
+  unsigned int total=0;
+  BOOST_FOREACH(const query_t& q, queries) {
+    total++;
+    counts[make_pair(filter(q.first),q.second)]++;
+  }
+
+  typedef std::multimap<int, query_t> rcounts_t;
+  rcounts_t rcounts;
+  
+  for(counts_t::const_iterator i=counts.begin(); i != counts.end(); ++i)
+    rcounts.insert(make_pair(-i->second, i->first));
+
+  ostringstream ret;
+  ret<<"Over last "<<total<<" entries:\n";
+  format fmt("%.02f%%\t%s\n");
+  int limit=0, accounted=0;
+  if(total) {
+    for(rcounts_t::const_iterator i=rcounts.begin(); i != rcounts.end() && limit < 20; ++i, ++limit) {
+      ret<< fmt % (-100.0*i->first/total) % (i->second.first.toString()+"|"+DNSRecordContent::NumberToType(i->second.second));
+      accounted+= -i->first;
+    }
+    ret<< '\n' << fmt % (100.0*(total-accounted)/total) % "rest";
+  }
+
+  
   return ret.str();
 }
 
@@ -663,7 +828,11 @@ string RecursorControlParser::getAnswer(const string& question, RecursorControlP
 "set-minimum-ttl value            set mininum-ttl-override\n"
 "set-carbon-server                set a carbon server for telemetry\n"
 "trace-regex [regex]              emit resolution trace for matching queries (empty regex to clear trace)\n"
+"top-largeanswer-remotes          show top remotes receiving large answers\n"
+"top-queries                      show top queries\n"
 "top-remotes                      show top remotes\n"
+"top-servfail-queries             show top queries receiving servfail answers\n"
+"top-servfail-remotes             show top remotes receiving servfail answers\n"
 "unload-lua-script                unload Lua script\n"
 "version                          return Recursor version number\n"
 "wipe-cache domain0 [domain1] ..  wipe domain data from cache\n";
@@ -683,7 +852,7 @@ string RecursorControlParser::getAnswer(const string& question, RecursorControlP
   }
 
   if(cmd=="version") {
-    return string(PDNS_VERSION)+"\n";
+    return getPDNSVersion()+"\n";
   }
   
   if(cmd=="quit-nicely") {
@@ -724,12 +893,12 @@ string RecursorControlParser::getAnswer(const string& question, RecursorControlP
     } 
     catch(std::exception& e) 
     {
-      L<<Logger::Error<<"reloading ACLs failed (Exception: "<<e.what()<<")"<<endl;
+      L<<Logger::Error<<"Reloading ACLs failed (Exception: "<<e.what()<<")"<<endl;
       return e.what() + string("\n");
     }
     catch(PDNSException& ae)
     {
-      L<<Logger::Error<<"reloading ACLs failed (PDNSException: "<<ae.reason<<")"<<endl;
+      L<<Logger::Error<<"Reloading ACLs failed (PDNSException: "<<ae.reason<<")"<<endl;
       return ae.reason + string("\n");
     }
     return "ok\n";
@@ -737,7 +906,27 @@ string RecursorControlParser::getAnswer(const string& question, RecursorControlP
 
 
   if(cmd=="top-remotes")
-    return doTopRemotes();
+    return doGenericTopRemotes(pleaseGetRemotes);
+
+  if(cmd=="top-queries")
+    return doGenericTopQueries(pleaseGetQueryRing);
+
+  if(cmd=="top-pub-queries")
+    return doGenericTopQueries(pleaseGetQueryRing, getRegisteredName);
+
+  if(cmd=="top-servfail-queries")
+    return doGenericTopQueries(pleaseGetServfailQueryRing);
+
+  if(cmd=="top-pub-servfail-queries")
+    return doGenericTopQueries(pleaseGetServfailQueryRing, getRegisteredName);
+
+
+  if(cmd=="top-servfail-remotes")
+    return doGenericTopRemotes(pleaseGetServfailRemotes);
+
+  if(cmd=="top-largeanswer-remotes")
+    return doGenericTopRemotes(pleaseGetLargeAnswerRemotes);
+
 
   if(cmd=="current-queries")
     return doCurrentQueries();

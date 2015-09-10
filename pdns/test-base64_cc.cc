@@ -1,5 +1,8 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_NO_MAIN
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <boost/test/unit_test.hpp>
 #include <boost/assign/std/map.hpp>
 #include <boost/foreach.hpp>
@@ -26,7 +29,9 @@ BOOST_AUTO_TEST_CASE(test_Base64_Roundtrip) {
 BOOST_AUTO_TEST_CASE(test_Base64_Encode) {
   typedef std::map<std::string, std::string> cases_t;
   cases_t cases;
-  assign::insert(cases)("z","eg==")
+  assign::insert(cases)
+    ("", "")
+    ("z","eg==")
     ("x4","eDQ=")
     ("J07","SjA3")
     ("kl8F","a2w4Rg==")
@@ -62,7 +67,8 @@ BOOST_AUTO_TEST_CASE(test_Base64_Encode) {
   BOOST_FOREACH(const cases_t::value_type& val, cases) {
     std::string encoded = Base64Encode(val.first), decoded;
     BOOST_CHECK_EQUAL(encoded, val.second);
-    B64Decode(encoded, decoded);
+    decoded.clear();
+    B64Decode(val.second, decoded);
     BOOST_CHECK_EQUAL(decoded, val.first);
   }
 }

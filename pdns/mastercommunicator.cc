@@ -19,6 +19,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "packetcache.hh"
 #include "utility.hh"
 #include <errno.h>
@@ -40,7 +43,7 @@
 #include "namespaces.hh"
 
 
-void CommunicatorClass::queueNotifyDomain(const string &domain, DNSBackend *B)
+void CommunicatorClass::queueNotifyDomain(const DNSName &domain, UeberBackend *B)
 {
   bool hasQueuedItem=false;
   set<string> nsset, ips;
@@ -60,7 +63,7 @@ void CommunicatorClass::queueNotifyDomain(const string &domain, DNSBackend *B)
         const ComboAddress caIp(*k, 53);
         if(!d_preventSelfNotification || !AddressIsUs(caIp)) {
           if(!d_onlyNotify.match(&caIp))
-            L<<Logger::Info<<"Skiped notification of domain '"<<domain<<"' to "<<*j<<" because it does not match only-notify."<<endl;
+            L<<Logger::Info<<"Skipped notification of domain '"<<domain<<"' to "<<*j<<" because it does not match only-notify."<<endl;
           else
             ips.insert(caIp.toStringWithPort());
         }
@@ -96,7 +99,7 @@ void CommunicatorClass::queueNotifyDomain(const string &domain, DNSBackend *B)
 }
 
 
-bool CommunicatorClass::notifyDomain(const string &domain)
+bool CommunicatorClass::notifyDomain(const DNSName &domain)
 {
   DomainInfo di;
   UeberBackend B;
@@ -115,7 +118,7 @@ void NotificationQueue::dump()
 {
   cerr<<"Waiting for notification responses: "<<endl;
   BOOST_FOREACH(NotificationRequest& nr, d_nqueue) {
-    cerr<<nr.domain<<", "<<nr.ip<<endl;
+    cerr<<nr.domain.toString()<<", "<<nr.ip<<endl;
   }
 }
 
@@ -124,7 +127,7 @@ void CommunicatorClass::masterUpdateCheck(PacketHandler *P)
   if(!::arg().mustDo("master"))
     return; 
 
-  UeberBackend *B=dynamic_cast<UeberBackend *>(P->getBackend());
+  UeberBackend *B=P->getBackend();
   vector<DomainInfo> cmdomains;
   B->getUpdatedMasters(&cmdomains);
   
@@ -145,7 +148,7 @@ void CommunicatorClass::masterUpdateCheck(PacketHandler *P)
   
   for(vector<DomainInfo>::const_iterator i=cmdomains.begin();i!=cmdomains.end();++i) {
     extern PacketCache PC;
-    PC.purge(i->zone); // fixes cvstrac ticket #30
+    PC.purge(i->zone.toString()); // fixes cvstrac ticket #30
     queueNotifyDomain(i->zone,P->getBackend());
     i->backend->setNotified(i->id,i->serial); 
   }
@@ -177,7 +180,7 @@ time_t CommunicatorClass::doNotifications()
       L<<Logger::Warning<<"Received unsuccessful notification report for '"<<p.qdomain<<"' from "<<from.toStringWithPort()<<", error: "<<RCode::to_s(p.d.rcode)<<endl;      
 
     if(d_nq.removeIf(from.toStringWithPort(), p.d.id, p.qdomain))
-      L<<Logger::Warning<<"Removed from notification list: '"<<p.qdomain<<"' to "<<from.toStringWithPort()<< (p.d.rcode ? RCode::to_s(p.d.rcode) : " (was acknowledged)")<<endl;      
+      L<<Logger::Warning<<"Removed from notification list: '"<<p.qdomain<<"' to "<<from.toStringWithPort()<<" "<< (p.d.rcode ? RCode::to_s(p.d.rcode) : "(was acknowledged)")<<endl;      
     else {
       L<<Logger::Warning<<"Received spurious notify answer for '"<<p.qdomain<<"' from "<< from.toStringWithPort()<<endl;
       //d_nq.dump();
@@ -185,7 +188,8 @@ time_t CommunicatorClass::doNotifications()
   }
 
   // send out possible new notifications
-  string domain, ip;
+  DNSName domain;
+  string ip;
   uint16_t id;
 
   bool purged;
@@ -203,7 +207,7 @@ time_t CommunicatorClass::doNotifications()
         drillHole(domain, ip);
       }
       catch(ResolverException &re) {
-        L<<Logger::Error<<"Error trying to resolve '"+ip+"' for notifying '"+domain+"' to server: "+re.reason<<endl;
+        L<<Logger::Error<<"Error trying to resolve '"+ip+"' for notifying '"+domain.toString()+"' to server: "+re.reason<<endl;
       }
     }
     else
@@ -213,7 +217,7 @@ time_t CommunicatorClass::doNotifications()
   return d_nq.earliest();
 }
 
-void CommunicatorClass::sendNotification(int sock, const string& domain, const ComboAddress& remote, uint16_t id)
+void CommunicatorClass::sendNotification(int sock, const DNSName& domain, const ComboAddress& remote, uint16_t id)
 {
   vector<uint8_t> packet;
   DNSPacketWriter pw(packet, domain, QType::SOA, 1, Opcode::Notify);
@@ -225,13 +229,13 @@ void CommunicatorClass::sendNotification(int sock, const string& domain, const C
   }
 }
 
-void CommunicatorClass::drillHole(const string &domain, const string &ip)
+void CommunicatorClass::drillHole(const DNSName &domain, const string &ip)
 {
   Lock l(&d_holelock);
   d_holes[make_pair(domain,ip)]=time(0);
 }
 
-bool CommunicatorClass::justNotified(const string &domain, const string &ip)
+bool CommunicatorClass::justNotified(const DNSName &domain, const string &ip)
 {
   Lock l(&d_holelock);
   if(d_holes.find(make_pair(domain,ip))==d_holes.end()) // no hole
@@ -253,7 +257,7 @@ void CommunicatorClass::makeNotifySockets()
     d_nsock6 = -1;
 }
 
-void CommunicatorClass::notify(const string &domain, const string &ip)
+void CommunicatorClass::notify(const DNSName &domain, const string &ip)
 {
   d_nq.add(domain, ip);
   d_any_sem.post();

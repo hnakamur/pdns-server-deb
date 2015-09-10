@@ -19,6 +19,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "packetcache.hh"
 
 #include <cstdio>
@@ -43,8 +46,10 @@
 #include <fcntl.h>
 #include <fstream>
 #include <boost/algorithm/string.hpp>
+#ifdef HAVE_LIBSODIUM
+#include <sodium.h>
+#endif
 
-#include "config.h"
 #include "dns.hh"
 #include "dnsbackend.hh"
 #include "ueberbackend.hh"
@@ -130,7 +135,7 @@ static void writePid(void)
   if(of)
     of<<getpid()<<endl;
   else
-    L<<Logger::Error<<"Requested to write pid for "<<getpid()<<" to "<<fname<<" failed: "<<strerror(errno)<<endl;
+    L<<Logger::Error<<"Writing pid for "<<getpid()<<" to "<<fname<<" failed: "<<strerror(errno)<<endl;
 }
 
 int g_fd1[2], g_fd2[2];
@@ -308,8 +313,7 @@ static int guardian(int argc, char **argv)
           exit(1);
         }
         setStatus("Child died with code "+itoa(ret));
-        L<<Logger::Error<<"Our pdns instance exited with code "<<ret<<endl;
-        L<<Logger::Error<<"Respawning"<<endl;
+        L<<Logger::Error<<"Our pdns instance exited with code "<<ret<<", respawning"<<endl;
 
         sleep(1);
         continue;
@@ -366,7 +370,7 @@ static void loadModules()
         res=UeberBackend::loadmodule(::arg()["module-dir"]+"/"+module);
       
       if(res==false) {
-        L<<Logger::Error<<"receiver unable to load module "<<module<<endl;
+        L<<Logger::Error<<"Receiver unable to load module "<<module<<endl;
         exit(1);
       }
     }
@@ -481,6 +485,13 @@ int main(int argc, char **argv)
 #endif
 
     seedRandom(::arg()["entropy-source"]);
+
+#ifdef HAVE_LIBSODIUM
+      if (sodium_init() == -1) {
+        cerr<<"Unable to initialize sodium crypto library"<<endl;
+        exit(99);
+      }
+#endif
     
     loadModules();
     BackendMakers().launch(::arg()["launch"]); // vrooooom!
@@ -502,10 +513,10 @@ int main(int argc, char **argv)
     }
 
     if(::arg().mustDo("list-modules")) {
-      vector<string>modules=BackendMakers().getModules();
+      auto modules = BackendMakers().getModules();
       cout<<"Modules available:"<<endl;
-      for(vector<string>::const_iterator i=modules.begin();i!=modules.end();++i)
-        cout<<*i<<endl;
+      for(const auto& m : modules)
+        cout<< m <<endl;
 
       _exit(99);
     }
@@ -554,8 +565,10 @@ int main(int argc, char **argv)
     DynListener::registerFunc("REMOTES", &DLRemotesHandler, "get top remotes");
     DynListener::registerFunc("SET",&DLSettingsHandler, "set config variables", "<var> <value>");
     DynListener::registerFunc("RETRIEVE",&DLNotifyRetrieveHandler, "retrieve slave domain", "<domain>");
-    DynListener::registerFunc("CURRENT-CONFIG",&DLCurrentConfigHandler, "Retrieve the current configuration");
+    DynListener::registerFunc("CURRENT-CONFIG",&DLCurrentConfigHandler, "retrieve the current configuration");
     DynListener::registerFunc("LIST-ZONES",&DLListZones, "show list of zones", "[master|slave|native]");
+    DynListener::registerFunc("POLICY",&DLPolicy, "interact with policy engine", "[policy command]");
+    DynListener::registerFunc("TOKEN-LOGIN", &DLTokenLogin, "Login to a PKCS#11 token", "<module> <slot> <pin>");
 
     if(!::arg()["tcp-control-address"].empty()) {
       DynListener* dlTCP=new DynListener(ComboAddress(::arg()["tcp-control-address"], ::arg().asNum("tcp-control-port")));

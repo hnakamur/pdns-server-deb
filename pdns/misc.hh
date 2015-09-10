@@ -19,13 +19,13 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#ifndef MISC_HH
-#define MISC_HH
+#pragma once
 #include <errno.h>
 #include <inttypes.h>
 #include <cstring>
 #include <cstdio>
 #include <regex.h>
+#include <limits.h>
 #include <boost/algorithm/string.hpp>
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
@@ -33,28 +33,7 @@
 #include <boost/multi_index/key_extractors.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
 using namespace ::boost::multi_index;
-#if 0
-#include <iostream>
-using std::cout;
-using std::endl;
 
-struct TSCTimer
-{
-  TSCTimer()
-  {
-    RDTSC(d_tsc1);
-  }
-  ~TSCTimer()
-  {
-    uint64_t tsc2;
-    RDTSC(tsc2);
-    cout<<"Timer: "<< (tsc2 - d_tsc1)/3000.0 << endl;
-  }
-  uint64_t d_tsc1;
-};
-#endif
-
-#include "utility.hh"
 #include "dns.hh"
 #include <sys/time.h>
 #include <sys/types.h>
@@ -68,10 +47,15 @@ struct TSCTimer
 #include <vector>
 
 #include "namespaces.hh"
+#include "dnsname.hh"
+
+typedef enum { TSIG_MD5, TSIG_SHA1, TSIG_SHA224, TSIG_SHA256, TSIG_SHA384, TSIG_SHA512, TSIG_GSS } TSIGHashEnum;
+
 bool chopOff(string &domain);
 bool chopOffDotted(string &domain);
 
 bool endsOn(const string &domain, const string &suffix);
+bool dottedEndsOn(const DNSName &domain, const DNSName &suffix); // REMOVE ME
 bool dottedEndsOn(const string &domain, const string &suffix);
 string nowTime();
 const string unquotify(const string &item);
@@ -87,6 +71,10 @@ uint16_t getShort(const unsigned char *p);
 uint16_t getShort(const char *p);
 uint32_t getLong(const unsigned char *p);
 uint32_t getLong(const char *p);
+uint32_t pdns_strtoui(const char *nptr, char **endptr, int base);
+bool getTSIGHashEnum(const DNSName& algoName, TSIGHashEnum& algoEnum);
+DNSName getTSIGAlgoName(TSIGHashEnum& algoEnum);
+
 int logFacilityToLOG(unsigned int facility);
 
 struct ServiceTuple
@@ -103,23 +91,23 @@ stringtok (Container &container, string const &in,
 {
   const string::size_type len = in.length();
   string::size_type i = 0;
-  
+
   while (i<len) {
     // eat leading whitespace
     i = in.find_first_not_of (delimiters, i);
     if (i == string::npos)
       return;   // nothing left but white space
-    
+
     // find the end of the token
     string::size_type j = in.find_first_of (delimiters, i);
-    
+
     // push token
     if (j == string::npos) {
       container.push_back (in.substr(i));
       return;
     } else
       container.push_back (in.substr(i, j-i));
-    
+
     // set up for next loop
     i = j + 1;
   }
@@ -138,23 +126,23 @@ vstringtok (Container &container, string const &in,
 {
   const string::size_type len = in.length();
   string::size_type i = 0;
-  
+
   while (i<len) {
     // eat leading whitespace
     i = in.find_first_not_of (delimiters, i);
     if (i == string::npos)
       return;   // nothing left but white space
-    
+
     // find the end of the token
     string::size_type j = in.find_first_of (delimiters, i);
-    
+
     // push token
     if (j == string::npos) {
       container.push_back (make_pair(i, len));
       return;
     } else
       container.push_back (make_pair(i, j));
-    
+
     // set up for next loop
     i = j + 1;
   }
@@ -179,9 +167,29 @@ int makeGidNumeric(const string &group);
 int makeUidNumeric(const string &user);
 void cleanSlashes(string &str);
 
-/** The DTime class can be used for timing statistics with microsecond resolution. 
+#if defined(_POSIX_THREAD_CPUTIME) && defined(CLOCK_THREAD_CPUTIME_ID)
+/** CPUTime measurements */
+class CPUTime
+{
+public:
+  void start()
+  {
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &d_start);
+  }
+  uint64_t ndiff()
+  {
+    struct timespec now;
+    clock_gettime(CLOCK_THREAD_CPUTIME_ID, &now);
+    return 1000000000ULL*(now.tv_sec - d_start.tv_sec) + (now.tv_nsec - d_start.tv_nsec);
+  }
+private:
+  struct timespec d_start;
+};
+#endif
+
+/** The DTime class can be used for timing statistics with microsecond resolution.
 On 32 bits systems this means that 2147 seconds is the longest time that can be measured. */
-class DTime 
+class DTime
 {
 public:
   DTime(); //!< Does not set the timer for you! Saves lots of gettimeofday() calls
@@ -204,13 +212,13 @@ private:
 
 inline void DTime::set()
 {
-  Utility::gettimeofday(&d_set,0);
+  gettimeofday(&d_set,0);
 }
 
 inline int DTime::udiff()
 {
   int res=udiffNoReset();
-  Utility::gettimeofday(&d_set,0);
+  gettimeofday(&d_set,0);
   return res;
 }
 
@@ -218,7 +226,7 @@ inline int DTime::udiffNoReset()
 {
   struct timeval now;
 
-  Utility::gettimeofday(&now,0);
+  gettimeofday(&now,0);
   int ret=1000000*(now.tv_sec-d_set.tv_sec)+(now.tv_usec-d_set.tv_usec);
   return ret;
 }
@@ -258,11 +266,11 @@ inline const string toLowerCanonic(const string &upper)
       c = dns_tolower(upper[i]);
       if(c != upper[i])
         reply[i] = c;
-    }   
+    }
     if(upper[i-1]=='.')
       reply.resize(i-1);
   }
-      
+
   return reply;
 }
 
@@ -281,8 +289,8 @@ inline string toUpper( const string& s )
 inline double getTime()
 {
   struct timeval now;
-  Utility::gettimeofday(&now,0);
-  
+  gettimeofday(&now,0);
+
   return now.tv_sec+now.tv_usec/1000000.0;
 }
 
@@ -303,7 +311,7 @@ inline float makeFloat(const struct timeval& tv)
   return tv.tv_sec + tv.tv_usec/1000000.0f;
 }
 
-inline bool operator<(const struct timeval& lhs, const struct timeval& rhs) 
+inline bool operator<(const struct timeval& lhs, const struct timeval& rhs)
 {
   return make_pair(lhs.tv_sec, lhs.tv_usec) < make_pair(rhs.tv_sec, rhs.tv_usec);
 }
@@ -339,6 +347,13 @@ inline bool pdns_iequals(const std::string& a, const std::string& b)
     bPtr++;
   }
   return true;
+}
+
+// FIXME400 remove this, it's just here to move faster while we DNSName the things
+inline bool pdns_iequals(const DNSName& a, const DNSName& b) __attribute__((pure));
+inline bool pdns_iequals(const DNSName& a, const DNSName& b)
+{
+  return a==b;
 }
 
 inline bool pdns_iequals_ch(const char a, const char b) __attribute__((pure));
@@ -393,8 +408,8 @@ public:
 
 private:
     mutable native_t value_;
-    
-    // the below is necessary because __sync_fetch_and_add is not universally available on i386.. I 3> RHEL5. 
+
+    // the below is necessary because __sync_fetch_and_add is not universally available on i386.. I 3> RHEL5.
 #if defined( __GNUC__ ) && ( defined( __i386__ ) || defined( __x86_64__ ) )
     static native_t atomic_exchange_and_add( native_t * pw, native_t dv )
     {
@@ -415,7 +430,7 @@ private:
 
         return r;
     }
-    #else 
+    #else
     static native_t atomic_exchange_and_add( native_t * pw, native_t dv )
     {
       return __sync_fetch_and_add(pw, dv);
@@ -423,8 +438,8 @@ private:
     #endif
 };
 
-
-struct CIStringCompare: public std::binary_function<string, string, bool>  
+// FIXME400 this should probably go?
+struct CIStringCompare: public std::binary_function<string, string, bool>
 {
   bool operator()(const string& a, const string& b) const
   {
@@ -448,7 +463,7 @@ struct CIStringComparePOSIX
    }
 };
 
-struct CIStringPairCompare: public std::binary_function<pair<string, uint16_t>, pair<string,uint16_t>, bool>  
+struct CIStringPairCompare: public std::binary_function<pair<string, uint16_t>, pair<string,uint16_t>, bool>
 {
   bool operator()(const pair<string, uint16_t>& a, const pair<string, uint16_t>& b) const
   {
@@ -474,28 +489,32 @@ inline size_t pdns_ci_find(const string& haystack, const string& needle)
 
 pair<string, string> splitField(const string& inp, char sepa);
 
-inline bool isCanonical(const string& dom)
+inline bool isCanonical(const string& qname)
 {
-  if(dom.empty())
+  if(qname.empty())
     return false;
-  return dom[dom.size()-1]=='.';
+  return qname[qname.size()-1]=='.';
 }
 
-inline string toCanonic(const string& zone, const string& domain)
+inline bool isCanonical(const DNSName& qname)
 {
-  if(domain.length()==1 && domain[0]=='@')
-    return zone;
+  if(qname.empty())
+    return false;
+  return true;
+}
 
-  if(isCanonical(domain))
-    return domain;
-  string ret=domain;
-  ret.append(1,'.');
-  if(!zone.empty() && zone[0]!='.')
-    ret.append(zone);
-  return ret;
+
+inline DNSName toCanonic(const DNSName& zone, const string& qname)
+{
+  if(qname.size()==1 && qname[0]=='@')
+    return zone.toString();
+  if(isCanonical(qname))
+    return DNSName(qname).toString();
+  return DNSName(qname) += zone;
 }
 
 string stripDot(const string& dom);
+
 void seedRandom(const string& source);
 string makeRelative(const std::string& fqdn, const std::string& zone);
 string labelReverse(const std::string& qname);
@@ -520,7 +539,7 @@ class Regex
 public:
   /** constructor that accepts the expression to regex */
   Regex(const string &expr);
-  
+
   ~Regex()
   {
     regfree(&d_preg);
@@ -530,16 +549,81 @@ public:
   {
     return regexec(&d_preg,line.c_str(),0,0,0)==0;
   }
-  
+  bool match(const DNSName& name)
+  {
+    return match(name.toStringNoDot());
+  }
+
 private:
   regex_t d_preg;
 };
 
+class SimpleMatch
+{
+public:
+  SimpleMatch(const string &mask, bool caseFold = false)
+  {
+    this->d_mask = mask;
+    this->d_fold = caseFold;
+  }
+ 
+  bool match(string::const_iterator mi, string::const_iterator mend, string::const_iterator vi, string::const_iterator vend)
+  {
+    for(;;mi++) {
+      if (mi == mend) {
+        return vi == vend;
+      } else if (*mi == '?') {
+        if (vi == vend) return false;
+        vi++;
+      } else if (*mi == '*') {
+        while(*mi == '*') mi++;
+        if (mi == d_mask.end()) return true;
+        while(vi != vend) {
+          if (match(mi,mend,vi,vend)) return true;
+          vi++;
+        }
+        return false;
+      } else {
+        if ((mi == mend && vi != vend)||
+            (mi != mend && vi == vend)) return false;
+        if (d_fold) {
+          if (dns_tolower(*mi) != dns_tolower(*vi)) return false;
+        } else {
+          if (*mi != *vi) return false;
+        }
+        vi++;
+      }
+    }
+  }
+
+  bool match(const string& value) {
+    return match(d_mask.begin(), d_mask.end(), value.begin(), value.end());
+  }
+
+  bool match(const DNSName& name) {
+    return match(name.toStringNoDot());
+  }
+
+private:
+  string d_mask;
+  bool d_fold;
+};
+
 union ComboAddress;
-void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, ComboAddress* source);
+void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* source);
 
 unsigned int getFilenumLimit(bool hardOrSoft=0);
 void setFilenumLimit(unsigned int lim);
 bool readFileIfThere(const char* fname, std::string* line);
 uint32_t burtle(const unsigned char* k, uint32_t lengh, uint32_t init);
-#endif
+uint32_t burtleCI(const unsigned char* k, uint32_t lengh, uint32_t init);
+bool setSocketTimestamps(int fd);
+
+//! Sets the socket into blocking mode.
+bool setBlocking( int sock );
+
+//! Sets the socket into non-blocking mode.
+bool setNonBlocking( int sock );
+int closesocket(int fd);
+bool setCloseOnExec(int sock);
+uint64_t udpErrorStats(const std::string& str);

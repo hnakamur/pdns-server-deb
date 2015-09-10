@@ -1,6 +1,9 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "remotebackend.hh"
 #include <sys/socket.h>
-#include <pdns/lock.hh> 
+#include "pdns/lock.hh" 
 #include <unistd.h>
 #include <fcntl.h>
 #ifndef UNIX_PATH_MAX 

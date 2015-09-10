@@ -1,6 +1,9 @@
 #define BOOST_TEST_DYN_LINK
 #define BOOST_TEST_NO_MAIN
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <boost/test/unit_test.hpp>
 #include <boost/test/floating_point_comparison.hpp>
 #include "iputils.hh"
@@ -11,6 +14,11 @@
 #include <utility>
 extern StatBag S;
 
+
+std::ostream & operator<<(std::ostream &os, const DNSName& d)
+{
+    return os <<"DNSName("<<d.toString()<<")";
+}
 
 BOOST_AUTO_TEST_SUITE(packetcache_cc)
 

@@ -22,7 +22,7 @@ public:
   bool getResponsePacket(const std::string& queryPacket, time_t now, std::string* responsePacket, uint32_t* age);
   void insertResponsePacket(const std::string& responsePacket, time_t now, uint32_t ttd);
   void doPruneTo(unsigned int maxSize=250000);
-  int doWipePacketCache(const string& name, uint16_t qtype=0xffff);
+  int doWipePacketCache(const DNSName& name, uint16_t qtype=0xffff);
   
   void prune();
   uint64_t d_hits, d_misses;
@@ -62,8 +62,8 @@ inline bool RecursorPacketCache::Entry::operator<(const struct RecursorPacketCac
   const struct dnsheader* 
     dh=(const struct dnsheader*) d_packet.c_str(), 
     *rhsdh=(const struct dnsheader*)rhs.d_packet.c_str();
-  if(make_tuple(dh->opcode, dh->rd, dh->qdcount) < 
-     make_tuple(rhsdh->opcode, rhsdh->rd, rhsdh->qdcount))
+  if(boost::make_tuple(dh->opcode, dh->rd, dh->qdcount) < 
+     boost::make_tuple(rhsdh->opcode, rhsdh->rd, rhsdh->qdcount))
     return true;
 
   return dnspacketLessThan(d_packet, rhs.d_packet);

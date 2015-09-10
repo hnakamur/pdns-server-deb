@@ -19,6 +19,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <iostream>
 #include <cstdio>
 #include <cstring>
@@ -31,14 +34,13 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <boost/shared_ptr.hpp>
+
 
 #include <sys/stat.h>
 #include "pdnsexception.hh"
 #include "misc.hh"
 #include "dynmessenger.hh"
 #include "arguments.hh"
-#include "config.h"
 #include "statbag.hh"
 #include "misc.hh"
 #include "namespaces.hh"

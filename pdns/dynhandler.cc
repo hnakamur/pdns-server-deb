@@ -19,6 +19,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "packetcache.hh"
 #include "utility.hh"
 #include "dynhandler.hh"
@@ -33,6 +36,7 @@
 #include "nameserver.hh"
 #include "responsestats.hh"
 #include "ueberbackend.hh"
+#include "common_startup.hh"
 
 extern ResponseStats g_rs;
 
@@ -320,6 +324,7 @@ string DLReloadHandler(const vector<string>&parts, Utility::pid_t ppid)
   return "Ok";
 }
 
+
 string DLListZones(const vector<string>&parts, Utility::pid_t ppid)
 {
   UeberBackend B;
@@ -341,7 +346,7 @@ string DLListZones(const vector<string>&parts, Utility::pid_t ppid)
 
   for (vector<DomainInfo>::const_iterator di=domains.begin(); di != domains.end(); di++) {
     if (di->kind == kindFilter || kindFilter == -1) {
-      ret<<di->zone<<endl;
+      ret<<di->zone.toString()<<endl;
       count++;
     }
   }
@@ -351,4 +356,35 @@ string DLListZones(const vector<string>&parts, Utility::pid_t ppid)
     ret<<"All zonecount:"<<count;
 
   return ret.str();
+}
+
+string DLPolicy(const vector<string>&parts, Utility::pid_t ppid)
+{
+  if(LPE) {
+    return LPE->policycmd(parts);
+  }
+  else {
+    return "no policy script loaded";
+  }
+}
+
+#ifdef HAVE_P11KIT1
+extern bool PKCS11ModuleSlotLogin(const std::string& module, int slot, const std::string& pin);
+#endif
+
+string DLTokenLogin(const vector<string>&parts, Utility::pid_t ppid)
+{
+#ifndef HAVE_P11KIT1
+  return "PKCS#11 support not compiled in";
+#else
+  if (parts.size() != 4) {
+    return "invalid number of parameters, needs 4, got " + boost::lexical_cast<string>(parts.size());
+  }
+
+  if (PKCS11ModuleSlotLogin(parts[1], boost::lexical_cast<int>(parts[2]), parts[3])) {
+    return "logged in";
+  } else {
+    return "could not log in, check logs";
+  }
+#endif
 }

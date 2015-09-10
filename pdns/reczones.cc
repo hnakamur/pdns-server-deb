@@ -20,6 +20,9 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "syncres.hh"
 #include "arguments.hh"
 #include "zoneparser-tng.hh"
@@ -42,7 +45,7 @@ void primeHints(void)
                              "192.112.36.4", "128.63.2.53",
                              "192.36.148.17","192.58.128.30", "193.0.14.129", "199.7.83.42", "202.12.27.33"};
     static const char *ip6s[]={
-      "2001:503:ba3e::2:30", NULL, NULL, "2001:500:2d::d", NULL,
+      "2001:503:ba3e::2:30", "2001:500:84::b", "2001:500:2::c", "2001:500:2d::d", NULL,
       "2001:500:2f::f", NULL, "2001:500:1::803f:235", "2001:7fe::53",
       "2001:503:c27::2:30", "2001:7fd::1", "2001:500:3::42", "2001:dc3::35"
     };
@@ -96,13 +99,13 @@ void primeHints(void)
   t_RC->replace(time(0),".", QType(QType::NS), nsset, true); // and stuff in the cache (auth)
 }
 
-static void makeNameToIPZone(SyncRes::domainmap_t* newMap, const string& hostname, const string& ip)
+static void makeNameToIPZone(SyncRes::domainmap_t* newMap, const DNSName& hostname, const string& ip)
 {
   SyncRes::AuthDomain ad;
   ad.d_rdForward=false;
 
   DNSResourceRecord rr;
-  rr.qname=toCanonic("", hostname);
+  rr.qname=hostname;
   rr.d_place=DNSResourceRecord::ANSWER;
   rr.ttl=86400;
   rr.qtype=QType::SOA;
@@ -140,10 +143,10 @@ static void makeIPToNamesZone(SyncRes::domainmap_t* newMap, const vector<string>
 
   DNSResourceRecord rr;
   for(int n=ipparts.size()-1; n>=0 ; --n) {
-    rr.qname.append(ipparts[n]);
-    rr.qname.append(1,'.');
+    rr.qname.appendRawLabel(ipparts[n]);
   }
-  rr.qname.append("in-addr.arpa.");
+  rr.qname.appendRawLabel("in-addr");
+  rr.qname.appendRawLabel("arpa");
 
   rr.d_place=DNSResourceRecord::ANSWER;
   rr.ttl=86400;
@@ -160,7 +163,7 @@ static void makeIPToNamesZone(SyncRes::domainmap_t* newMap, const vector<string>
 
   if(ipparts.size()==4)  // otherwise this is a partial zone
     for(unsigned int n=1; n < parts.size(); ++n) {
-      rr.content=toCanonic("", parts[n]);
+      rr.content=DNSName(parts[n]).toString();
       ad.d_records.insert(rr);
     }
 
@@ -297,7 +300,7 @@ string reloadAuthAndForwards()
     return "ok\n";
   }
   catch(std::exception& e) {
-    L<<Logger::Error<<"Had error reloading zones, keeping original data: "<<e.what()<<endl;
+    L<<Logger::Error<<"Encountered error reloading zones, keeping original data: "<<e.what()<<endl;
   }
   catch(PDNSException& ae) {
     L<<Logger::Error<<"Encountered error reloading zones, keeping original data: "<<ae.reason<<endl;
@@ -326,11 +329,11 @@ SyncRes::domainmap_t* parseAuthAndForwards()
       pair<string,string> headers=splitField(*iter, '=');
       trim(headers.first);
       trim(headers.second);
-      headers.first=toCanonic("", headers.first);
+      // headers.first=toCanonic("", headers.first);
       if(n==0) {
         ad.d_rdForward = false;
         L<<Logger::Error<<"Parsing authoritative data for zone '"<<headers.first<<"' from file '"<<headers.second<<"'"<<endl;
-        ZoneParserTNG zpt(headers.second, headers.first);
+        ZoneParserTNG zpt(headers.second, DNSName(headers.first));
         DNSResourceRecord rr;
         while(zpt.get(rr)) {
           try {
@@ -339,11 +342,11 @@ SyncRes::domainmap_t* parseAuthAndForwards()
           }
           catch(std::exception &e) {
             delete newMap;
-            throw PDNSException("Error parsing record '"+rr.qname+"' of type "+rr.qtype.getName()+" in zone '"+headers.first+"' from file '"+headers.second+"': "+e.what());
+            throw PDNSException("Error parsing record '"+rr.qname.toString()+"' of type "+rr.qtype.getName()+" in zone '"+headers.first+"' from file '"+headers.second+"': "+e.what());
           }
           catch(...) {
             delete newMap;
-            throw PDNSException("Error parsing record '"+rr.qname+"' of type "+rr.qtype.getName()+" in zone '"+headers.first+"' from file '"+headers.second+"'");
+            throw PDNSException("Error parsing record '"+rr.qname.toString()+"' of type "+rr.qtype.getName()+" in zone '"+headers.first+"' from file '"+headers.second+"'");
           }
 
           ad.d_records.insert(rr);
@@ -410,7 +413,7 @@ SyncRes::domainmap_t* parseAuthAndForwards()
         throw PDNSException("Conversion error parsing line "+lexical_cast<string>(linenum)+" of " +::arg()["forward-zones-file"]);
       }
 
-      (*newMap)[toCanonic("", domain)]=ad;
+      (*newMap)[domain]=ad;
     }
     L<<Logger::Warning<<"Done parsing " << newMap->size() - before<<" forwarding instructions from file '"<<::arg()["forward-zones-file"]<<"'"<<endl;
   }
@@ -442,7 +445,7 @@ SyncRes::domainmap_t* parseAuthAndForwards()
           if(searchSuffix.empty() || parts[n].find('.') != string::npos)
               makeNameToIPZone(newMap, parts[n], parts[0]);
           else {
-              string canonic=toCanonic(searchSuffix, parts[n]);
+              DNSName canonic=toCanonic(DNSName(searchSuffix), parts[n]);
               if(canonic != parts[n]) {
               makeNameToIPZone(newMap, canonic, parts[0]);
             }

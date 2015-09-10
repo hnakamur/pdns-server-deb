@@ -1,0 +1,20 @@
+.TH "NSEC3DIG" "1" "April 2015" "" ""
+.SH NAME
+.PP
+\f[B]nsec3dig\f[] \- Show and validate NSEC3 proofs
+.SH SYNOPSIS
+.PP
+\f[B]nsec3dig\f[] \f[I]IPADDRESS\f[] \f[I]PORT\f[] \f[I]QNAME\f[]
+\f[I]QTYPE\f[] [recurse]
+.SH DESCRIPTION
+.PP
+\f[B]nsec3dig\f[] sends a query for \f[I]QNAME\f[] and \f[I]QTYPE\f[] to
+the nameserver at \f[I]IPADDRESS\f[] on port \f[I]PORT\f[] and prints
+whether and why the NSEC3 proofs are correct.
+Using the \[aq]recurse\[aq] option sets the Recursion Desired (RD) bit
+in the query.
+.SH EXAMPLE
+.PP
+\f[C]nsec3dig\ 8.8.8.8\ 53\ doesntexist.isoc.nl\ TXT\ recurse\f[]
+.SH AUTHORS
+PowerDNS.com BV.
