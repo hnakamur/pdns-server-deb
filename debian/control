@@ -23,6 +23,7 @@ Build-Depends: autoconf,
                libcdb-dev,
                libcurl4-openssl-dev,
                libgdbm-dev,
+               libgeoip-dev,
                libgmp-dev,
                libldap2-dev,
                liblmdb-dev,
@@ -33,6 +34,7 @@ Build-Depends: autoconf,
                libsqlite3-dev,
                libssl-dev,
                libtool,
+               libyaml-cpp-dev (>= 0.5),
                libzmq-dev,
                pkg-config,
                po-debconf,
@@ -101,19 +103,20 @@ Description: LDAP backend for PowerDNS
  .
  This package contains an LDAP backend for the PowerDNS nameserver.
 
-Package: pdns-backend-geo
+Package: pdns-backend-geoip
 Architecture: any
 Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
 Provides: pdns-backend
-Description: geo backend for PowerDNS
+Description: geoip backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
  of different backends ranging from simple zonefiles to relational
  databases and load balancing/failover algorithms.
  PowerDNS tries to emphasize speed and security.
  .
- This package contains a geobackend for the PowerDNS nameserver. This backend
- balances the load throughout the world so that people access the
- geographically nearest available server.
+ This package contains a geoip-backend for the PowerDNS nameserver. This
+ backend balances the load throughout the world so that people access the
+ geographically nearest available server based on a zonefile written in
+ YAML.
 
 Package: pdns-backend-mysql
 Architecture: any

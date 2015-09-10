@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# postinst script for pdns-backend-geo
+# postinst script for pdns-backend-geoip
 
 set -e
 
