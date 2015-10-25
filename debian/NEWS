@@ -1,3 +1,11 @@
+pdns (3.4.6-2) unstable; urgency=medium
+
+  The "geo" backend has been replaced by the much newer "geoip"
+  backend. The geoip backend actually has documentation and upstream
+  has a higher confidence of keeping it working in newer versions.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Thu, 10 Sep 2015 21:51:38 +0000
+
 pdns (3.3-1~exp1) experimental; urgency=low
 
   The sqlite backend was removed upstream in PowerDNS 3.3. If you're

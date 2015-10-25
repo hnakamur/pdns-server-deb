@@ -1,3 +1,19 @@
+pdns (3.4.6-3) unstable; urgency=medium
+
+  * Remove unused Build-Dependencies
+  * pdns-tools: Correctly Break/Replace pdns-server << 3.4.6-2.
+    As some pdns-tools files were previously shipped in pdns-server.
+    Thanks to Andreas Beckmann <anbe@debian.org> (Closes: #802737)
+  * Fix upgrades with default configuration.
+    The postinst script used to do a "grep include" on pdns.conf, which
+    in older versions would work (mostly), because the default config
+    only had a single "include=" entry. Now this is no longer true,
+    so remove that. Also, changing the include directory would have
+    never worked. (Closes: #798773)
+    Thanks to Stephen Frost <sfrost@snowman.net>.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sun, 25 Oct 2015 15:22:57 +0000
+
 pdns (3.4.6-2) unstable; urgency=medium
 
   * Retroactively add CVE to 3.4.6-1 changelog
