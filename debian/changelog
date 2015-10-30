@@ -1,3 +1,14 @@
+pdns (3.4.1-4+deb8u4) jessie; urgency=medium
+
+  * Fix upgrades with default configuration.
+    The postinst script used to do a "grep include" on pdns.conf, which
+    in older versions would work (mostly), because the default config
+    only had a single "include=" entry. Now this is no longer true,
+    so remove that. Also, changing the include directory would have
+    never worked. (Closes: #798773)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Fri, 30 Oct 2015 14:34:36 +0000
+
 pdns (3.4.1-4+deb8u3) jessie-security; urgency=high
 
   * Security update: apply patches for CVE-2015-5230
