@@ -19,12 +19,8 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "dynmessenger.hh"
 #include <cstdio>
-#include "utility.hh"
 #include <cstdlib>
 #include <cstring>
 #include <cerrno>
@@ -37,7 +33,7 @@ DynMessenger::DynMessenger(const string &fname,
     int timeout_usec)
 {
   d_s=socket(AF_UNIX,SOCK_STREAM,0);
-  setCloseOnExec(d_s);
+  Utility::setCloseOnExec(d_s);
   
   if(d_s<0) {
     throw PDNSException(string("socket")+strerror(errno));
@@ -77,7 +73,7 @@ DynMessenger::DynMessenger(const ComboAddress& remote,
     int timeout_usec)
 {
   d_s=socket(AF_INET, SOCK_STREAM,0);
-  setCloseOnExec(d_s);
+  Utility::setCloseOnExec(d_s);
  
   if(d_s<0) {
     throw PDNSException(string("socket")+strerror(errno));

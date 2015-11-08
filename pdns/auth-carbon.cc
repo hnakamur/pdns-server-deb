@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "statbag.hh"
 #include "logger.hh"
 #include "iputils.hh"
@@ -42,7 +39,6 @@ try
 	char *p = strchr(tmp, '.');
 	if(p) *p=0;
 	hostname=tmp;
-	boost::replace_all(hostname, ".", "_");
       }
       BOOST_FOREACH(const string& entry, entries) {
 	str<<"pdns."<<hostname<<".auth."<<entry<<' '<<S.read(entry)<<' '<<now<<"\r\n";

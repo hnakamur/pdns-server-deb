@@ -25,6 +25,7 @@
 // $Id$
 #include <string>
 #include <vector>
+#include <utility>
 #include "namespaces.hh"
 
 /** The QType class is meant to deal easily with the different kind of resource types, like 'A', 'NS',
@@ -79,9 +80,9 @@ public:
   static int chartocode(const char *p); //!< convert a character string to a code
 // more solaris fun
 #undef DS
-  enum typeenum : uint16_t {A=1, NS=2, CNAME=5, SOA=6, MR=9, WKS=11, PTR=12, HINFO=13, MINFO=14, MX=15, TXT=16, RP=17, AFSDB=18, SIG=24, KEY=25, AAAA=28, LOC=29, SRV=33, NAPTR=35, KX=36,
+  enum typeenum {A=1, NS=2, CNAME=5, SOA=6, MR=9, PTR=12, HINFO=13, MX=15, TXT=16, RP=17, AFSDB=18, SIG=24, KEY=25, AAAA=28, LOC=29, SRV=33, NAPTR=35, KX=36,
 		 CERT=37, A6=38, DNAME=39, OPT=41, DS=43, SSHFP=44, IPSECKEY=45, RRSIG=46, NSEC=47, DNSKEY=48, DHCID=49, NSEC3=50, NSEC3PARAM=51,
-		 TLSA=52, SPF=99, EUI48=108, EUI64=109, TKEY=249, TSIG=250, IXFR=251, AXFR=252, MAILB=253, MAILA=254, ANY=255, ADDR=259, ALIAS=260, DLV=32769};
+     TLSA=52, OPENPGPKEY=61, SPF=99, EUI48=108, EUI64=109, TKEY=249, TSIG=250, IXFR=251, AXFR=252, MAILB=253, MAILA=254, ANY=255, URL=256, MBOXFW=257, CURL=258, ADDR=259, DLV=32769} types;
   typedef pair<string,uint16_t> namenum;
   static vector<namenum> names;
 
@@ -152,6 +153,7 @@ private:
       qtype_insert("NSEC3", 50);
       qtype_insert("NSEC3PARAM", 51);
       qtype_insert("TLSA", 52);
+      qtype_insert("OPENPGPKEY", 61);
       qtype_insert("SPF", 99);
       qtype_insert("EUI48", 108);
       qtype_insert("EUI64", 109);
@@ -162,8 +164,10 @@ private:
       qtype_insert("MAILB", 253);
       qtype_insert("MAILA", 254);
       qtype_insert("ANY", 255);
+      qtype_insert("URL", 256);
+      qtype_insert("MBOXFW", 257);
+      qtype_insert("CURL", 258);
       qtype_insert("ADDR", 259);
-      qtype_insert("ALIAS", 260);
       qtype_insert("DLV", 32769);
     }
   } initializer;

@@ -3,9 +3,6 @@
 // Version : $Id$ 
 //
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include <string>
 #include <map>
 #include <unistd.h>
@@ -15,13 +12,13 @@
 
 #include "pdns/namespaces.hh"
 
-#include "pdns/dns.hh"
-#include "pdns/dnsbackend.hh"
-#include "pdns/dnspacket.hh"
-#include "pdns/ueberbackend.hh"
-#include "pdns/pdnsexception.hh"
-#include "pdns/logger.hh"
-#include "pdns/arguments.hh"
+#include <pdns/dns.hh>
+#include <pdns/dnsbackend.hh>
+#include <pdns/dnspacket.hh>
+#include <pdns/ueberbackend.hh>
+#include <pdns/pdnsexception.hh>
+#include <pdns/logger.hh>
+#include <pdns/arguments.hh>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
@@ -83,7 +80,7 @@ void CoWrapper::receive(string &line)
       return;
    }
    catch(PDNSException &ae) {
-      L<<Logger::Warning<<kBackendId<<" Unable to receive data from coprocess. "<<ae.reason<<endl;
+      L<<Logger::Warning<<kBackendId<<" unable to receive data from coprocess. "<<ae.reason<<endl;
       delete d_cp;
       d_cp=0;
       throw;
@@ -98,7 +95,7 @@ PipeBackend::PipeBackend(const string &suffix)
      d_coproc=shared_ptr<CoWrapper>(new CoWrapper(getArg("command"), getArgAsNum("timeout")));
      d_regex=getArg("regex").empty() ? 0 : new Regex(getArg("regex"));
      d_regexstr=getArg("regex");
-     d_abiVersion = getArgAsNum("abi-version");
+     d_abiVersion = ::arg().asNum("pipebackend-abi-version");
    }
    catch(const ArgException &A) {
       L<<Logger::Error<<kBackendId<<" Fatal argument error: "<<A.reason<<endl;
@@ -109,13 +106,13 @@ PipeBackend::PipeBackend(const string &suffix)
    }
 }
 
-void PipeBackend::lookup(const QType& qtype,const DNSName& qname, DNSPacket *pkt_p,  int zoneId)
+void PipeBackend::lookup(const QType &qtype,const string &qname, DNSPacket *pkt_p,  int zoneId)
 {
    try {
       d_disavow=false;
-      if(d_regex && !d_regex->match(qname.toStringNoDot())) {
+      if(d_regex && !d_regex->match(qname+";"+qtype.getName())) { 
          if(::arg().mustDo("query-logging"))
-            L<<Logger::Error<<"Query for '"<<qname<<"' failed regex '"<<d_regexstr<<"'"<<endl;
+            L<<Logger::Error<<"Query for '"<<qname<<"' type '"<<qtype.getName()<<"' failed regex '"<<d_regexstr<<"'"<<endl;
          d_disavow=true; // don't pass to backend
       } else {
          ostringstream query;
@@ -129,7 +126,7 @@ void PipeBackend::lookup(const QType& qtype,const DNSName& qname, DNSPacket *pkt
          }
          // pipebackend-abi-version = 1
          // type    qname           qclass  qtype   id      remote-ip-address
-         query<<"Q\t"<<qname.toStringNoDot()<<"\tIN\t"<<qtype.getName()<<"\t"<<zoneId<<"\t"<<remoteIP;
+         query<<"Q\t"<<qname<<"\tIN\t"<<qtype.getName()<<"\t"<<zoneId<<"\t"<<remoteIP;
 
          // add the local-ip-address if pipebackend-abi-version is set to 2
          if (d_abiVersion >= 2)
@@ -150,7 +147,7 @@ void PipeBackend::lookup(const QType& qtype,const DNSName& qname, DNSPacket *pkt
    d_qname=qname;
 }
 
-bool PipeBackend::list(const DNSName& target, int inZoneId, bool include_disabled)
+bool PipeBackend::list(const string &target, int inZoneId, bool include_disabled)
 {
    try {
       d_disavow=false;
@@ -159,7 +156,7 @@ bool PipeBackend::list(const DNSName& target, int inZoneId, bool include_disable
 
 // type    qname           qclass  qtype   id      ip-address
       if (d_abiVersion >= 4)
-        query<<"AXFR\t"<<inZoneId<<"\t"<<target.toStringNoDot();
+        query<<"AXFR\t"<<inZoneId<<"\t"<<target;
       else
         query<<"AXFR\t"<<inZoneId;
 
@@ -171,33 +168,6 @@ bool PipeBackend::list(const DNSName& target, int inZoneId, bool include_disable
    }
    d_qname=itoa(inZoneId);
    return true;
-}
-
-string PipeBackend::directBackendCmd(const string &query) {
-  if (d_abiVersion < 5)
-    return "not supported on ABI version " + boost::lexical_cast<string>(d_abiVersion) + "(use ABI version 5 or later)\n";
-
-  ostringstream oss;
-
-  try {
-      ostringstream oss;
-      oss<<"CMD\t"<<query;
-      d_coproc->send(oss.str());
-   }
-   catch(PDNSException &ae) {
-      L<<Logger::Error<<kBackendId<<" Error from coprocess: "<<ae.reason<<endl;
-      throw;
-   }
-   oss.str("");
-
-   while(true) {
-     string line;
-     d_coproc->receive(line);
-     if (line == "END") break;
-     oss << line << std::endl;
-   };
-
-   return oss.str();
 }
 
 //! For the dynamic loader
@@ -235,7 +205,7 @@ bool PipeBackend::get(DNSResourceRecord &r)
       vector<string>parts;
       stringtok(parts,line,"\t");
       if(parts.empty()) {
-         L<<Logger::Error<<kBackendId<<" Coprocess returned empty line in query for "<<d_qname<<endl;
+         L<<Logger::Error<<kBackendId<<" coprocess returned emtpy line in query for "<<d_qname<<endl;
          throw PDNSException("Format error communicating with coprocess");
       }
       else if(parts[0]=="FAIL") {
@@ -250,7 +220,7 @@ bool PipeBackend::get(DNSResourceRecord &r)
       }
       else if(parts[0]=="DATA") { // yay
          if(parts.size() < 7 + extraFields) {
-            L<<Logger::Error<<kBackendId<<" Coprocess returned incomplete or empty line in data section for query for "<<d_qname<<endl;
+            L<<Logger::Error<<kBackendId<<" coprocess returned incomplete or empty line in data section for query for "<<d_qname<<endl;
             throw PDNSException("Format error communicating with coprocess in data section");
             // now what?
          }
@@ -277,11 +247,12 @@ bool PipeBackend::get(DNSResourceRecord &r)
          }
          else {
            if(parts.size()< 8 + extraFields) {
-            L<<Logger::Error<<kBackendId<<" Coprocess returned incomplete MX/SRV line in data section for query for "<<d_qname<<endl;
+            L<<Logger::Error<<kBackendId<<" coprocess returned incomplete MX/SRV line in data section for query for "<<d_qname<<endl;
             throw PDNSException("Format error communicating with coprocess in data section of MX/SRV record");
            }
            
-           r.content=parts[6+extraFields]+" "+parts[7+extraFields];
+           r.priority=atoi(parts[6+extraFields].c_str());
+           r.content=parts[7+extraFields];
          }
          break;
       }
@@ -304,8 +275,7 @@ class PipeFactory : public BackendFactory
       {
          declare(suffix,"command","Command to execute for piping questions to","");
          declare(suffix,"timeout","Number of milliseconds to wait for an answer","2000");
-         declare(suffix,"regex","Regular expression of queries to pass to coprocess","");
-         declare(suffix,"abi-version","Version of the pipe backend ABI","1");
+         declare(suffix,"regex","Regular exception of queries to pass to coprocess","");
       }
 
       DNSBackend *make(const string &suffix="")
@@ -320,11 +290,7 @@ class PipeLoader
       PipeLoader()
       {
          BackendMakers().report(new PipeFactory);
-         L << Logger::Info << kBackendId <<" This is the pipe backend version " VERSION
-#ifndef REPRODUCIBLE
-      << " (" __DATE__ " " __TIME__ ")"
-#endif
-      << " reporting" << endl;
+         L << Logger::Info << kBackendId <<" This is the pipe backend version " VERSION " (" __DATE__ ", " __TIME__ ") reporting" << endl;
       }  
 };
 

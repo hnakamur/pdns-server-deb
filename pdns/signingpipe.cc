@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "signingpipe.hh"
 #include "misc.hh"
 #include <poll.h>
@@ -66,13 +63,13 @@ try
   return 0;
 }
 catch(...) {
-  L<<Logger::Error<<"Unknown exception in signing thread occurred"<<endl;
+  L<<Logger::Error<<"unknown exception in signing thread occurred"<<endl;
   return 0;
 }
 
-ChunkedSigningPipe::ChunkedSigningPipe(const DNSName& signerName, bool mustSign, const string& servers, unsigned int workers)
-  : d_queued(0), d_outstanding(0), d_numworkers(workers), d_submitted(0), d_signer(signerName),
-    d_maxchunkrecords(100), d_tids(d_numworkers), d_mustSign(mustSign), d_final(false)
+ChunkedSigningPipe::ChunkedSigningPipe(const std::string& signerName, bool mustSign, const pdns::string& servers, unsigned int workers) 
+  : d_queued(0), d_outstanding(0), d_signer(signerName), d_maxchunkrecords(100), d_numworkers(workers), d_tids(d_numworkers),
+    d_mustSign(mustSign), d_final(false), d_submitted(0)
 {
   d_rrsetToSign = new rrset_t;
   d_chunks.push_back(vector<DNSResourceRecord>()); // load an empty chunk
@@ -85,10 +82,10 @@ ChunkedSigningPipe::ChunkedSigningPipe(const DNSName& signerName, bool mustSign,
   for(unsigned int n=0; n < d_numworkers; ++n) {
     if(socketpair(AF_UNIX, SOCK_STREAM, 0, fds) < 0) 
       throw runtime_error("Unable to create communication socket in for ChunkedSigningPipe");
-    setCloseOnExec(fds[0]);
-    setCloseOnExec(fds[1]);
+    Utility::setCloseOnExec(fds[0]);
+    Utility::setCloseOnExec(fds[1]);
     pthread_create(&d_tids[n], 0, helperWorker, (void*) new StartHelperStruct(this, n, fds[1]));
-    setNonBlocking(fds[0]);
+    Utility::setNonBlocking(fds[0]);
     d_sockets.push_back(fds[0]);
   }
 }
@@ -110,15 +107,23 @@ ChunkedSigningPipe::~ChunkedSigningPipe()
 }
 
 namespace {
-bool
-dedupLessThan(const DNSResourceRecord& a, const DNSResourceRecord &b)
+bool dedupLessThan(const DNSResourceRecord& a, const DNSResourceRecord &b)
 {
-  return (tie(a.content, a.ttl) < tie(b.content, b.ttl));
+  uint16_t aprio = 0, bprio = 0;
+  if (a.qtype.getCode() == QType::MX || a.qtype.getCode() == QType::SRV)
+    aprio = a.priority;
+  if (b.qtype.getCode() == QType::MX || b.qtype.getCode() == QType::SRV)
+    bprio = b.priority;
+  return tie(a.content, aprio) < tie(b.content, bprio);
 }
 
 bool dedupEqual(const DNSResourceRecord& a, const DNSResourceRecord &b)
 {
-  return(tie(a.content, a.ttl) == tie(b.content, b.ttl));
+  if(a.content != b.content)
+    return false;
+  if(a.qtype.getCode() == QType::MX || a.qtype.getCode() == QType::SRV)
+    return a.priority == b.priority;
+  return true;
 }
 }
 
@@ -133,7 +138,7 @@ bool ChunkedSigningPipe::submit(const DNSResourceRecord& rr)
 {
   ++d_submitted;
   // check if we have a full RRSET to sign
-  if(!d_rrsetToSign->empty() && (d_rrsetToSign->begin()->qtype.getCode() != rr.qtype.getCode()  ||  d_rrsetToSign->begin()->qname != rr.qname)) 
+  if(!d_rrsetToSign->empty() && (d_rrsetToSign->begin()->qtype.getCode() != rr.qtype.getCode()  ||  !pdns_iequals(d_rrsetToSign->begin()->qname, rr.qname))) 
   {
     dedupRRSet();
     sendRRSetToWorker();
@@ -287,7 +292,7 @@ try
       break;
     if(res < 0)
       unixDie("reading object pointer to sign from pdns");
-    set<DNSName> authSet;
+    set<string, CIStringCompare> authSet;
     authSet.insert(d_signer);
     addRRSigs(dk, db, authSet, *chunk);
     ++d_signed;

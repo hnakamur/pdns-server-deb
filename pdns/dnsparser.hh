@@ -31,14 +31,12 @@
 #include <errno.h>
 // #include <netinet/in.h>
 #include "misc.hh"
-
+#include <boost/shared_ptr.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 #include "dns.hh"
 #include "dnswriter.hh"
-#include "dnsname.hh"
-#include "pdnsexception.hh"
 
 /** DNS records have three representations:
     1) in the packet
@@ -119,9 +117,9 @@ public:
   }
 
 
-  void xfrName(DNSName &label, bool compress=false)
+  void xfrLabel(string &label, bool compress=false)
   {
-    label=getName();
+    label=getLabel();
   }
 
   void xfrText(string &text, bool multi=false)
@@ -135,12 +133,13 @@ public:
   void xfrHexBlob(string& blob, bool keepReading=false);
 
   static uint16_t get16BitInt(const vector<unsigned char>&content, uint16_t& pos);
+  static void getLabelFromContent(const vector<uint8_t>& content, uint16_t& frompos, string& ret, int recurs);
 
   void getDnsrecordheader(struct dnsrecordheader &ah);
   void copyRecord(vector<unsigned char>& dest, uint16_t len);
   void copyRecord(unsigned char* dest, uint16_t len);
 
-  string getName();
+  string getLabel(unsigned int recurs=0);
   string getText(bool multi);
 
   uint16_t d_pos;
@@ -150,7 +149,6 @@ public:
 private:
   uint16_t d_startrecordpos; // needed for getBlob later on
   uint16_t d_recordlen;      // ditto
-  uint16_t not_used; // Alighns the whole class on 8-byte boundries
   const vector<uint8_t>& d_content;
 };
 
@@ -166,7 +164,7 @@ public:
   virtual std::string getZoneRepresentation() const = 0;
   virtual ~DNSRecordContent() {}
   virtual void toPacket(DNSPacketWriter& pw)=0;
-  virtual string serialize(const DNSName& qname, bool canonic=false, bool lowerCase=false) // it would rock if this were const, but it is too hard
+  virtual string serialize(const string& qname, bool canonic=false, bool lowerCase=false) // it would rock if this were const, but it is too hard
   {
     vector<uint8_t> packet;
     string empty;
@@ -186,11 +184,11 @@ public:
     return record;
   }
 
-  static shared_ptr<DNSRecordContent> unserialize(const DNSName& qname, uint16_t qtype, const string& serialized);
+  static shared_ptr<DNSRecordContent> unserialize(const string& qname, uint16_t qtype, const string& serialized);
 
   void doRecordCheck(const struct DNSRecord&){}
 
-  DNSName label; // FIXME400 rename
+  std::string label;
   struct dnsrecordheader header;
 
   typedef DNSRecordContent* makerfunc_t(const struct DNSRecord& dr, PacketReader& pr);  
@@ -263,13 +261,13 @@ protected:
 
 struct DNSRecord
 {
-  DNSName d_label; //FIXME400 rename
-  std::shared_ptr<DNSRecordContent> d_content;
+  std::string d_label;
   uint16_t d_type;
   uint16_t d_class;
   uint32_t d_ttl;
   uint16_t d_clen;
-  enum : uint8_t {Answer=1, Nameserver, Additional} d_place;
+  enum {Answer=1, Nameserver, Additional} d_place;
+  boost::shared_ptr<DNSRecordContent> d_content;
 
   bool operator<(const DNSRecord& rhs) const
   {
@@ -279,8 +277,8 @@ struct DNSRecord
     if(rhs.d_content)
       rzrp=toLower(rhs.d_content->getZoneRepresentation());
     
-    string llabel=toLower(d_label.toString()); //FIXME400
-    string rlabel=toLower(rhs.d_label.toString()); //FIXME400
+    string llabel=toLower(d_label);
+    string rlabel=toLower(rhs.d_label);
 
     return 
       tie(llabel,     d_type,     d_class, lzrp) <
@@ -295,8 +293,8 @@ struct DNSRecord
     if(rhs.d_content)
       rzrp=toLower(rhs.d_content->getZoneRepresentation());
     
-    string llabel=toLower(d_label.toString()); //FIXME400
-    string rlabel=toLower(rhs.d_label.toString()); //FIXME400
+    string llabel=toLower(d_label);
+    string rlabel=toLower(rhs.d_label);
     
     return 
       tie(llabel,     d_type,     d_class, lzrp) ==
@@ -320,10 +318,10 @@ public:
     init(packet, len);
   }
 
-  DNSName d_qname;
+  dnsheader d_header;
+  string d_qname;
   uint16_t d_qclass, d_qtype;
   //uint8_t d_rcode;
-  dnsheader d_header;
 
   typedef vector<pair<DNSRecord, uint16_t > > answers_t;
   

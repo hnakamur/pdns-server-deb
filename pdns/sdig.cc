@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "dnsparser.hh"
 #include "sstuff.hh"
 #include "misc.hh"
@@ -65,7 +62,7 @@ try
   }
   //  pw.setRD(true);
  
- /*
+  /*
   pw.startRecord("powerdns.com", DNSRecordContent::TypeToNumber("NS"));
   NSRecordContent nrc("ns1.powerdns.com");
   nrc.toPacket(pw);
@@ -85,10 +82,10 @@ try
   // pw.commit();
   
   string reply;
-  ComboAddress dest(argv[1] + (*argv[1]=='@'), atoi(argv[2]));
 
   if(tcp) {
-    Socket sock(dest.sin4.sin_family, SOCK_STREAM);
+    Socket sock(AF_INET, SOCK_STREAM);
+    ComboAddress dest(argv[1] + (*argv[1]=='@'), atoi(argv[2]));
     sock.connect(dest);
     uint16_t len;
     len = htons(packet.size());
@@ -116,18 +113,19 @@ try
   }
   else //udp
   {
-    Socket sock(dest.sin4.sin_family, SOCK_DGRAM);
+    Socket sock(AF_INET, SOCK_DGRAM);
+    ComboAddress dest(argv[1] + (*argv[1]=='@'), atoi(argv[2]));
     sock.sendTo(string((char*)&*packet.begin(), (char*)&*packet.end()), dest);
     
     sock.recvFrom(reply, dest);
   }
   MOADNSParser mdp(reply);
-  cout<<"Reply to question for qname='"<<mdp.d_qname.toString()<<"', qtype="<<DNSRecordContent::NumberToType(mdp.d_qtype)<<endl;
+  cout<<"Reply to question for qname='"<<mdp.d_qname<<"', qtype="<<DNSRecordContent::NumberToType(mdp.d_qtype)<<endl;
   cout<<"Rcode: "<<mdp.d_header.rcode<<", RD: "<<mdp.d_header.rd<<", QR: "<<mdp.d_header.qr;
   cout<<", TC: "<<mdp.d_header.tc<<", AA: "<<mdp.d_header.aa<<", opcode: "<<mdp.d_header.opcode<<endl;
 
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i!=mdp.d_answers.end(); ++i) {          
-    cout<<i->first.d_place-1<<"\t"<<i->first.d_label.toString()<<"\tIN\t"<<DNSRecordContent::NumberToType(i->first.d_type);
+    cout<<i->first.d_place-1<<"\t"<<i->first.d_label<<"\tIN\t"<<DNSRecordContent::NumberToType(i->first.d_type);
     if(i->first.d_type == QType::RRSIG) 
     {
       string zoneRep = i->first.d_content->getZoneRepresentation();

@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "dnsparser.hh"
 #include "sstuff.hh"
 #include "misc.hh"
@@ -16,15 +13,12 @@ StatBag S;
 typedef std::pair<string,string> nsec3;
 typedef set<nsec3> nsec3set;
 
-string nsec3Hash(const DNSName &qname, const string &salt, unsigned int iters)
+string nsec3Hash(const string &qname, const string &salt, unsigned int iters)
 {
-  NSEC3PARAMRecordContent ns3prc;
-  ns3prc.d_iterations = iters;
-  ns3prc.d_salt = salt;
-  return toBase32Hex(hashQNameWithSalt(ns3prc, qname));
+  return toBase32Hex(hashQNameWithSalt(iters, salt, qname));
 }
 
-void proveOrDeny(const nsec3set &nsec3s, const DNSName &qname, const string &salt, unsigned int iters, set<DNSName> &proven, set<DNSName> &denied)
+void proveOrDeny(const nsec3set &nsec3s, const string &qname, const string &salt, unsigned int iters, set<string> &proven, set<string> &denied)
 {
   string hashed = nsec3Hash(qname, salt, iters);
 
@@ -37,23 +31,23 @@ void proveOrDeny(const nsec3set &nsec3s, const DNSName &qname, const string &sal
     if(hashed == base)
     {
       proven.insert(qname);
-      cout<<qname.toString()<<" ("<<hashed<<") proven by base of "<<base<<".."<<next<<endl;
+      cout<<qname<<" ("<<hashed<<") proven by base of "<<base<<".."<<next<<endl;
     }
     if(hashed == next)
     {
       proven.insert(qname);
-      cout<<qname.toString()<<" ("<<hashed<<") proven by next of "<<base<<".."<<next<<endl;
+      cout<<qname<<" ("<<hashed<<") proven by next of "<<base<<".."<<next<<endl;
     }
     if((hashed > base && hashed < next) ||
        (next < base && (hashed < next || hashed > base)))
     {
       denied.insert(qname);
-      cout<<qname.toString()<<" ("<<hashed<<") denied by "<<base<<".."<<next<<endl;
+      cout<<qname<<" ("<<hashed<<") denied by "<<base<<".."<<next<<endl;
     }
     if (base == next && base != hashed)
     {
       denied.insert(qname);
-      cout<<qname.toString()<<" ("<<hashed<<") denied by "<<base<<".."<<next<<endl;
+      cout<<qname<<" ("<<hashed<<") denied by "<<base<<".."<<next<<endl;
     }
   }
 }
@@ -118,13 +112,13 @@ try
   delete[] creply;
 
   MOADNSParser mdp(reply);
-  cout<<"Reply to question for qname='"<<mdp.d_qname.toString()<<"', qtype="<<DNSRecordContent::NumberToType(mdp.d_qtype)<<endl;
+  cout<<"Reply to question for qname='"<<mdp.d_qname<<"', qtype="<<DNSRecordContent::NumberToType(mdp.d_qtype)<<endl;
   cout<<"Rcode: "<<mdp.d_header.rcode<<", RD: "<<mdp.d_header.rd<<", QR: "<<mdp.d_header.qr;
   cout<<", TC: "<<mdp.d_header.tc<<", AA: "<<mdp.d_header.aa<<", opcode: "<<mdp.d_header.opcode<<endl;
 
-  set<DNSName> names;
-  set<DNSName> namesseen;
-  set<DNSName> namestocheck;
+  set<string> names;
+  set<string> namesseen;
+  set<string> namestocheck;
   nsec3set nsec3s;
   string nsec3salt;
   int nsec3iters = 0;
@@ -137,8 +131,7 @@ try
       // nsec3.insert(new nsec3()
       // cerr<<toBase32Hex(r.d_nexthash)<<endl;
       vector<string> parts;
-      string sname=i->first.d_label.toString();
-      boost::split(parts, sname /* FIXME400 */, boost::is_any_of("."));
+      boost::split(parts, i->first.d_label, boost::is_any_of("."));
       nsec3s.insert(make_pair(toLower(parts[0]), toBase32Hex(r.d_nexthash)));
       nsec3salt = r.d_salt;
       nsec3iters = r.d_iterations;
@@ -146,8 +139,8 @@ try
     else
     {
       // cerr<<"namesseen.insert('"<<i->first.d_label<<"')"<<endl;
-      names.insert(i->first.d_label);
-      namesseen.insert(i->first.d_label);
+      names.insert(stripDot(i->first.d_label));
+      namesseen.insert(stripDot(i->first.d_label));
     }
 
     if(i->first.d_type == QType::CNAME)
@@ -155,7 +148,7 @@ try
       namesseen.insert(stripDot(i->first.d_content->getZoneRepresentation()));
     }
 
-    cout<<i->first.d_place-1<<"\t"<<i->first.d_label.toString()<<"\tIN\t"<<DNSRecordContent::NumberToType(i->first.d_type);
+    cout<<i->first.d_place-1<<"\t"<<i->first.d_label<<"\tIN\t"<<DNSRecordContent::NumberToType(i->first.d_type);
     cout<<"\t"<<i->first.d_ttl<<"\t"<< i->first.d_content->getZoneRepresentation()<<"\n";
   }
 
@@ -171,17 +164,17 @@ try
 #endif
 
   cout<<"== nsec3 prove/deny report follows =="<<endl;
-  set<DNSName> proven;
-  set<DNSName> denied;
+  set<string> proven;
+  set<string> denied;
   namesseen.insert(stripDot(qname));
-  for(const auto &n: namesseen)
+  BOOST_FOREACH(string n, namesseen)
   {
-    DNSName shorter(n);
+    string shorter(n);
     do {
       namestocheck.insert(shorter);
-    } while(shorter.chopOff());
+    } while(chopOff(shorter));
   }
-  for(const auto &n: namestocheck)
+  BOOST_FOREACH(string n, namestocheck)
   {
     proveOrDeny(nsec3s, n, nsec3salt, nsec3iters, proven, denied);
     proveOrDeny(nsec3s, "*."+n, nsec3salt, nsec3iters, proven, denied);
@@ -198,44 +191,43 @@ try
     cout<<"qname found proven, NODATA response?"<<endl;
     exit(EXIT_SUCCESS);
   }
-  DNSName shorter=qname;
-  DNSName encloser;
-  DNSName nextcloser;
-  DNSName prev(qname);
-  while(shorter.chopOff())
+  string shorter=qname;
+  string encloser;
+  string nextcloser;
+  string prev(qname);
+  while(chopOff(shorter))
   {
     if(proven.count(shorter))
     {
       encloser=shorter;
       nextcloser=prev;
-      cout<<"found closest encloser at "<<encloser.toString()<<endl;
-      cout<<"next closer is "<<nextcloser.toString()<<endl;
+      cout<<"found closest encloser at "<<encloser<<endl;
+      cout<<"next closer is "<<nextcloser<<endl;
       break;
     }
     prev=shorter;
   }
-  if(encloser.countLabels() && nextcloser.countLabels())
+  if(encloser.size() && nextcloser.size())
   {
     if(denied.count(nextcloser))
     {
-      cout<<"next closer ("<<nextcloser.toString()<<") is denied correctly"<<endl;
+      cout<<"next closer ("<<nextcloser<<") is denied correctly"<<endl;
     }
     else
     {
-      cout<<"next closer ("<<nextcloser.toString()<<") NOT denied"<<endl;
+      cout<<"next closer ("<<nextcloser<<") NOT denied"<<endl;
     }
-    DNSName wcplusencloser=DNSName("*")+encloser;
-    if(denied.count(wcplusencloser))
+    if(denied.count("*."+encloser))
     {
-      cout<<"wildcard at encloser ("<<wcplusencloser.toString()<<") is denied correctly"<<endl;
+      cout<<"wildcard at encloser (*."<<encloser<<") is denied correctly"<<endl;
     }
-    else if(proven.count(wcplusencloser))
+    else if(proven.count("*."+encloser))
     {
-      cout<<"wildcard at encloser ("<<wcplusencloser.toString()<<") is proven"<<endl;
+      cout<<"wildcard at encloser (*."<<encloser<<") is proven"<<endl;
     }
     else
     {
-      cout<<"wildcard at encloser ("<<wcplusencloser.toString()<<") is NOT denied or proven"<<endl;
+      cout<<"wildcard at encloser (*."<<encloser<<") is NOT denied or proven"<<endl;
     }
   }
   exit(EXIT_SUCCESS);

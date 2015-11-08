@@ -1,1 +1,1 @@
-$(MYSQL_LIBS)
+$(MYSQL_lib)

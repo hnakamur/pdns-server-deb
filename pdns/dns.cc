@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "dns.hh"
 #include "misc.hh"
 #include "arguments.hh"
@@ -104,7 +101,7 @@ bool dnspacketLessThan(const std::string& a, const std::string& b)
     int result=0;
     unsigned int n;
     for(n = 0; n < aLabelLen && n < bLabelLen; ++n) 
-      if((result = dns_tolower(aSafe[aPos + n]) - dns_tolower(bSafe[bPos +n])))
+      if((result = aSafe[aPos + n] - bSafe[bPos +n]))   // XXX this should perhaps be dns_tolower
         break;
     // cerr<<"Done loop, result="<<result<<", n = "<<n<<", aLabelLen="<<aLabelLen<<", bLabelLen="<<bLabelLen<<endl;
     if(result < 0)
@@ -120,7 +117,7 @@ bool dnspacketLessThan(const std::string& a, const std::string& b)
   } while(aLabelLen && bLabelLen);
   
   if(aLabelLen || bLabelLen) //
-    throw runtime_error("Error in label comparison routine, should not happen");
+    throw runtime_error("Error in label comparison routing, should not happen");
       
   uint16_t aQtype = aSafe[aPos]*256 + aSafe[aPos + 1];
   uint16_t bQtype = bSafe[bPos]*256 + bSafe[bPos + 1];
@@ -145,7 +142,7 @@ uint32_t hashQuestion(const char* packet, uint16_t len, uint32_t init)
   while((labellen=*pos++) && pos < end) { 
     if(pos + labellen + 1 > end) // include length field  in hash
       return 0;
-    ret=burtleCI(pos, labellen+1, ret);
+    ret=burtle(pos, labellen+1, ret);
     pos += labellen;
   }
   return ret;
@@ -200,8 +197,7 @@ void fillSOAData(const string &content, SOAData &data)
   if(pleft>1) 
     data.hostmaster=attodot(parts[1]); // ahu@ds9a.nl -> ahu.ds9a.nl, piet.puk@ds9a.nl -> piet\.puk.ds9a.nl
 
-  data.serial = pleft > 2 ? pdns_strtoui(parts[2].c_str(), NULL, 10) : 0;
-  if (data.serial == UINT_MAX && errno == ERANGE) throw PDNSException("serial number too large in '"+parts[2]+"'");
+  data.serial = pleft > 2 ? strtoul(parts[2].c_str(), NULL, 10) : 0;
 
   data.refresh = pleft > 3 ? atoi(parts[3].c_str())
         : ::arg().asNum("soa-refresh-default");
@@ -220,7 +216,7 @@ string serializeSOAData(const SOAData &d)
 {
   ostringstream o;
   //  nameservername hostmaster serial-number [refresh [retry [expire [ minimum] ] ] ]
-  o<<d.nameserver.toString()<<" "<< d.hostmaster.toString() <<" "<< d.serial <<" "<< d.refresh << " "<< d.retry << " "<< d.expire << " "<< d.default_ttl;
+  o<<d.nameserver<<" "<< d.hostmaster <<" "<< d.serial <<" "<< d.refresh << " "<< d.retry << " "<< d.expire << " "<< d.default_ttl;
 
   return o.str();
 }

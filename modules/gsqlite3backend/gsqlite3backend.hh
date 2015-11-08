@@ -13,9 +13,12 @@
 //! The gSQLiteBackend retrieves it's data from a SQLite database (http://www.sqlite.org/)
 class gSQLite3Backend : public GSQLBackend
 {
+private:
+protected:
 public:
   //! Constructs the backend, throws an exception if it failed..
   gSQLite3Backend( const std::string & mode, const std::string & suffix );
+  virtual string sqlEscape(const string &name);
 };
 
 #endif // GSQLITEBACKEND_HH

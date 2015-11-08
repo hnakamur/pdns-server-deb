@@ -1,13 +1,10 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "tinydnsbackend.hh"
 #include "pdns/lock.hh"
 #include <cdb.h>
-#include "pdns/misc.hh"
-#include "pdns/iputils.hh"
-#include "pdns/dnspacket.hh"
-#include "pdns/dnsrecords.hh"
+#include <pdns/misc.hh>
+#include <pdns/iputils.hh>
+#include <pdns/dnspacket.hh>
+#include <pdns/dnsrecords.hh>
 #include <utility>
 #include <boost/foreach.hpp>
 
@@ -155,16 +152,16 @@ void TinyDNSBackend::getAllDomains(vector<DomainInfo> *domains, bool include_dis
 	}
 }
 
-bool TinyDNSBackend::list(const DNSName &target, int domain_id, bool include_disabled) {
+bool TinyDNSBackend::list(const string &target, int domain_id, bool include_disabled) {
 	d_isAxfr=true;
-	string key = target.toDNSString(); // FIXME400 bug: no lowercase here? or promise that from core?
+	string key = simpleCompress(target);
 	d_cdbReader=new CDB(getArg("dbfile"));
 	return d_cdbReader->searchSuffix(key);
 }
 
-void TinyDNSBackend::lookup(const QType &qtype, const DNSName &qdomain, DNSPacket *pkt_p, int zoneId) {
+void TinyDNSBackend::lookup(const QType &qtype, const string &qdomain, DNSPacket *pkt_p, int zoneId) {
 	d_isAxfr = false;
-	string queryDomain = toLowerCanonic(qdomain.toString());
+	string queryDomain = toLowerCanonic(qdomain);
 
 	string key=simpleCompress(queryDomain);
 
@@ -252,8 +249,9 @@ bool TinyDNSBackend::get(DNSResourceRecord &rr)
 				key.insert(0, 1, '\052');
 				key.insert(0, 1, '\001');
 			}
-			// rr.qname.clear(); 
-			rr.qname=DNSName(key.c_str(), key.size(), 0, false);
+			rr.qname.clear(); 
+			simpleExpandTo(key, 0, rr.qname);
+			rr.qname = stripDot(rr.qname); // strip the last dot, packethandler needs this.
 			rr.domain_id=-1;
 			// 11:13.21 <@ahu> IT IS ALWAYS AUTH --- well not really because we are just a backend :-)
 			// We could actually do NSEC3-NARROW DNSSEC according to Habbie, if we do, we need to change something ehre. 
@@ -279,11 +277,19 @@ bool TinyDNSBackend::get(DNSResourceRecord &rr)
 				dr.d_class = 1;
 				dr.d_type = rr.qtype.getCode();
 				dr.d_clen = val.size()-pr.d_pos;
-
 				DNSRecordContent *drc = DNSRecordContent::mastermake(dr, pr);
-				rr.content = drc->getZoneRepresentation();
-				cerr<<"CONTENT: "<<rr.content<<endl;
+
+				string content = drc->getZoneRepresentation();
+				// cerr<<"CONTENT: "<<content<<endl;
 				delete drc;
+				if(rr.qtype.getCode() == QType::MX || rr.qtype.getCode() == QType::SRV) {
+					vector<string>parts;
+					stringtok(parts,content," ");
+					rr.priority=atoi(parts[0].c_str());
+					rr.content=content.substr(parts[0].size()+1);
+				} else {
+					rr.content = content;
+				}
 			}
 			catch (...) {
 				if (d_ignorebogus) {
@@ -328,11 +334,7 @@ class TinyDNSLoader
 public:
 	TinyDNSLoader() {
 		BackendMakers().report(new TinyDNSFactory);
-		L << Logger::Info << "[tinydnsbackend] This is the tinydns backend version " VERSION
-#ifndef REPRODUCIBLE
-		  << " (" __DATE__ " " __TIME__ ")"
-#endif
-		  << " reporting" << endl;
+		L << Logger::Info << "[tinydnsbackend] This is the tinydns backend version " VERSION " (" __DATE__ ", " __TIME__ ") reporting" << endl;
 	}
 };
 

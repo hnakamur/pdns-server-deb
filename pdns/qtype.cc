@@ -19,6 +19,7 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#include "utility.hh"
 #include "dns.hh"
 #include <iostream>
 #include <string>
@@ -27,8 +28,7 @@
 #include <sstream>
 #include "qtype.hh"
 #include "misc.hh"
-
-static_assert(sizeof(QType) == 2, "QType is not 2 bytes in size, something is wrong!");
+#include "lock.hh"
 
 vector<QType::namenum> QType::names;
 // XXX FIXME we need to do something with initializer order here!

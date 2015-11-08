@@ -16,9 +16,6 @@
 */
 
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "luabackend.hh"
 
 #include "pdns/logger.hh"

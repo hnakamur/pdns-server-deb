@@ -30,7 +30,6 @@ string compilerVersion();
 void showProductVersion();
 void showBuildConfiguration();
 string fullVersionString();
-string getPDNSVersion();
 string productName();
 string productTypeApiType();
 void versionSetProduct(ProductType pt);

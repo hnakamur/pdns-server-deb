@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "mtasker.hh"
 #include "syncres.hh"
 #include "rec_channel.hh"
@@ -45,7 +42,6 @@ try
     if(p) *p=0;
 
     hostname=tmp;
-    boost::replace_all(hostname, ".", "_");    
   }
   BOOST_FOREACH(const all_t::value_type& val, all) {
     str<<"pdns."<<hostname<<".recursor."<<val.first<<' '<<val.second<<' '<<now<<"\r\n";
@@ -56,7 +52,7 @@ try
   if(ret < 0)
     L<<Logger::Warning<<"Error writing carbon data to "<<remote.toStringWithPort()<<": "<<strerror(errno)<<endl;
   if(ret==0)
-    L<<Logger::Warning<<"Timeout connecting/writing carbon data to "<<remote.toStringWithPort()<<endl;
+    L<<Logger::Warning<<"Timeout connecting/writing carbon data to "<<remote.toStringWithPort();
  }
 catch(PDNSException& e)
 {

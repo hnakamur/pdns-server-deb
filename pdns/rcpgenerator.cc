@@ -20,13 +20,9 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "rcpgenerator.hh"
 #include "dnsparser.hh"
 #include "misc.hh"
-#include "utility.hh"
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
 #include <iostream>
@@ -66,8 +62,7 @@ void RecordTextReader::xfr32BitInt(uint32_t &val)
     throw RecordTextException("expected digits at position "+lexical_cast<string>(d_pos)+" in '"+d_string+"'");
 
   char *endptr;
-  unsigned long ret=pdns_strtoui(d_string.c_str() + d_pos, &endptr, 10);
-  if (ret == UINT_MAX && errno == ERANGE) throw RecordTextException("serial number too large in '"+d_string+"'");
+  unsigned long ret=strtoul(d_string.c_str() + d_pos, &endptr, 10);
   val=ret;
   
   d_pos = endptr - d_string.c_str();
@@ -78,14 +73,10 @@ void RecordTextReader::xfrTime(uint32_t &val)
   struct tm tm;
   memset(&tm, 0, sizeof(tm));
   
-  uint64_t itmp;
-  xfr64BitInt(itmp); // ends on number, so this works 
+  string tmp;
+  xfrLabel(tmp); // ends on number, so this works 
 
-  ostringstream tmp;
-
-  tmp<<itmp;
-
-  sscanf(tmp.str().c_str(), "%04d%02d%02d" "%02d%02d%02d", 
+  sscanf(tmp.c_str(), "%04d%02d%02d" "%02d%02d%02d", 
          &tm.tm_year, &tm.tm_mon, &tm.tm_mday, 
          &tm.tm_hour, &tm.tm_min, &tm.tm_sec);
 
@@ -188,11 +179,11 @@ void RecordTextReader::xfr8BitInt(uint8_t &val)
 }
 
 // this code should leave all the escapes around 
-void RecordTextReader::xfrName(DNSName& val, bool) 
+void RecordTextReader::xfrLabel(string& val, bool) 
 {
   skipSpaces();
-  string sval;
-  sval.reserve(d_end - d_pos);
+  val.clear();
+  val.reserve(d_end - d_pos);
 
   const char* strptr=d_string.c_str();
   string::size_type begin_pos = d_pos;
@@ -202,19 +193,18 @@ void RecordTextReader::xfrName(DNSName& val, bool)
       
     d_pos++;
   }
-  sval.append(strptr+begin_pos, strptr+d_pos);      
+  val.append(strptr+begin_pos, strptr+d_pos);      
 
-  if(sval.empty())
-    sval=d_zone;
+  if(val.empty())
+    val=d_zone;
   else if(!d_zone.empty()) {
-    char last=sval[sval.size()-1];
+    char last=val[val.size()-1];
    
     if(last =='.')
-      sval.resize(sval.size()-1);
+      val.resize(val.size()-1);
     else if(last != '.' && !isdigit(last)) // don't add zone to IP address
-      sval+="."+d_zone;
+      val+="."+d_zone;
   }
-  val = DNSName(sval);
 }
 
 static bool isbase64(char c, bool acceptspace)
@@ -503,12 +493,12 @@ void RecordTextWriter::xfr8BitInt(const uint8_t& val)
 }
 
 // should not mess with the escapes
-void RecordTextWriter::xfrName(const DNSName& val, bool)
+void RecordTextWriter::xfrLabel(const string& val, bool)
 {
   if(!d_string.empty())
     d_string.append(1,' ');
   
-  d_string+=val.toString();
+  d_string+=val;
 }
 
 void RecordTextWriter::xfrBlobNoSpaces(const string& val, int size)
@@ -567,7 +557,7 @@ try
   rtr.xfrText(flags);
   rtr.xfrText(services);
   rtr.xfrText(regexp);
-  rtr.xfrName(replacement);
+  rtr.xfrLabel(replacement);
 
   cout<<"order: "<<order<<", pref: "<<pref<<"\n";
   cout<<"flags: \""<<flags<<"\", services: \""<<services<<"\", regexp: \""<<regexp<<"\", replacement: "<<replacement<<"\n";
@@ -580,7 +570,7 @@ try
   rtw.xfrText(flags);
   rtw.xfrText(services);
   rtw.xfrText(regexp);
-  rtw.xfrName(replacement);
+  rtw.xfrLabel(replacement);
 
   cout<<"Regenerated: '"<<out<<"'\n";
   

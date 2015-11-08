@@ -1,1 +1,1 @@
-$(MYSQL_LIBS)
+-lmysqlclient -lz

@@ -1,10 +1,8 @@
-pkglib_LTLIBRARIES = libopendbxbackend.la
+AM_CPPFLAGS=$(THREADFLAGS) $(BOOST_CPPFLAGS)
 
 EXTRA_DIST = OBJECTFILES OBJECTLIBS
 
-libopendbxbackend_la_SOURCES = \
-	odbxbackend.cc odbxbackend.hh \
-	odbxprivate.cc
-
-libopendbxbackend_la_LDFLAGS = -module -avoid-version
-libopendbxbackend_la_LIBADD = $(OPENDBX_LIBS)
+pkglib_LTLIBRARIES = libopendbxbackend.la
+libopendbxbackend_la_SOURCES = odbxbackend.hh odbxbackend.cc odbxprivate.cc
+libopendbxbackend_la_LDFLAGS =-module -avoid-version
+libopendbxbackend_la_LIBADD =-l$(LIBOPENDBX)

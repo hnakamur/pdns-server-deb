@@ -4,7 +4,6 @@
 #include "namespaces.hh"
 
 void doSecPoll(bool first);
-void secPollParseResolveConf();
 extern std::string g_security_message;
 
 #endif

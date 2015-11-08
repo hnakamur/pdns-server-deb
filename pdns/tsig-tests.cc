@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "dnsparser.hh"
 #include "dnswriter.hh"
 #include "sstuff.hh"
@@ -46,10 +43,10 @@ try
   string key;
   B64Decode("Syq9L9WrBWdxBC+HxKok2g==", key);
 
-  DNSName keyname("pdns-b-aa");
+  string keyname("pdns-b-aa");
 
   TSIGRecordContent trc;
-  trc.d_algoName="hmac-md5.sig-alg.reg.int";
+  trc.d_algoName="hmac-md5.sig-alg.reg.int.";
   trc.d_time=time(0);
   trc.d_fudge=300;
   trc.d_origID=ntohs(pw.getHeader()->id);
@@ -77,7 +74,7 @@ try
     cout<<"\t"<<i->first.d_ttl<<"\t"<< i->first.d_content->getZoneRepresentation()<<"\n";
     
     if(i->first.d_type == QType::TSIG)
-      trc2 = std::dynamic_pointer_cast<TSIGRecordContent>(i->first.d_content);
+      trc2 = boost::dynamic_pointer_cast<TSIGRecordContent>(i->first.d_content);
   }
 
   if(mdp.getTSIGPos()) {    
@@ -92,8 +89,8 @@ try
   }
 #endif
   seedRandom("/dev/urandom");
-  cerr<<"Keyname: '"<<keyname.toString()<<"', algo: '"<<trc.d_algoName.toString()<<"', key: '"<<Base64Encode(key)<<"'\n";
-  AXFRRetriever axfr(dest, DNSName("b.aa"), keyname, DNSName("hmac-md5"), key);
+  cerr<<"Keyname: '"<<keyname<<"', algo: '"<<trc.d_algoName<<"', key: '"<<Base64Encode(key)<<"'\n";
+  AXFRRetriever axfr(dest, "b.aa", keyname, "hmac-md5", key);
   vector<DNSResourceRecord> res;
   while(axfr.getChunk(res)) {
   }

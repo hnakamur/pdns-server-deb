@@ -1,11 +1,8 @@
-pkglib_LTLIBRARIES = libldapbackend.la
+AM_CPPFLAGS=$(THREADFLAGS) $(BOOST_CPPFLAGS)
 
 EXTRA_DIST = OBJECTFILES OBJECTLIBS
 
-libldapbackend_la_SOURCES = \
-	ldapbackend.cc ldapbackend.hh \
-	powerldap.cc powerldap.hh \
-	utils.hh
-
-libldapbackend_la_LDFLAGS = -module -avoid-version
-libldapbackend_la_LIBADD = $(LDAP_LIBS)
+pkglib_LTLIBRARIES = libldapbackend.la
+libldapbackend_la_SOURCES = ldapbackend.cc ldapbackend.hh powerldap.hh powerldap.cc utils.hh
+libldapbackend_la_LDFLAGS =-module -avoid-version
+libldapbackend_la_LIBADD =-l$(LIBLDAP)

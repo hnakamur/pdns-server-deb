@@ -1,6 +1,6 @@
 /*
     PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2015  PowerDNS.COM BV
+    Copyright (C) 2002 - 2011  PowerDNS.COM BV
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2
@@ -28,13 +28,13 @@
 #include <queue>
 #include <vector>
 #include <pthread.h>
+#include <semaphore.h>
 #include <unistd.h>
 #include "logger.hh"
 #include "dns.hh"
 #include "dnsbackend.hh"
 #include "pdnsexception.hh"
 #include "arguments.hh"
-#include <atomic>
 #include "statbag.hh"
 
 extern StatBag S;
@@ -44,18 +44,33 @@ extern StatBag S;
     
     Questions are posed to the Distributor, which returns the answer via a callback.
 
-    The Distributor spawns sufficient backends, and if they thrown an exception,
-    it will cycle the backend but drop the query that was active during the exception.
+    The Distributor takes care that there are enough Backends alive at any one
+    time and will try to spawn additional ones should they die.
+
+    The Backend needs to count the number of living instances and supply this number to
+    the Distributor using its numBackends() method. This is silly.
+
+    If an exception escapes a Backend, the distributor retires it.
 */
+template<class Answer>struct AnswerData
+{
+  Answer *A;
+};
 
 template<class Answer, class Question, class Backend> class Distributor
 {
 public:
   static Distributor *Create(int n=1); //!< Create a new Distributor with \param n threads
-  typedef std::function<void(Answer*)> callback_t;
-  virtual int question(Question *, callback_t callback) =0; //!< Submit a question to the Distributor
-  virtual int getQueueSize() =0; //!< Returns length of question queue
-  virtual bool isOverloaded() =0;
+
+  virtual void cleanup();
+  virtual int question(Question *, void (*)(const AnswerData<Answer> &)) {return 0;}; //!< Submit a question to the Distributor
+  virtual void getQueueSizes(int &questions, int &answers) {}; //!< Returns length of question queue
+
+  virtual int getNumBusy() {return 0;};
+
+  virtual bool isOverloaded() {return false;};
+
+private:
 };
 
 template<class Answer, class Question, class Backend> class SingleThreadDistributor
@@ -63,9 +78,14 @@ template<class Answer, class Question, class Backend> class SingleThreadDistribu
 {
 public:
   SingleThreadDistributor();
-  typedef std::function<void(Answer*)> callback_t;
-  int question(Question *, callback_t callback) override; //!< Submit a question to the Distributor
-  int getQueueSize() {
+  int question(Question *, void (*)(const AnswerData<Answer> &)); //!< Submit a question to the Distributor
+  void getQueueSizes(int &questions, int &answers) {
+    questions = 0;
+    answers = 0;
+  }
+
+  int getNumBusy()
+  {
     return 0;
   }
 
@@ -78,40 +98,52 @@ public:
     if (b) delete b;
   }
 private:
-  Backend *b{0};
+  Backend *b;
 };
 
 template<class Answer, class Question, class Backend> class MultiThreadDistributor
     : public Distributor<Answer, Question, Backend>
 {
 public:
-  MultiThreadDistributor(int n);
-  typedef std::function<void(Answer*)> callback_t;
-  int question(Question *, callback_t callback) override; //!< Submit a question to the Distributor
+  MultiThreadDistributor(int n=1);
+  int question(Question *, void (*)(const AnswerData<Answer> &)); //!< Submit a question to the Distributor
   static void* makeThread(void *); //!< helper function to create our n threads
-  int getQueueSize() override {
-    return d_queued;
+  void getQueueSizes(int &questions, int &answers) {
+      numquestions.getValue( &questions );
+      answers = 0;
+  }
+
+  int getNumBusy()
+  {
+    return d_num_threads-d_idle_threads;
   }
 
   struct QuestionData
   {
     Question *Q;
-    callback_t callback;
+    void (*callback)(const AnswerData<Answer> &);
     int id;
   };
 
-  bool isOverloaded() override
+  bool isOverloaded()
   {
     return d_overloaded;
   }
   
 private:
   bool d_overloaded;
+  std::queue<QuestionData> questions;
+  pthread_mutex_t q_lock;
+
+  Semaphore numquestions;
+
+  pthread_mutex_t to_mut;
+  pthread_cond_t to_cond;
+
   int nextid;
   time_t d_last_started;
   int d_num_threads;
-  std::atomic<unsigned int> d_queued{0}, d_running{0};
-  std::vector<std::pair<int,int>> d_pipes;
+  AtomicCounter d_idle_threads;
 };
 
 //template<class Answer, class Question, class Backend>::nextid;
@@ -135,17 +167,15 @@ template<class Answer, class Question, class Backend>MultiThreadDistributor<Answ
   d_overloaded = false;
 
   nextid=0;
+  // d_idle_threads=0;
   d_last_started=time(0);
+//  sem_init(&numquestions,0,0);
+  pthread_mutex_init(&q_lock,0);
+
+  pthread_mutex_init(&to_mut,0);
+  pthread_cond_init(&to_cond,0);
 
   pthread_t tid;
-  
-
-  for(int i=0; i < n; ++i) {
-    int fds[2];
-    if(pipe(fds) < 0)
-      unixDie("Creating pipe");
-    d_pipes.push_back({fds[0],fds[1]});
-  }
   
   L<<Logger::Warning<<"About to create "<<n<<" backend threads for UDP"<<endl;
   for(int i=0;i<n;i++) {
@@ -155,77 +185,106 @@ template<class Answer, class Question, class Backend>MultiThreadDistributor<Answ
   L<<Logger::Warning<<"Done launching threads, ready to distribute questions"<<endl;
 }
 
+template<class Answer, class Question, class Backend>void Distributor<Answer,Question,Backend>::cleanup()
+{
+    L<<Logger::Error<< "Cleaning up distributor" <<endl;
+}
 
 // start of a new thread
 template<class Answer, class Question, class Backend>void *MultiThreadDistributor<Answer,Question,Backend>::makeThread(void *p)
 {
   pthread_detach(pthread_self());
-  MultiThreadDistributor *us=static_cast<MultiThreadDistributor *>(p);
-  int ournum=us->d_running++;
-
   try {
     Backend *b=new Backend(); // this will answer our questions
-    int queuetimeout=::arg().asNum("queue-limit"); 
+    MultiThreadDistributor *us=static_cast<MultiThreadDistributor *>(p);
+    int qcount;
 
+    // this is so gross
+#ifndef SMTPREDIR 
+    int queuetimeout=::arg().asNum("queue-limit"); 
+#endif 
+    // ick ick ick!
+    static int overloadQueueLength=::arg().asNum("overload-queue-length");
     for(;;) {
-    
-      QuestionData* QD;
-      if(read(us->d_pipes[ournum].first, &QD, sizeof(QD)) != sizeof(QD))
-	unixDie("read");
-      --us->d_queued;
+      ++(us->d_idle_threads);
+
+      us->numquestions.getValue( &qcount );
+
+      us->numquestions.wait();
+
+      --(us->d_idle_threads);
+      pthread_mutex_lock(&us->q_lock);
+
+      QuestionData QD=us->questions.front();
+
+      us->questions.pop();
+      pthread_mutex_unlock(&us->q_lock);
+
+      Question *q=QD.Q;
+      
+
+      if(us->d_overloaded && qcount <= overloadQueueLength/10) {
+        us->d_overloaded=false;
+      }
+      
       Answer *a; 
 
-      if(queuetimeout && QD->Q->d_dt.udiff()>queuetimeout*1000) {
-        delete QD->Q;
-	delete QD;
+#ifndef SMTPREDIR
+      if(queuetimeout && q->d_dt.udiff()>queuetimeout*1000) {
+        delete q;
         S.inc("timedout-packets");
         continue;
       }        
+#endif  
       // this is the only point where we interact with the backend (synchronous)
       try {
-        a=b->question(QD->Q); 
-	delete QD->Q;
+        a=b->question(q); // a can be NULL!
+        delete q;
       }
       catch(const PDNSException &e) {
         L<<Logger::Error<<"Backend error: "<<e.reason<<endl;
-	delete b;
-	b=new Backend();
-        a=QD->Q->replyPacket();
-
+        a=q->replyPacket();
         a->setRcode(RCode::ServFail);
         S.inc("servfail-packets");
-        S.ringAccount("servfail-queries",QD->Q->qdomain.toString());
-
-	delete QD->Q;
+        S.ringAccount("servfail-queries",q->qdomain);
       }
       catch(...) {
-        L<<Logger::Error<<"Caught unknown exception in Distributor thread "<<(long)pthread_self()<<endl;
-	delete b;
-	b=new Backend();
-        a=QD->Q->replyPacket();
-	
+        L<<Logger::Error<<Logger::NTLog<<"Caught unknown exception in Distributor thread "<<(unsigned long)pthread_self()<<endl;
+        a=q->replyPacket();
         a->setRcode(RCode::ServFail);
         S.inc("servfail-packets");
-        S.ringAccount("servfail-queries",QD->Q->qdomain.toString());
-	delete QD->Q;
+        S.ringAccount("servfail-queries",q->qdomain);
       }
 
-      QD->callback(a);
-      delete QD;
+      AnswerData<Answer> AD;
+      AD.A=a;
+
+      try {
+        QD.callback(AD);
+      }
+      catch(std::exception& e)
+      {
+        L<<Logger::Error<<"Error in callback (while sending reply): "<<e.what()<<endl;
+        delete AD.A;
+      }
+      catch(...) {
+        L<<Logger::Error<<"Unknown callback (sending reply) error"<<endl;
+        delete AD.A;
+      }
     }
     
     delete b;
   }
   catch(const PDNSException &AE) {
-    L<<Logger::Error<<"Distributor caught fatal exception: "<<AE.reason<<endl;
+    L<<Logger::Error<<Logger::NTLog<<"Distributor caught fatal exception: "<<AE.reason<<endl;
   }
   catch(...) {
-    L<<Logger::Error<<"Caught an unknown exception when creating backend, probably"<<endl;
+    L<<Logger::Error<<Logger::NTLog<<"Caught an unknown exception when creating backend, probably"<<endl;
   }
   return 0;
 }
 
-template<class Answer, class Question, class Backend>int SingleThreadDistributor<Answer,Question,Backend>::question(Question* q, callback_t callback)
+template<class Answer, class Question, class Backend>int SingleThreadDistributor<Answer,Question,Backend>::question(Question* q, void (*callback)(const AnswerData<Answer> &))
 {
   Answer *a;
   try {
@@ -238,50 +297,88 @@ template<class Answer, class Question, class Backend>int SingleThreadDistributor
     a=q->replyPacket();
     a->setRcode(RCode::ServFail);
     S.inc("servfail-packets");
-    S.ringAccount("servfail-queries",q->qdomain.toString());
+    S.ringAccount("servfail-queries",q->qdomain);
   }
   catch(...) {
-    L<<Logger::Error<<"Caught unknown exception in Distributor thread "<<(unsigned long)pthread_self()<<endl;
+    L<<Logger::Error<<Logger::NTLog<<"Caught unknown exception in Distributor thread "<<(unsigned long)pthread_self()<<endl;
     delete b;
     b=new Backend;
     a=q->replyPacket();
     a->setRcode(RCode::ServFail);
     S.inc("servfail-packets");
-    S.ringAccount("servfail-queries",q->qdomain.toString());
+    S.ringAccount("servfail-queries",q->qdomain);
   }
-  callback(a);
+  AnswerData<Answer> AD;
+  AD.A=a;
+  try {
+    callback(AD);
+  }
+  catch(std::exception& e)
+  {
+    L<<Logger::Error<<"Error in callback (while sending reply): "<<e.what()<<endl;
+    delete AD.A;
+  }
+  catch(...) {
+    L<<Logger::Error<<"Unknown callback (sending reply) error"<<endl;
+    delete AD.A;
+  }
   return 0;
 }
 
-struct DistributorFatal{};
-
-template<class Answer, class Question, class Backend>int MultiThreadDistributor<Answer,Question,Backend>::question(Question* q, callback_t callback)
+template<class Answer, class Question, class Backend>int MultiThreadDistributor<Answer,Question,Backend>::question(Question* q, void (*callback)(const AnswerData<Answer> &))
 {
+  // XXX assert callback
   q=new Question(*q);
 
-  auto QD=new QuestionData();
-  QD->Q=q;
-  auto ret = QD->id = nextid++; // might be deleted after write!
-  QD->callback=callback;
-  
-  if(write(d_pipes[QD->id % d_pipes.size()].second, &QD, sizeof(QD)) != sizeof(QD))
-    unixDie("write");
+  DLOG(L<<"Distributor has "<<Backend::numRunning()<<" threads available"<<endl);
 
-  d_queued++;
-  
-  static unsigned int overloadQueueLength=::arg().asNum("overload-queue-length");
-  static unsigned int maxQueueLength=::arg().asNum("max-queue-length");
+  /* the line below is a bit difficult.
+     What happens is that we have a goal for the number of running distributor threads. Furthermore, other
+     parts of PowerDNS also start backends, which get included in this count.
 
-  if(overloadQueueLength) 
-    d_overloaded= d_queued > overloadQueueLength;
+     If less than two threads now die, no new ones will be spawned.
 
-  if(d_queued > maxQueueLength) {
-    L<<Logger::Error<< d_queued <<" questions waiting for database/backend attention. Limit is "<<::arg().asNum("max-queue-length")<<", respawning"<<endl;
-    // this will leak the entire contents of all pipes, nothing will be freed. Respawn when this happens!
-    throw DistributorFatal();
+     The solutionis to add '+2' below, but it is not a pretty solution. Better solution is
+     to only account the number of threads within the Distributor, and not in the backend.
+
+     XXX FIXME 
+  */
+
+  if(Backend::numRunning() < d_num_threads+2 && time(0)-d_last_started>5) { 
+    d_last_started=time(0);
+    L<<"Distributor misses a thread ("<<Backend::numRunning()<<"<"<<d_num_threads + 2<<"), spawning new one"<<endl;
+    pthread_t tid;
+    pthread_create(&tid,0,&makeThread,static_cast<void *>(this));
   }
-   
-  return ret;
+
+  QuestionData QD;
+  QD.Q=q;
+  QD.id=nextid++;
+  QD.callback=callback;
+
+  pthread_mutex_lock(&q_lock);
+  questions.push(QD);
+  pthread_mutex_unlock(&q_lock);
+
+  numquestions.post();
+  
+  static int overloadQueueLength=::arg().asNum("overload-queue-length");
+
+  if(!(nextid%50)) {
+    int val;
+    numquestions.getValue( &val );
+    
+    if(!d_overloaded)
+      d_overloaded = overloadQueueLength && (val > overloadQueueLength);
+
+    if(val>::arg().asNum("max-queue-length")) {
+      L<<Logger::Error<<val<<" questions waiting for database attention. Limit is "<<::arg().asNum("max-queue-length")<<", respawning"<<endl;
+      _exit(1);
+    }
+
+  }
+
+  return QD.id;
 }
 
 #endif // DISTRIBUTOR_HH

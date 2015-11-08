@@ -1,5 +1,3 @@
-PRAGMA foreign_keys = 1;
-
 CREATE TABLE domains (
   id                    INTEGER PRIMARY KEY,
   name                  VARCHAR(255) NOT NULL COLLATE NOCASE,
@@ -24,8 +22,7 @@ CREATE TABLE records (
   change_date           INTEGER DEFAULT NULL,
   disabled              BOOLEAN DEFAULT 0,
   ordername             VARCHAR(255),
-  auth                  BOOL DEFAULT 1,
-  FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE ON UPDATE CASCADE
+  auth                  BOOL DEFAULT 1
 );
 
 CREATE INDEX rec_name_index ON records(name);
@@ -50,8 +47,7 @@ CREATE TABLE comments (
   type                  VARCHAR(10) NOT NULL,
   modified_at           INT NOT NULL,
   account               VARCHAR(40) DEFAULT NULL,
-  comment               VARCHAR(65535) NOT NULL,
-  FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE ON UPDATE CASCADE
+  comment               VARCHAR(65535) NOT NULL
 );
 
 CREATE INDEX comments_domain_id_index ON comments (domain_id);
@@ -63,8 +59,7 @@ CREATE TABLE domainmetadata (
  id                     INTEGER PRIMARY KEY,
  domain_id              INT NOT NULL,
  kind                   VARCHAR(32) COLLATE NOCASE,
- content                TEXT,
- FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE ON UPDATE CASCADE
+ content                TEXT
 );
 
 CREATE INDEX domainmetaidindex ON domainmetadata(domain_id);
@@ -75,8 +70,7 @@ CREATE TABLE cryptokeys (
  domain_id              INT NOT NULL,
  flags                  INT NOT NULL,
  active                 BOOL,
- content                TEXT,
- FOREIGN KEY(domain_id) REFERENCES domains(id) ON DELETE CASCADE ON UPDATE CASCADE
+ content                TEXT
 );
 
 CREATE INDEX domainidindex ON cryptokeys(domain_id);

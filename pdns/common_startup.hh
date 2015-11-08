@@ -44,7 +44,6 @@ extern CommunicatorClass Communicator;
 extern UDPNameserver *N;
 extern int avg_latency;
 extern TCPNameserver *TN;
-extern AuthLua *LPE;
 extern ArgvMap & arg( void );
 extern void declareArguments();
 extern void declareStats();

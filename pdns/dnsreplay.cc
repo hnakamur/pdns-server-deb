@@ -38,9 +38,6 @@ What to do with timeouts. We keep around at most 65536 outstanding answers.
 
  */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include <bitset>
 #include "statbag.hh"
 #include "dnspcap.hh"
@@ -268,7 +265,7 @@ bool isRcodeOk(int rcode)
   return rcode==0 || rcode==3;
 }
 
-set<pair<DNSName,uint16_t> > s_origbetterset;
+set<pair<string,uint16_t> > s_origbetterset;
 
 bool isRootReferral(const MOADNSParser::answers_t& answers)
 {
@@ -280,7 +277,7 @@ bool isRootReferral(const MOADNSParser::answers_t& answers)
     //    cerr<<(int)iter->first.d_place<<", "<<iter->first.d_label<<" "<<iter->first.d_type<<", # "<<answers.size()<<endl;
     if(iter->first.d_place!=2)
       ok=false;
-    if(!iter->first.d_label.isRoot() || iter->first.d_type!=QType::NS)
+    if(iter->first.d_label!="." || iter->first.d_type!=QType::NS)
       ok=false;
   }
   return ok;
@@ -372,17 +369,17 @@ void measureResultAndClean(qids_t::const_iterator iter)
       s_origbetter++;
       if(!g_quiet) 
         if(s_origbetterset.insert(make_pair(qd.d_qi.d_qname, qd.d_qi.d_qtype)).second) {
-          cout<<"orig better: " << qd.d_qi.d_qname.toString()<<" "<< qd.d_qi.d_qtype<<endl;
+          cout<<"orig better: " << qd.d_qi.d_qname<<" "<< qd.d_qi.d_qtype<<endl;
         }
     }
 
     if(!g_quiet) {
       cout<<"orig: rcode="<<qd.d_origRcode<<"\n";
       for(set<DNSRecord>::const_iterator i=canonicOrig.begin(); i!=canonicOrig.end(); ++i)
-        cout<<"\t"<<i->d_label.toString()<<"\t"<<DNSRecordContent::NumberToType(i->d_type)<<"\t'"  << (i->d_content ? i->d_content->getZoneRepresentation() : "") <<"'\n";
+        cout<<"\t"<<i->d_label<<"\t"<<DNSRecordContent::NumberToType(i->d_type)<<"\t'"  << (i->d_content ? i->d_content->getZoneRepresentation() : "") <<"'\n";
       cout<<"new: rcode="<<qd.d_newRcode<<"\n";
       for(set<DNSRecord>::const_iterator i=canonicNew.begin(); i!=canonicNew.end(); ++i)
-        cout<<"\t"<<i->d_label.toString()<<"\t"<<DNSRecordContent::NumberToType(i->d_type)<<"\t'"  << (i->d_content ? i->d_content->getZoneRepresentation() : "") <<"'\n";
+        cout<<"\t"<<i->d_label<<"\t"<<DNSRecordContent::NumberToType(i->d_type)<<"\t'"  << (i->d_content ? i->d_content->getZoneRepresentation() : "") <<"'\n";
       cout<<"\n";
       cout<<"-\n";
 
@@ -421,7 +418,7 @@ try
       qids_by_id_index_t::const_iterator found=idindex.find(ntohs(mdp.d_header.id));
       if(found == idindex.end()) {
         if(!g_quiet)      
-          cout<<"Received an answer ("<<mdp.d_qname.toString()<<") from reference nameserver with id "<<mdp.d_header.id<<" which we can't match to a question!"<<endl;
+          cout<<"Received an answer ("<<mdp.d_qname<<") from reference nameserver with id "<<mdp.d_header.id<<" which we can't match to a question!"<<endl;
         s_weunmatched++;
         continue;
       }
@@ -440,10 +437,6 @@ try
       s_wednserrors++;
     }
     catch(std::out_of_range &e)
-    {
-      s_wednserrors++;
-    }
-    catch(std::exception& e) 
     {
       s_wednserrors++;
     }
@@ -560,7 +553,6 @@ bool sendPacketFromPR(PcapPacketReader& pr, const ComboAddress& remote)
       qd.d_assignedID = s_idmanager.getID();
       uint16_t tmp=dh->id;
       dh->id=htons(qd.d_assignedID);
-      //      dh->rd=1; // useful to replay traffic to auths to a recursor
       s_socket->sendTo((const char*)pr.d_payload, pr.d_len, remote);
       sent=true;
       dh->id=tmp;
@@ -614,7 +606,7 @@ bool sendPacketFromPR(PcapPacketReader& pr, const ComboAddress& remote)
     s_idmanager.releaseID(qd.d_assignedID);  // not added to qids for cleanup
     s_origdnserrors++;
   }
-  catch(std::exception &e)
+  catch(std::out_of_range &e)
   {
     s_idmanager.releaseID(qd.d_assignedID);  // not added to qids for cleanup
     s_origdnserrors++;    

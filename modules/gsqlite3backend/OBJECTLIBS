@@ -1,1 +1,1 @@
-$(SQLITE3_LIBS)
+-lsqlite3

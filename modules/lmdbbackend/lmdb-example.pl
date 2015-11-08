@@ -30,9 +30,9 @@ my @entries = (
     # host type data
     [ $zone, 'NS', "ns.$zone" ],
     # MX/SRV put priority <space> data
-    [ $zone, 'MX', "10 mail.example.com" ],
+    [ $zone, 'MX', "10 mail.hotmail.com" ],
     # No SOA records
-    [ "test.$zone", 'A', '192.0.2.66' ],
+    [ "test.$zone", 'A', '1.2.3.4' ],
     [ "text.$zone", 'TXT', "test\n123" ],
     [ "longtext.$zone", 'TXT', "A" x 550 ],
 

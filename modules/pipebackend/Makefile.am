@@ -1,13 +1,12 @@
+AM_CPPFLAGS=$(THREADFLAGS) $(BOOST_CPPFLAGS)
+#if !ALLSTATIC
+#install-exec-local:
+#	install .lib/libpipebackend.so.0.0.0 @libdir@
+#endif
+
+EXTRA_DIST=OBJECTFILES OBJECTLIBS backend.pl
 pkglib_LTLIBRARIES = libpipebackend.la
 
-EXTRA_DIST = \
-	OBJECTFILES \
-	OBJECTLIBS \
-	backend.pl
-
-libpipebackend_la_SOURCES = \
-	coprocess.cc coprocess.hh \
-	pipebackend.cc pipebackend.hh
-
-libpipebackend_la_LDFLAGS = -module -avoid-version
+libpipebackend_la_SOURCES=pipebackend.cc pipebackend.hh coprocess.cc coprocess.hh
+libpipebackend_la_LDFLAGS=-module -avoid-version
 

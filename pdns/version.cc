@@ -20,26 +20,18 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "logger.hh"
 #include "version.hh"
-#ifdef HAVE_MBEDTLS2
-#include <mbedtls/version.h>
-#else
-#include <polarssl/version.h>
-#include "mbedtlscompat.hh"
-#endif
+#include "version_generated.h"
 
 static ProductType productType;
 
 string compilerVersion()
 {
 #if defined(__clang__)
-  return string("clang " __clang_version__ );
+  return string("clang "__clang_version__);
 #elif defined(__GNUC__)
-  return string("gcc " __VERSION__ );
+  return string("gcc "__VERSION__);
 #else  // add other compilers here
   return string("Unknown compiler");
 #endif
@@ -56,11 +48,6 @@ string productName() {
   return "Unknown";
 }
 
-string getPDNSVersion()
-{
-  return VERSION;
-}
-
 // REST API product type
 string productTypeApiType() {
   switch (productType) {
@@ -74,14 +61,10 @@ string productTypeApiType() {
 
 void showProductVersion()
 {
-  theL()<<Logger::Warning<<productName()<<" "<< VERSION << " (C) 2001-2015 "
-    "PowerDNS.COM BV" << endl;
+  theL()<<Logger::Warning<<productName()<<" "<<PDNS_VERSION<<" ("DIST_HOST") "
+    "(C) 2001-2015 PowerDNS.COM BV" << endl;
   theL()<<Logger::Warning<<"Using "<<(sizeof(unsigned long)*8)<<"-bits mode. "
-    "Built using " << compilerVersion()
-#ifndef REPRODUCIBLE
-    <<" on " __DATE__ " " __TIME__ " by " BUILD_HOST
-#endif
-    <<"."<< endl;
+    "Built on "BUILD_DATE" by "BUILD_HOST", "<<compilerVersion()<<"."<<endl;
   theL()<<Logger::Warning<<"PowerDNS comes with ABSOLUTELY NO WARRANTY. "
     "This is free software, and you are welcome to redistribute it "
     "according to the terms of the GPL version 2." << endl;
@@ -98,9 +81,6 @@ void showBuildConfiguration()
 #endif
 #ifdef HAVE_CRYPTOPP
     "cryptopp " <<
-#endif
-#ifdef HAVE_LIBSODIUM
-    "sodium " <<
 #endif
 #ifdef HAVE_LIBDL
     "libdl " <<
@@ -119,25 +99,12 @@ void showBuildConfiguration()
   // Auth only
   theL()<<Logger::Warning<<"Built-in modules: "<<PDNS_MODULES<<endl;
 #endif
-#ifndef MBEDTLS_SYSTEM
-  theL()<<Logger::Warning<<"Built-in mbed TLS: "<<MBEDTLS_VERSION_STRING<<endl;
-#endif
-#ifdef PDNS_CONFIG_ARGS
-#define double_escape(s) #s
-#define escape_quotes(s) double_escape(s)
-  theL()<<Logger::Warning<<"Configured with: "<<escape_quotes(PDNS_CONFIG_ARGS)<<endl;
-#undef escape_quotes
-#undef double_escape
-#endif
 }
 
 string fullVersionString()
 {
   ostringstream s;
-  s<<productName()<<" " VERSION;
-#ifndef REPRODUCIBLE
-  s<<" (built " __DATE__ " " __TIME__ " by " BUILD_HOST ")";
-#endif
+  s<<productName()<<" "PDNS_VERSION" ("DIST_HOST" built "BUILD_DATE" "BUILD_HOST")";
   return s.str();
 }
 

@@ -42,9 +42,9 @@
 #include "namespaces.hh"
 
 int asendto(const char *data, int len, int flags, const ComboAddress& ip, uint16_t id, 
-            const DNSName& domain, uint16_t qtype,  int* fd);
+            const string& domain, uint16_t qtype,  int* fd);
 int arecvfrom(char *data, int len, int flags, const ComboAddress& ip, int *d_len, uint16_t id, 
-              const DNSName& domain, uint16_t, int fd, struct timeval* now);
+              const string& domain, uint16_t, int fd, struct timeval* now);
 
 class LWResException : public PDNSException
 {
@@ -56,7 +56,6 @@ public:
 class LWResult
 {
 public:
-  LWResult() : d_usec(0) {}
   typedef vector<DNSResourceRecord> res_t;
 
   vector<DNSResourceRecord> d_result;
@@ -67,6 +66,6 @@ public:
   bool d_haveEDNS;
 };
 
-int asyncresolve(const ComboAddress& ip, const DNSName& domain, int type, bool doTCP, bool sendRDQuery, int EDNS0Level, struct timeval* now, LWResult* res);
+int asyncresolve(const ComboAddress& ip, const string& domain, int type, bool doTCP, bool sendRDQuery, int EDNS0Level, struct timeval* now, LWResult* res);
 
 #endif // PDNS_LWRES_HH

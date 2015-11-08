@@ -1,1 +1,1 @@
-$(LDAP_LIBS)
+-lldap_r -llber

@@ -1,11 +1,8 @@
-#ifndef PDNS_PKCS11SIGNERS_HH
-#define PDNS_PKCS11SIGNERS_HH
-
 class PKCS11DNSCryptoKeyEngine : public DNSCryptoKeyEngine
 {
   protected:
     std::string d_module;
-    unsigned long d_slot_id;
+    std::string d_slot_id;
     std::string d_pin;
     std::string d_label;
 
@@ -44,6 +41,4 @@ class PKCS11DNSCryptoKeyEngine : public DNSCryptoKeyEngine
     static DNSCryptoKeyEngine* maker(unsigned int algorithm);
 };
 
-bool PKCS11ModuleSlotLogin(const std::string& module, int slot, const std::string& pin);
-
-#endif /* PDNS_PKCS11SIGNERS_HH */
+bool PKCS11ModuleSlotLogin(const std::string& module, const string& tokenId, const std::string& pin);

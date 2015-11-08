@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include "odbxbackend.hh"
 
 
@@ -169,7 +166,7 @@ bool OdbxBackend::getDomainInfo( const string& domain, DomainInfo& di )
 
 
 
-bool OdbxBackend::getSOA( const DNSName& domain, SOAData& sd, DNSPacket* p )
+bool OdbxBackend::getSOA( const string& domain, SOAData& sd, DNSPacket* p )
 {
         const char* tmp;
 
@@ -179,7 +176,7 @@ bool OdbxBackend::getSOA( const DNSName& domain, SOAData& sd, DNSPacket* p )
         	DLOG( L.log( m_myname + " getSOA()", Logger::Debug ) );
 
         	string stmt = getArg( "sql-lookupsoa" );
-        	string& stmtref = strbind( ":name", escape( domain.toStringNoDot(), READ ), stmt );
+        	string& stmtref = strbind( ":name", escape( toLower( domain ), READ ), stmt );
 
         	if( !execStmt( stmtref.c_str(), stmtref.size(), READ ) ) { return false; }
         	if( !getRecord( READ ) ) { return false; }
@@ -198,7 +195,7 @@ bool OdbxBackend::getSOA( const DNSName& domain, SOAData& sd, DNSPacket* p )
         		if( ( tmp = odbx_field_value( m_result, 2 ) ) != NULL )
         		{
         			sd.ttl = strtoul( tmp, NULL, 10 );
-        		}
+        		} 
 
         		if( sd.serial == 0 && ( tmp = odbx_field_value( m_result, 1 ) ) != NULL )
         		{
@@ -235,13 +232,13 @@ bool OdbxBackend::getSOA( const DNSName& domain, SOAData& sd, DNSPacket* p )
 
 
 
-bool OdbxBackend::list( const DNSName& target, int zoneid, bool include_disabled )
+bool OdbxBackend::list( const string& target, int zoneid, bool include_disabled )
 {
         try
         {
         	DLOG( L.log( m_myname + " list()", Logger::Debug ) );
 
-        	m_qname.empty();
+        	m_qname = "";
         	m_result = NULL;
 
         	int len = snprintf( m_buffer, sizeof( m_buffer ) - 1, "%d", zoneid );
@@ -274,7 +271,7 @@ bool OdbxBackend::list( const DNSName& target, int zoneid, bool include_disabled
 
 
 
-void OdbxBackend::lookup( const QType& qtype, const DNSName& qname, DNSPacket* dnspkt, int zoneid )
+void OdbxBackend::lookup( const QType& qtype, const string& qname, DNSPacket* dnspkt, int zoneid )
 {
         try
         {
@@ -323,7 +320,7 @@ void OdbxBackend::lookup( const QType& qtype, const DNSName& qname, DNSPacket* d
         		stmtref = strbind( ":id", string( m_buffer, len ), stmtref );
         	}
 
-        	string tmp = qname.toStringNoDot();
+        	string tmp = qname;
         	stmtref = strbind( ":name", escape( toLowerByRef( tmp ), READ ), stmtref );
 
         	if( !execStmt( stmtref.c_str(), stmtref.size(), READ ) )
@@ -343,7 +340,7 @@ void OdbxBackend::lookup( const QType& qtype, const DNSName& qname, DNSPacket* d
 bool OdbxBackend::get( DNSResourceRecord& rr )
 {
         const char* tmp;
-        string priority;
+
 
         try
         {
@@ -351,8 +348,8 @@ bool OdbxBackend::get( DNSResourceRecord& rr )
 
         	if( getRecord( READ ) )
         	{
-
         		rr.content = "";
+        		rr.priority = 0;
         		rr.domain_id = 0;
         		rr.last_modified = 0;
         		rr.ttl = m_default_ttl;
@@ -380,16 +377,13 @@ bool OdbxBackend::get( DNSResourceRecord& rr )
 
         		if( ( tmp = odbx_field_value( m_result, 4 ) ) != NULL )
         		{
-        			priority = string( tmp, odbx_field_length( m_result, 4 ) );
+        			rr.priority = (uint16_t) strtoul( tmp, NULL, 10 );
         		}
 
         		if( ( tmp = odbx_field_value( m_result, 5 ) ) != NULL )
         		{
         			rr.content = string( tmp, odbx_field_length( m_result, 5 ) );
         		}
-
-        		if (rr.qtype==QType::MX || rr.qtype==QType::SRV)
-        			rr.content = priority + " " + rr.content;
 
         		return true;
         	}
@@ -664,23 +658,10 @@ bool OdbxBackend::feedRecord( const DNSResourceRecord& rr, string *ordername )
         		return false;
         	}
 
-        	string tmp = rr.qname.toStringNoDot();
-
-        	int priority=0;
-        	string content(rr.content);
-
-        	if(rr.qtype == QType::MX || rr.qtype == QType::SRV) {
-        		priority=atoi(content.c_str());
-
-        		string::size_type pos = content.find_first_not_of("0123456789");
-        		if(pos != string::npos)
-        			boost::erase_head(content, pos);
-        		trim_left(content);
-        	}
-
+        	string tmp = rr.qname;
         	int len = snprintf( m_buffer, sizeof( m_buffer ) - 1, getArg( "sql-insert-record" ).c_str(), rr.domain_id,
-        		escape( toLowerByRef( tmp ), WRITE ).c_str(), rr.qtype.getName().c_str(), rr.ttl, priority,
-        		escape( content, WRITE ).c_str() );
+        		escape( toLowerByRef( tmp ), WRITE ).c_str(), rr.qtype.getName().c_str(), rr.ttl, rr.priority,
+        		escape( rr.content, WRITE ).c_str() );
 
         	if( len < 0 )
         	{

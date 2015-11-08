@@ -33,8 +33,8 @@ class Handler
    def initialize
    end
 
-   def rr(qname, qtype, content, ttl, auth = 1, domain_id = -1)
-      {:qname => qname, :qtype => qtype, :content => content, :ttl => ttl.to_i, :auth => auth.to_i, :domain_id => domain_id.to_i}
+   def rr(qname, qtype, content, ttl, priority = 0, auth = 1, domain_id = -1)
+      {:qname => qname, :qtype => qtype, :content => content, :ttl => ttl.to_i, :priority => priority.to_i, :auth => auth.to_i, :domain_id => domain_id.to_i}
    end
 
    def do_initialize(*args)
@@ -248,10 +248,6 @@ class Handler
    def do_calculatesoaserial(args)
      return [2013060300] if args["sd"]["qname"] == "unit.test"
      [false]
-   end
-
-   def do_directbackendcmd(args)
-     [args["query"]]
    end
 end
 

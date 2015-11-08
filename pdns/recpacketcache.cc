@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include <iostream>
 #include <boost/foreach.hpp>
 #include "recpacketcache.hh"
@@ -15,10 +12,10 @@ RecursorPacketCache::RecursorPacketCache()
   d_hits = d_misses = 0;
 }
 
-int RecursorPacketCache::doWipePacketCache(const DNSName& name, uint16_t qtype)
+int RecursorPacketCache::doWipePacketCache(const string& name, uint16_t qtype)
 {
   vector<uint8_t> packet;
-  DNSPacketWriter pw(packet, name, 0);
+  DNSPacketWriter pw(packet, toLower(name), 0);
   pw.getHeader()->rd=1;
   Entry e;
   e.d_packet.assign((const char*)&*packet.begin(), packet.size());
@@ -65,17 +62,6 @@ bool RecursorPacketCache::getResponsePacket(const std::string& queryPacket, time
     memcpy(&id, queryPacket.c_str(), 2); 
     *responsePacket = iter->d_packet;
     responsePacket->replace(0, 2, (char*)&id, 2);
-    
-    string::size_type i=sizeof(dnsheader);
-
-    for(;;) {
-      int labellen = (unsigned char)queryPacket[i];
-      if(!labellen || i + labellen > responsePacket->size()) break;
-      i++;
-      responsePacket->replace(i, labellen, queryPacket, i, labellen);
-      i = i + labellen;
-    }
-
     d_hits++;
     moveCacheItemToBack(d_packetCache, iter);
 

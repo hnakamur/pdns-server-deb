@@ -1,6 +1,3 @@
-#ifdef HAVE_CONFIG_H
-#include "config.h"
-#endif
 #include <bitset>
 #include "dnsparser.hh"
 #include "iputils.hh"
@@ -71,7 +68,7 @@ try
   MOADNSParser mdp(packet);
 
   cerr<<"Received notification response with error: "<<RCode::to_s(mdp.d_header.rcode)<<endl;
-  cerr<<"For: '"<<mdp.d_qname.toString()<<"'"<<endl;
+  cerr<<"For: '"<<mdp.d_qname<<"'"<<endl;
 }
 catch(std::exception& e)
 {

@@ -19,9 +19,7 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#ifndef PDNS_COMMENT_HH
-#define PDNS_COMMENT_HH
-
+#pragma once
 #include "utility.hh"
 #include "qtype.hh"
 #include <sys/types.h>
@@ -29,17 +27,14 @@
 class Comment
 {
 public:
-  Comment() : modified_at(0), domain_id(0)  {};
+  Comment() : domain_id(0), modified_at(0) {};
   ~Comment() {};
 
   // data
+  int domain_id;
   string qname; //!< the name of the associated RRset, for example: www.powerdns.com
+  QType qtype; //!< qtype of the associated RRset, ie A, CNAME, MX etc
   time_t modified_at;
   string account; //!< account last updating this comment
   string content; //!< The actual comment. Example: blah blah
-
-  int domain_id;
-  QType qtype; //!< qtype of the associated RRset, ie A, CNAME, MX etc
 };
-
-#endif /* PDNS_COMMENT_HH */
