@@ -1,3 +1,10 @@
+pdns (3.4.7-1) unstable; urgency=medium
+
+  * New upstream release. Operating, stability, interop improvements.
+    Adds OPENPGPKEY support. New default-soa-edit(-signed) settings.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sun, 08 Nov 2015 13:43:27 +0000
+
 pdns (3.4.6-3) unstable; urgency=medium
 
   * Remove unused Build-Dependencies
