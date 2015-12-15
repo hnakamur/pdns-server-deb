@@ -1,0 +1,735 @@
+Index: pdns/m4/pdns_with_system_polarssl.m4
+===================================================================
+--- pdns.orig/m4/pdns_with_system_polarssl.m4
++++ pdns/m4/pdns_with_system_polarssl.m4
+@@ -12,28 +12,11 @@ AC_DEFUN([PDNS_WITH_SYSTEM_POLARSSL],[
+   AS_IF([test "x$with_system_polarssl" = "xyes"],[
+     OLD_LIBS=$LIBS
+     LIBS=""
+-    AC_SEARCH_LIBS([sha1_hmac], [mbedtls polarssl],[
++    AC_SEARCH_LIBS([mbedtls_sha1], [mbedcrypto],[
+       POLARSSL_LIBS=$LIBS
+-      AC_MSG_CHECKING([for PolarSSL version >= 1.1])
+-      AC_COMPILE_IFELSE([
+-        AC_LANG_PROGRAM(
+-          [[#include <polarssl/version.h>]],
+-          [[
+-            #if POLARSSL_VERSION_NUMBER < 0x01010000
+-            #error invalid version
+-            #endif
+-          ]]
+-        )],
+-        [have_system_polarssl=yes],
+-        [have_system_polarssl=no]
+-      )
+-      AC_MSG_RESULT([$have_system_polarssl])
+-      ],
+-      [have_system_polarssl=no]
+-    )
+-    LIBS=$OLD_LIBS
+-    ],
+-    [have_system_polarssl=no]
++      have_system_polarssl=yes
++    ])
++    ],[have_system_polarssl=no]
+   )
+ 
+   AS_IF([test "x$have_system_polarssl" = "xyes"],[
+Index: pdns/pdns/dns_random.cc
+===================================================================
+--- pdns.orig/pdns/dns_random.cc
++++ pdns/pdns/dns_random.cc
+@@ -1,4 +1,4 @@
+-#include <polarssl/aes.h>
++#include <mbedtls/aes.h>
+ #include <iostream>
+ #include <cstdlib>
+ #include <cstring>
+@@ -11,7 +11,7 @@
+ 
+ using namespace std;
+ 
+-static aes_context g_ctx;
++static mbedtls_aes_context g_ctx;
+ static unsigned char g_counter[16], g_stream[16];
+ static uint32_t g_in;
+ static size_t g_offset;
+@@ -21,7 +21,7 @@ static bool g_initialized;
+ void dns_random_init(const char data[16])
+ {
+   g_offset = 0;
+-  aes_setkey_enc(&g_ctx, (const unsigned char*)data, 128);
++  mbedtls_aes_setkey_enc(&g_ctx, (const unsigned char*)data, 128);
+ 
+   struct timeval now;
+   gettimeofday(&now, 0);
+@@ -39,7 +39,7 @@ unsigned int dns_random(unsigned int n)
+   if(!g_initialized)
+     abort();
+   uint32_t out;
+-  aes_crypt_ctr(&g_ctx, sizeof(g_in), &g_offset, g_counter, (unsigned char*) &g_stream, (unsigned char*) &g_in, (unsigned char*) &out);
++  mbedtls_aes_crypt_ctr(&g_ctx, sizeof(g_in), &g_offset, g_counter, (unsigned char*) &g_stream, (unsigned char*) &g_in, (unsigned char*) &out);
+   return out % n;
+ }
+ 
+Index: pdns/pdns/dnssecinfra.cc
+===================================================================
+--- pdns.orig/pdns/dnssecinfra.cc
++++ pdns/pdns/dnssecinfra.cc
+@@ -9,8 +9,10 @@
+ #include <boost/algorithm/string.hpp>
+ #include "dnssecinfra.hh" 
+ #include "dnsseckeeper.hh"
+-#include <polarssl/md5.h>
+-#include <polarssl/sha1.h>
++#include <mbedtls/md5.h>
++#include <mbedtls/sha1.h>
++#include <mbedtls/md_internal.h>
++#include <mbedtls/md.h>
+ #include <boost/assign/std/vector.hpp> // for 'operator+=()'
+ #include <boost/assign/list_inserter.hpp>
+ #include "base64.hh"
+@@ -378,7 +380,7 @@ std::string hashQNameWithSalt(unsigned i
+ //  cerr<<makeHexDump(toHash)<<endl;
+   unsigned char hash[20];
+   for(;;) {
+-    sha1((unsigned char*)toHash.c_str(), toHash.length(), hash);
++    mbedtls_sha1((unsigned char*)toHash.c_str(), toHash.length(), hash);
+     if(!times--) 
+       break;
+     toHash.assign((char*)hash, sizeof(hash));
+@@ -468,66 +470,37 @@ void decodeDERIntegerSequence(const std:
+   }  
+ }
+ 
+-string calculateMD5HMAC(const std::string& key, const std::string& text)
+-{
+-  std::string res;
+-  unsigned char hash[16];
+-
+-  md5_hmac(reinterpret_cast<const unsigned char*>(key.c_str()), key.size(), reinterpret_cast<const unsigned char*>(text.c_str()), text.size(), hash);
+-  res.assign(reinterpret_cast<const char*>(hash), 16);
+-
+-  return res;
+-}
++string calculateHMAC(const std::string& key, const std::string& text, TSIGHashEnum hasher) {
++  mbedtls_md_type_t md_type;
++  const mbedtls_md_info_t *md_info;
+ 
+-string calculateSHAHMAC(const std::string& key, const std::string& text, TSIGHashEnum hasher)
+-{
+-  std::string res;
+-  unsigned char hash[64];
++  unsigned char hash[MBEDTLS_MD_MAX_SIZE];
+ 
+   switch(hasher) {
+-  case TSIG_SHA1:
+-  {
+-      sha1_hmac(reinterpret_cast<const unsigned char*>(key.c_str()), key.size(), reinterpret_cast<const unsigned char*>(text.c_str()), text.size(), hash);
+-      res.assign(reinterpret_cast<const char*>(hash), 20);
++    case TSIG_MD5:
++      md_type = MBEDTLS_MD_MD5;
+       break;
+-  };
+-  case TSIG_SHA224:
+-  {
+-      sha2_hmac(reinterpret_cast<const unsigned char*>(key.c_str()), key.size(), reinterpret_cast<const unsigned char*>(text.c_str()), text.size(), hash, 1);
+-      res.assign(reinterpret_cast<const char*>(hash), 28);
++    case TSIG_SHA1:
++      md_type = MBEDTLS_MD_SHA1;
+       break;
+-  };
+-  case TSIG_SHA256:
+-  {
+-      sha2_hmac(reinterpret_cast<const unsigned char*>(key.c_str()), key.size(), reinterpret_cast<const unsigned char*>(text.c_str()), text.size(), hash, 0);
+-      res.assign(reinterpret_cast<const char*>(hash), 32);
++    case TSIG_SHA224:
++      md_type = MBEDTLS_MD_SHA224;
+       break;
+-  };
+-  case TSIG_SHA384:
+-  {
+-      sha4_hmac(reinterpret_cast<const unsigned char*>(key.c_str()), key.size(), reinterpret_cast<const unsigned char*>(text.c_str()), text.size(), hash, 1);
+-      res.assign(reinterpret_cast<const char*>(hash), 48);
++    case TSIG_SHA384:
++      md_type = MBEDTLS_MD_SHA384;
+       break;
+-  };
+-  case TSIG_SHA512:
+-  {
+-      sha4_hmac(reinterpret_cast<const unsigned char*>(key.c_str()), key.size(), reinterpret_cast<const unsigned char*>(text.c_str()), text.size(), hash, 0);
+-      res.assign(reinterpret_cast<const char*>(hash), 64);
++    case TSIG_SHA512:
++      md_type = MBEDTLS_MD_SHA512;
+       break;
+-  };
+-  default:
+-    throw new PDNSException("Unknown hash algorithm requested for SHA");
+-  };
+-
+-  return res;
+-}
+-
+-string calculateHMAC(const std::string& key, const std::string& text, TSIGHashEnum hash) {
+-  if (hash == TSIG_MD5) return calculateMD5HMAC(key, text);
+-
+-  // add other algorithms here
++    default:
++      throw new PDNSException("Unknown hash algorithm requested from calculateHMAC()");
++  }
+ 
+-  return calculateSHAHMAC(key, text, hash);
++  md_info = mbedtls_md_info_from_type( md_type );
++  if( mbedtls_md_hmac( md_info, reinterpret_cast<const unsigned char*>(key.c_str()), key.size(), reinterpret_cast<const unsigned char*>(text.c_str()), text.size(), hash ) == 0 )
++    return string( (char*) hash, mbedtls_md_get_size( md_info ) );
++ 
++  return "";
+ }
+ 
+ string makeTSIGMessageFromTSIGPacket(const string& opacket, unsigned int tsigOffset, const string& keyname, const TSIGRecordContent& trc, const string& previous, bool timersonly, unsigned int dnsHeaderOffset)
+Index: pdns/pdns/dnssecinfra.hh
+===================================================================
+--- pdns.orig/pdns/dnssecinfra.hh
++++ pdns/pdns/dnssecinfra.hh
+@@ -130,9 +130,6 @@ class DNSPacket;
+ void addRRSigs(DNSSECKeeper& dk, DNSBackend& db, const std::set<string, CIStringCompare>& authMap, vector<DNSResourceRecord>& rrs);
+ 
+ typedef enum { TSIG_MD5, TSIG_SHA1, TSIG_SHA224, TSIG_SHA256, TSIG_SHA384, TSIG_SHA512 } TSIGHashEnum;
+-
+-string calculateMD5HMAC(const std::string& key, const std::string& text);
+-string calculateSHAHMAC(const std::string& key, const std::string& text, TSIGHashEnum hash);
+ string calculateHMAC(const std::string& key, const std::string& text, TSIGHashEnum hash);
+ 
+ string makeTSIGMessageFromTSIGPacket(const string& opacket, unsigned int tsigoffset, const string& keyname, const TSIGRecordContent& trc, const string& previous, bool timersonly, unsigned int dnsHeaderOffset=0);
+Index: pdns/pdns/polarrsakeyinfra.cc
+===================================================================
+--- pdns.orig/pdns/polarrsakeyinfra.cc
++++ pdns/pdns/polarrsakeyinfra.cc
+@@ -1,16 +1,16 @@
+-#include <polarssl/rsa.h>
+-#include <polarssl/base64.h>
++#include <mbedtls/rsa.h>
++#include <mbedtls/base64.h>
+ #include <sha.hh>
+-#include <polarssl/entropy.h>
+-#include <polarssl/ctr_drbg.h>
++#include <mbedtls/entropy.h>
++#include <mbedtls/ctr_drbg.h>
+ #include <boost/assign/std/vector.hpp> // for 'operator+=()'
+ #include <boost/foreach.hpp>
+ #include "dnssecinfra.hh"
+ using namespace boost::assign;
+ 
+-#define PDNSSEC_MI(x) mpi_init(&d_context.x)
+-#define PDNSSEC_MC(x) PDNSSEC_MI(x); mpi_copy(&d_context.x, const_cast<mpi*>(&orig.d_context.x))
+-#define PDNSSEC_MF(x) mpi_free(&d_context.x)
++#define PDNSSEC_MI(x) mbedtls_mpi_init(&d_context.x)
++#define PDNSSEC_MC(x) PDNSSEC_MI(x); mbedtls_mpi_copy(&d_context.x, const_cast<mbedtls_mpi*>(&orig.d_context.x))
++#define PDNSSEC_MF(x) mbedtls_mpi_free(&d_context.x)
+ 
+ class RSADNSCryptoKeyEngine : public DNSCryptoKeyEngine
+ {
+@@ -55,12 +55,12 @@ public:
+     return *this;
+   }
+ 
+-  const rsa_context& getConstContext() const
++  const mbedtls_rsa_context& getConstContext() const
+   {
+     return d_context;
+   }
+ 
+-  rsa_context& getContext() 
++  mbedtls_rsa_context& getContext() 
+   {
+     return d_context;
+   }
+@@ -74,7 +74,7 @@ public:
+   std::string getPublicKeyString() const;
+   int getBits() const
+   {
+-    return mpi_size(&d_context.N)*8;
++    return mbedtls_mpi_size(&d_context.N)*8;
+   }
+   void fromISCMap(DNSKEYRecordContent& drc, std::map<std::string, std::string>& stormap);
+   void fromPEMString(DNSKEYRecordContent& drc, const std::string& raw);
+@@ -85,7 +85,7 @@ public:
+   }
+ 
+ private:
+-  rsa_context d_context;
++  mbedtls_rsa_context d_context;
+ };
+ 
+ // see above
+@@ -94,23 +94,24 @@ private:
+ #undef PDNSSEC_MF
+ 
+ 
+-inline bool operator<(const mpi& a, const mpi& b)
++inline bool operator<(const mbedtls_mpi& a, const mbedtls_mpi& b)
+ {
+-  return mpi_cmp_mpi(&a, &b) < 0;
++  return mbedtls_mpi_cmp_mpi(&a, &b) < 0;
+ }
+ 
+ 
+ void RSADNSCryptoKeyEngine::create(unsigned int bits)
+ {
+-  entropy_context entropy;
+-  ctr_drbg_context ctr_drbg;
++  mbedtls_entropy_context entropy;
++  mbedtls_ctr_drbg_context ctr_drbg;
+   
+-  entropy_init( &entropy );
+-  int ret=ctr_drbg_init( &ctr_drbg, entropy_func, &entropy, (unsigned char *) "PowerDNS", 8);
++  mbedtls_entropy_init( &entropy );
++  mbedtls_ctr_drbg_init( &ctr_drbg );
++  int ret=mbedtls_ctr_drbg_seed( &ctr_drbg, mbedtls_entropy_func, &entropy, (unsigned char *) "PowerDNS", 8);
+   if(ret < 0) 
+     throw runtime_error("Entropy gathering for key generation failed");
+-  rsa_init(&d_context, RSA_PKCS_V15, 0); // FIXME this leaks memory (it does?)
+-  ret=rsa_gen_key(&d_context, ctr_drbg_random, &ctr_drbg, bits, 65537);
++  mbedtls_rsa_init(&d_context, MBEDTLS_RSA_PKCS_V15, 0); // FIXME this leaks memory (it does?)
++  ret=mbedtls_rsa_gen_key(&d_context, mbedtls_ctr_drbg_random, &ctr_drbg, bits, 65537);
+   if(ret < 0) 
+     throw runtime_error("Key generation failed");
+ }
+@@ -118,33 +119,33 @@ void RSADNSCryptoKeyEngine::create(unsig
+ std::string RSADNSCryptoKeyEngine::getPubKeyHash() const
+ {
+   unsigned char hash[20];
+-  unsigned char N[mpi_size(&d_context.N)];
+-  mpi_write_binary(&d_context.N, N, sizeof(N));
+-  unsigned char E[mpi_size(&d_context.E)];
+-  mpi_write_binary(&d_context.E, E, sizeof(E));
+-  
+-  sha1_context ctx;
+-  sha1_starts(&ctx);
+-  sha1_update(&ctx, N, sizeof(N));
+-  sha1_update(&ctx, E, sizeof(E));
+-  sha1_finish(&ctx, hash);
++  unsigned char N[mbedtls_mpi_size(&d_context.N)];
++  mbedtls_mpi_write_binary(&d_context.N, N, sizeof(N));
++  unsigned char E[mbedtls_mpi_size(&d_context.E)];
++  mbedtls_mpi_write_binary(&d_context.E, E, sizeof(E));
++  
++  mbedtls_sha1_context ctx;
++  mbedtls_sha1_starts(&ctx);
++  mbedtls_sha1_update(&ctx, N, sizeof(N));
++  mbedtls_sha1_update(&ctx, E, sizeof(E));
++  mbedtls_sha1_finish(&ctx, hash);
+   return string((char*)hash, sizeof(hash));
+ }
+ 
+ std::string RSADNSCryptoKeyEngine::sign(const std::string& msg) const
+ {
+   string hash = this->hash(msg);
+-  unsigned char signature[mpi_size(&d_context.N)];
+-  md_type_t hashKind;
++  unsigned char signature[mbedtls_mpi_size(&d_context.N)];
++  mbedtls_md_type_t hashKind;
+ 
+   if(hash.size()==20)
+-    hashKind= SIG_RSA_SHA1;
++    hashKind= MBEDTLS_MD_SHA1;
+   else if(hash.size()==32) 
+-    hashKind= SIG_RSA_SHA256;
++    hashKind= MBEDTLS_MD_SHA256;
+   else
+-    hashKind = SIG_RSA_SHA512;
++    hashKind = MBEDTLS_MD_SHA512;
+   
+-  int ret=rsa_pkcs1_sign(const_cast<rsa_context*>(&d_context), NULL, NULL, RSA_PRIVATE, 
++  int ret=mbedtls_rsa_pkcs1_sign(const_cast<mbedtls_rsa_context*>(&d_context), NULL, NULL, MBEDTLS_RSA_PRIVATE,
+     hashKind,
+     hash.size(),
+     (const unsigned char*) hash.c_str(), signature);
+@@ -158,20 +159,18 @@ std::string RSADNSCryptoKeyEngine::sign(
+ 
+ bool RSADNSCryptoKeyEngine::verify(const std::string& msg, const std::string& signature) const
+ {
+-  md_type_t hashKind;
++  mbedtls_md_type_t hashKind;
+   string hash=this->hash(msg);
+   if(hash.size()==20)
+-    hashKind= SIG_RSA_SHA1;
++    hashKind= MBEDTLS_MD_SHA1;
+   else if(hash.size()==32) 
+-    hashKind= SIG_RSA_SHA256;
++    hashKind= MBEDTLS_MD_SHA256;
+   else
+-    hashKind = SIG_RSA_SHA512;
++    hashKind = MBEDTLS_MD_SHA512;
+   
+-  int ret=rsa_pkcs1_verify(const_cast<rsa_context*>(&d_context),
+-#if POLARSSL_VERSION_NUMBER >= 0x01020900
++  int ret=mbedtls_rsa_pkcs1_verify(const_cast<mbedtls_rsa_context*>(&d_context),
+     NULL, NULL,
+-#endif
+-    RSA_PUBLIC,
++    MBEDTLS_RSA_PUBLIC,
+     hashKind,
+     hash.size(),
+     (const unsigned char*) hash.c_str(), (unsigned char*) signature.c_str());
+@@ -183,25 +182,17 @@ std::string RSADNSCryptoKeyEngine::hash(
+ {
+   if(d_algorithm <= 7 ) {  // RSASHA1
+     unsigned char hash[20];
+-    sha1((unsigned char*)toHash.c_str(), toHash.length(), hash);
++    mbedtls_sha1((unsigned char*)toHash.c_str(), toHash.length(), hash);
+     return string((char*)hash, sizeof(hash));
+   } 
+   else if(d_algorithm == 8) { // RSASHA256
+     unsigned char hash[32];
+-#if POLARSSL_VERSION_NUMBER >= 0x01030000
+-    sha256((unsigned char*)toHash.c_str(), toHash.length(), hash, 0);
+-#else
+-    sha2((unsigned char*)toHash.c_str(), toHash.length(), hash, 0);
+-#endif
++    mbedtls_sha256((unsigned char*)toHash.c_str(), toHash.length(), hash, 0);
+     return string((char*)hash, sizeof(hash));
+   } 
+   else if(d_algorithm == 10) { // RSASHA512
+     unsigned char hash[64];
+-#if POLARSSL_VERSION_NUMBER >= 0x01030000
+-    sha512((unsigned char*)toHash.c_str(), toHash.length(), hash, 0);
+-#else
+-    sha4((unsigned char*)toHash.c_str(), toHash.length(), hash, 0);
+-#endif
++    mbedtls_sha512((unsigned char*)toHash.c_str(), toHash.length(), hash, 0);
+     return string((char*)hash, sizeof(hash));
+   }
+   throw runtime_error("PolarSSL hashing method can't hash algorithm "+lexical_cast<string>(d_algorithm));
+@@ -211,7 +202,7 @@ std::string RSADNSCryptoKeyEngine::hash(
+ DNSCryptoKeyEngine::storvector_t RSADNSCryptoKeyEngine::convertToISCVector() const
+ {
+   storvector_t storvect;
+-  typedef vector<pair<string, const mpi*> > outputs_t;
++  typedef vector<pair<string, const mbedtls_mpi*> > outputs_t;
+   outputs_t outputs;
+   push_back(outputs)("Modulus", &d_context.N)("PublicExponent",&d_context.E)
+     ("PrivateExponent",&d_context.D)
+@@ -234,8 +225,8 @@ DNSCryptoKeyEngine::storvector_t RSADNSC
+   storvect.push_back(make_pair("Algorithm", algorithm));
+ 
+   BOOST_FOREACH(outputs_t::value_type value, outputs) {
+-    unsigned char tmp[mpi_size(value.second)];
+-    mpi_write_binary(value.second, tmp, sizeof(tmp));
++    unsigned char tmp[mbedtls_mpi_size(value.second)];
++    mbedtls_mpi_write_binary(value.second, tmp, sizeof(tmp));
+     storvect.push_back(make_pair(value.first, string((char*)tmp, sizeof(tmp))));
+   }
+   return storvect;
+@@ -246,10 +237,10 @@ void RSADNSCryptoKeyEngine::fromISCMap(D
+ {
+   string sline;
+   string key,value;
+-  typedef map<string, mpi*> places_t;
++  typedef map<string, mbedtls_mpi*> places_t;
+   places_t places;
+   
+-  rsa_init(&d_context, RSA_PKCS_V15, 0);
++  mbedtls_rsa_init(&d_context, MBEDTLS_RSA_PKCS_V15, 0);
+ 
+   places["Modulus"]=&d_context.N;
+   places["PublicExponent"]=&d_context.E;
+@@ -265,10 +256,10 @@ void RSADNSCryptoKeyEngine::fromISCMap(D
+   string raw;
+   BOOST_FOREACH(const places_t::value_type& val, places) {
+     raw=stormap[toLower(val.first)];
+-    mpi_read_binary(val.second, (unsigned char*) raw.c_str(), raw.length());
++    mbedtls_mpi_read_binary(val.second, (unsigned char*) raw.c_str(), raw.length());
+   }
+ 
+-  d_context.len = ( mpi_msb( &d_context.N ) + 7 ) >> 3; // no clue what this does
++  d_context.len = ( mbedtls_mpi_bitlen( &d_context.N ) + 7 ) >> 3; // no clue what this does
+   drc.d_key = this->getPublicKeyString();
+   drc.d_protocol=3;
+ }
+@@ -278,9 +269,9 @@ void RSADNSCryptoKeyEngine::fromPEMStrin
+   vector<string> integers;
+   decodeDERIntegerSequence(raw, integers);
+   cerr<<"Got "<<integers.size()<<" integers"<<endl; 
+-  map<int, mpi*> places;
++  map<int, mbedtls_mpi*> places;
+   
+-  rsa_init(&d_context, RSA_PKCS_V15, 0);
++  mbedtls_rsa_init(&d_context, MBEDTLS_RSA_PKCS_V15, 0);
+ 
+   places[1]=&d_context.N;
+   places[2]=&d_context.E;
+@@ -296,7 +287,7 @@ void RSADNSCryptoKeyEngine::fromPEMStrin
+   for(int n = 0; n < 9 ; ++n) {
+     if(places.count(n)) {
+       if(places[n]) {
+-        mpi_read_binary(places[n], (const unsigned char*)integers[n].c_str(), integers[n].length());
++        mbedtls_mpi_read_binary(places[n], (const unsigned char*)integers[n].c_str(), integers[n].length());
+         if(n==1)
+           modulus=integers[n];
+         if(n==2)
+@@ -304,7 +295,7 @@ void RSADNSCryptoKeyEngine::fromPEMStrin
+       }
+     }
+   }
+-  d_context.len = ( mpi_msb( &d_context.N ) + 7 ) >> 3; // no clue what this does
++  d_context.len = ( mbedtls_mpi_bitlen( &d_context.N ) + 7 ) >> 3; // no clue what this does
+ 
+   if(exponent.length() < 255) 
+     drc.d_key.assign(1, (char) (unsigned int) exponent.length());
+@@ -320,7 +311,7 @@ void RSADNSCryptoKeyEngine::fromPEMStrin
+ 
+ void RSADNSCryptoKeyEngine::fromPublicKeyString(const std::string& rawString)
+ {
+-  rsa_init(&d_context, RSA_PKCS_V15, 0);
++  mbedtls_rsa_init(&d_context, MBEDTLS_RSA_PKCS_V15, 0);
+   string exponent, modulus;
+   const unsigned char* raw = (const unsigned char*)rawString.c_str();
+   
+@@ -331,21 +322,21 @@ void RSADNSCryptoKeyEngine::fromPublicKe
+     exponent=rawString.substr(3, raw[1]*0xff + raw[2]);
+     modulus = rawString.substr(3+ raw[1]*0xff + raw[2]);
+   }
+-  mpi_read_binary(&d_context.E, (unsigned char*)exponent.c_str(), exponent.length());   
+-  mpi_read_binary(&d_context.N, (unsigned char*)modulus.c_str(), modulus.length());    
+-  d_context.len = ( mpi_msb( &d_context.N ) + 7 ) >> 3; // no clue what this does
++  mbedtls_mpi_read_binary(&d_context.E, (unsigned char*)exponent.c_str(), exponent.length());   
++  mbedtls_mpi_read_binary(&d_context.N, (unsigned char*)modulus.c_str(), modulus.length());    
++  d_context.len = ( mbedtls_mpi_bitlen( &d_context.N ) + 7 ) >> 3; // no clue what this does
+ }
+ 
+ string RSADNSCryptoKeyEngine::getPublicKeyString()  const
+ {
+   string keystring;
+-  char tmp[std::max(mpi_size(&d_context.E), mpi_size(&d_context.N))];
++  char tmp[std::max(mbedtls_mpi_size(&d_context.E), mbedtls_mpi_size(&d_context.N))];
+ 
+-  mpi_write_binary(&d_context.E, (unsigned char*)tmp, mpi_size(&d_context.E) );
+-  string exponent((char*)tmp, mpi_size(&d_context.E));
++  mbedtls_mpi_write_binary(&d_context.E, (unsigned char*)tmp, mbedtls_mpi_size(&d_context.E) );
++  string exponent((char*)tmp, mbedtls_mpi_size(&d_context.E));
+ 
+-  mpi_write_binary(&d_context.N, (unsigned char*)tmp, mpi_size(&d_context.N) );
+-  string modulus((char*)tmp, mpi_size(&d_context.N));
++  mbedtls_mpi_write_binary(&d_context.N, (unsigned char*)tmp, mbedtls_mpi_size(&d_context.N) );
++  string modulus((char*)tmp, mbedtls_mpi_size(&d_context.N));
+ 
+   if(exponent.length() < 255) 
+     keystring.assign(1, (char) (unsigned int) exponent.length());
+Index: pdns/pdns/md5.hh
+===================================================================
+--- pdns.orig/pdns/md5.hh
++++ pdns/pdns/md5.hh
+@@ -3,12 +3,12 @@
+ 
+ #include <string>
+ #include <stdint.h>
+-#include <polarssl/md5.h>
++#include <mbedtls/md5.h>
+ 
+ inline std::string pdns_md5sum(const std::string& input)
+ {
+   unsigned char result[16] = {0};
+-  md5(reinterpret_cast<const unsigned char*>(input.c_str()), input.length(), result);
++  mbedtls_md5(reinterpret_cast<const unsigned char*>(input.c_str()), input.length(), result);
+   return std::string(result, result + sizeof result);
+ }
+ 
+Index: pdns/pdns/pkcs11signers.cc
+===================================================================
+--- pdns.orig/pdns/pkcs11signers.cc
++++ pdns/pdns/pkcs11signers.cc
+@@ -1,8 +1,4 @@
+-#include <polarssl/rsa.h>
+-#include <polarssl/base64.h>
+ #include <sha.hh>
+-#include <polarssl/entropy.h>
+-#include <polarssl/ctr_drbg.h>
+ #include <boost/assign/std/vector.hpp> // for 'operator+=()'
+ #include <boost/assign/list_of.hpp>
+ #include <boost/make_shared.hpp>
+Index: pdns/pdns/sha.hh
+===================================================================
+--- pdns.orig/pdns/sha.hh
++++ pdns/pdns/sha.hh
+@@ -3,134 +3,84 @@
+ 
+ #include <string>
+ #include <stdint.h>
+-#include <polarssl/version.h>
+-#if POLARSSL_VERSION_NUMBER >= 0x01030000
+-  #include <polarssl/sha1.h>
+-  #include <polarssl/sha256.h>
+-  #include <polarssl/sha512.h>
+-  typedef sha256_context sha2_context;
+-  typedef sha512_context sha4_context;
+-  #define sha2_finish sha256_finish
+-  #define sha2_hmac sha256_hmac
+-  #define sha2_hmac_finish sha256_hmac_finish
+-  #define sha2_hmac_starts sha256_hmac_starts
+-  #define sha2_hmac_update sha256_hmac_update
+-  #define sha2_starts sha256_starts
+-  #define sha2_update sha256_update
+-  #define sha4_finish sha512_finish
+-  #define sha4_hmac sha512_hmac
+-  #define sha4_hmac_finish sha512_hmac_finish
+-  #define sha4_hmac_starts sha512_hmac_starts
+-  #define sha4_hmac_update sha512_hmac_update
+-  #define sha4_starts sha512_starts
+-  #define sha4_update sha512_update
+-  #define POLARSSL_SHA2_C POLARSSL_SHA256_C
+-  #define POLARSSL_SHA4_C POLARSSL_SHA512_C
+-  #define SIG_RSA_SHA1    POLARSSL_MD_SHA1
+-  #define SIG_RSA_SHA224  POLARSSL_MD_SHA224
+-  #define SIG_RSA_SHA256  POLARSSL_MD_SHA256
+-  #define SIG_RSA_SHA384  POLARSSL_MD_SHA384
+-  #define SIG_RSA_SHA512  POLARSSL_MD_SHA512
+-#else
+-  #include <polarssl/sha1.h>
+-  #include <polarssl/sha2.h>
+-  #include <polarssl/sha4.h>
+-  typedef int md_type_t;
+-#endif
++#include <mbedtls/sha1.h>
++#include <mbedtls/sha256.h>
++#include <mbedtls/sha512.h>
+ 
+ class SHA1Summer
+ {
+ public:
+-   SHA1Summer() { sha1_starts(&d_context); };
++   SHA1Summer() { mbedtls_sha1_starts(&d_context); };
+    void feed(const std::string &str) { feed(str.c_str(), str.length()); };
+-   void feed(const char *ptr, size_t len) { sha1_update(&d_context, reinterpret_cast<const unsigned char*>(ptr), len); };
++   void feed(const char *ptr, size_t len) { mbedtls_sha1_update(&d_context, reinterpret_cast<const unsigned char*>(ptr), len); };
+    const std::string get() const { 
+-     sha1_context ctx2;
++     mbedtls_sha1_context ctx2;
+      unsigned char result[20] = {0};
+      ctx2=d_context;
+-     sha1_finish(&ctx2, result);
++     mbedtls_sha1_finish(&ctx2, result);
+      return std::string(result, result + sizeof result);
+    };
+ private:
+    SHA1Summer(const SHA1Summer&);
+    SHA1Summer& operator=(const SHA1Summer&);
+-   sha1_context d_context;
+-};
+-
+-class SHA224Summer
+-{
+-public:
+-   SHA224Summer() { sha2_starts(&d_context, 1); };
+-   void feed(const std::string &str) { feed(str.c_str(), str.length()); };
+-   void feed(const char *ptr, size_t len) { sha2_update(&d_context, reinterpret_cast<const unsigned char*>(ptr), len); };
+-   const std::string get() const { 
+-     sha2_context ctx2;
+-     unsigned char result[32] = {0};
+-     ctx2=d_context;
+-     sha2_finish(&ctx2, result);
+-     return std::string(result, result + 28);
+-   };
+-private:
+-   SHA224Summer(const SHA1Summer&);
+-   SHA224Summer& operator=(const SHA1Summer&);
+-   sha2_context d_context;
++   mbedtls_sha1_context d_context;
+ };
+ 
+ class SHA256Summer
+ {
+ public:
+-   SHA256Summer() { sha2_starts(&d_context, 0); };
++   SHA256Summer() { mbedtls_sha256_starts(&d_context, 0); };
+    void feed(const std::string &str) { feed(str.c_str(), str.length()); };
+-   void feed(const char *ptr, size_t len) { sha2_update(&d_context, reinterpret_cast<const unsigned char*>(ptr), len); };
++   void feed(const char *ptr, size_t len) { mbedtls_sha256_update(&d_context, reinterpret_cast<const unsigned char*>(ptr), len); };
+    const std::string get() const {
+-     sha2_context ctx2;
++     mbedtls_sha256_context ctx2;
+      unsigned char result[32] = {0};
+      ctx2=d_context;
+-     sha2_finish(&ctx2, result);
++     mbedtls_sha256_finish(&ctx2, result);
+      return std::string(result, result + 32);
+    };
+ private:
+    SHA256Summer(const SHA1Summer&);
+    SHA256Summer& operator=(const SHA1Summer&);
+-   sha2_context d_context;
++   mbedtls_sha256_context d_context;
+ };
+ 
+ class SHA384Summer
+ {
+ public:
+-   SHA384Summer() { sha4_starts(&d_context, 1); };
++   SHA384Summer() { mbedtls_sha512_starts(&d_context, 1); };
+    void feed(const std::string &str) { feed(str.c_str(), str.length()); };
+-   void feed(const char *ptr, size_t len) { sha4_update(&d_context, reinterpret_cast<const unsigned char*>(ptr), len); };
++   void feed(const char *ptr, size_t len) { mbedtls_sha512_update(&d_context, reinterpret_cast<const unsigned char*>(ptr), len); };
+    const std::string get() const {
+-     sha4_context ctx2;
++     mbedtls_sha512_context ctx2;
+      unsigned char result[64] = {0};
+      ctx2 = d_context;
+-     sha4_finish(&ctx2, result);
++     mbedtls_sha512_finish(&ctx2, result);
+      return std::string(result, result + 48);
+    };
+ private:
+    SHA384Summer(const SHA1Summer&);
+    SHA384Summer& operator=(const SHA1Summer&);
+-   sha4_context d_context;
++   mbedtls_sha512_context d_context;
+ };
+ 
+ class SHA512Summer
+ {
+ public:
+-   SHA512Summer() { sha4_starts(&d_context, 0); };
++   SHA512Summer() { mbedtls_sha512_starts(&d_context, 0); };
+    void feed(const std::string &str) { feed(str.c_str(), str.length()); };
+-   void feed(const char *ptr, size_t len) { sha4_update(&d_context, reinterpret_cast<const unsigned char*>(ptr), len); };
++   void feed(const char *ptr, size_t len) { mbedtls_sha512_update(&d_context, reinterpret_cast<const unsigned char*>(ptr), len); };
+    const std::string get() const {
+-     sha4_context ctx2;
++     mbedtls_sha512_context ctx2;
+      unsigned char result[64] = {0};
+      ctx2=d_context;
+-     sha4_finish(&ctx2, result);
++     mbedtls_sha512_finish(&ctx2, result);
+      return std::string(result, result + sizeof result);
+    };
+ private:
+    SHA512Summer(const SHA1Summer&);
+    SHA512Summer& operator=(const SHA1Summer&);
+-   sha4_context d_context;
++   mbedtls_sha512_context d_context;
+ };
+ 
+ #endif /* sha.hh */
+Index: pdns/pdns/test-sha_hh.cc
+===================================================================
+--- pdns.orig/pdns/test-sha_hh.cc
++++ pdns/pdns/test-sha_hh.cc
+@@ -29,18 +29,6 @@ BOOST_AUTO_TEST_CASE(test_sha1summer) {
+    }
+ }
+ 
+-BOOST_AUTO_TEST_CASE(test_sha224summer) {
+-   cases_t cases = list_of 
+-      (case_t("abc", "23 09 7d 22 34 05 d8 22 86 42 a4 77 bd a2 55 b3 2a ad bc e4 bd a0 b3 f7 e3 6c 9d a7 ")) 
+-      (case_t("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq", "75 38 8b 16 51 27 76 cc 5d ba 5d a1 fd 89 01 50 b0 c6 45 5c b4 f5 8b 19 52 52 25 25 ")); 
+-
+-   BOOST_FOREACH(case_t& val, cases) { 
+-      SHA224Summer s; 
+-      s.feed(val.get<0>()); 
+-      BOOST_CHECK_EQUAL(makeHexDump(s.get()), val.get<1>()); 
+-   } 
+-}
+-
+ BOOST_AUTO_TEST_CASE(test_sha256summer) {
+    cases_t cases = list_of 
+       (case_t("abc", "ba 78 16 bf 8f 01 cf ea 41 41 40 de 5d ae 22 23 b0 03 61 a3 96 17 7a 9c b4 10 ff 61 f2 00 15 ad ")) 
