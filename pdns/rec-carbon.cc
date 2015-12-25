@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "mtasker.hh"
 #include "syncres.hh"
 #include "rec_channel.hh"
@@ -5,7 +8,7 @@
 #include "logger.hh"
 #include "arguments.hh"
 #include "lock.hh"
-#include <boost/foreach.hpp>
+
 
 void doCarbonDump(void*)
 try
@@ -42,8 +45,9 @@ try
     if(p) *p=0;
 
     hostname=tmp;
+    boost::replace_all(hostname, ".", "_");    
   }
-  BOOST_FOREACH(const all_t::value_type& val, all) {
+  for(const all_t::value_type& val :  all) {
     str<<"pdns."<<hostname<<".recursor."<<val.first<<' '<<val.second<<' '<<now<<"\r\n";
   }
   const string msg = str.str();
@@ -52,7 +56,7 @@ try
   if(ret < 0)
     L<<Logger::Warning<<"Error writing carbon data to "<<remote.toStringWithPort()<<": "<<strerror(errno)<<endl;
   if(ret==0)
-    L<<Logger::Warning<<"Timeout connecting/writing carbon data to "<<remote.toStringWithPort();
+    L<<Logger::Warning<<"Timeout connecting/writing carbon data to "<<remote.toStringWithPort()<<endl;
  }
 catch(PDNSException& e)
 {

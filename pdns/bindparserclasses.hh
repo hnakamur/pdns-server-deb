@@ -26,6 +26,7 @@
 #include <vector>
 #include <set>
 #include <stdio.h>
+#include <sys/stat.h>
 
 #include "namespaces.hh"
 
@@ -37,13 +38,14 @@ public:
 
   void clear() 
   {
-    name=filename=type="";
+    name=DNSName();
+    filename=type="";
     masters.clear();
     alsoNotify.clear();
     d_dev=0;
     d_ino=0;
   }
-  string name;
+  DNSName name;
   string viewName;
   string filename;
   vector<string> masters;
@@ -89,10 +91,10 @@ class BindParser
   set<string> & getAlsoNotify() { return this->alsoNotify; } 
 private:
   string d_dir;
-  bool d_verbose;
-  typedef map<string,string> zonedomain_t;
+  typedef map<DNSName,string> zonedomain_t;
   set<string> alsoNotify;
   vector<BindDomainInfo> d_zonedomains;
+  bool d_verbose;
 };
 
 #endif /* BINDPARSER_HH */

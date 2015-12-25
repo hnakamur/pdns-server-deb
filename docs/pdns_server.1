@@ -1,0 +1,49 @@
+.TH "PDNS_SERVER" "1" "December 2012" "" ""
+.SH NAME
+.PP
+\f[B]pdns_server\f[] \- The PowerDNS Authoritative Namserver
+.SH SYNOPSIS
+.PP
+\f[B]pdns_server\f[] [\f[I]OPTION\f[]]
+.SH DESCRIPTION
+.PP
+The PowerDNS Authoritative Server is a versatile nameserver which
+supports a large number of backends.
+These backends can either be plain zone files or be more dynamic in
+nature.
+Please see the online documentation for more information.
+.SH OPTIONS
+.PP
+See the online documentation for all options
+.TP
+.B \-\-daemon={\f[B]yes\f[],\f[B]no\f[]}
+Indicate if the server should run in the background as a real daemon, or
+in the foreground.
+.RS
+.RE
+.TP
+.B \-\-guardian={\f[B]yes\f[],\f[B]no\f[]}
+Run \f[B]pdns_server\f[] inside a guardian.
+This guardian monitors the performance of the inner \f[B]pdns_server\f[]
+instance.
+It is also this guardian that \f[B]pdns_control\f[](8) talks to.
+.RS
+.RE
+.TP
+.B \-\-control\-console
+Run the server in a special monitor mode.
+This enables detailed logging and exposes the raw control socket.
+.RS
+.RE
+.TP
+.B \-\-loglevel=\f[I]LEVEL\f[]
+Set the logging level.
+.RS
+.RE
+.PP
+\-\-help To view more options that are available use this program.
+.SH SEE ALSO
+.PP
+pdns_control(1), pdnsutil(1), http://doc.powerdns.com/md/authoritative/
+.SH AUTHORS
+PowerDNS.COM BV.

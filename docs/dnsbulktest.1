@@ -1,0 +1,39 @@
+.TH "DNSBULKTEST" "1" "April 2015" "" ""
+.SH NAME
+.PP
+\f[B]dnsbulktest\f[] \- A debugging tool for intermittent resolver
+failures
+.SH SYNOPSIS
+.PP
+\f[B]dnsbulktest\f[] [\f[I]OPTION\f[]]...
+\f[I]IPADDRESS\f[] \f[I]PORT\f[] [\f[I]LIMIT\f[]]
+.SH DESCRIPTION
+.PP
+\f[B]dnsbulktest\f[] sends a large amount of different queries (for up
+to \f[I]LIMIT\f[] different domains) to the nameserver at
+\f[I]IPADDRESS\f[] on port \f[I]PORT\f[].
+It reads the domain names from STDIN in the alexa topX format and
+outputs statistics on STDOUT.
+.SH OPTIONS
+.TP
+.B \-\-help, \-h
+Show a summary of options.
+.RS
+.RE
+.TP
+.B \-\-quiet, \-q
+Don\[aq]t show information on individual queries.
+.RS
+.RE
+.TP
+.B \-\-type, \-t \f[I]TYPE\f[]
+Query the nameserver for \f[I]TYPE\f[], A by default.
+.RS
+.RE
+.TP
+.B \-\-envoutput, \-e
+Write results on STDOUT as shell environment variables
+.RS
+.RE
+.SH AUTHORS
+PowerDNS.com BV.

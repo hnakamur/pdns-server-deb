@@ -31,12 +31,13 @@
 #include <errno.h>
 // #include <netinet/in.h>
 #include "misc.hh"
-#include <boost/shared_ptr.hpp>
-#include <boost/lexical_cast.hpp>
+
 #include <boost/tuple/tuple.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 #include "dns.hh"
 #include "dnswriter.hh"
+#include "dnsname.hh"
+#include "pdnsexception.hh"
 
 /** DNS records have three representations:
     1) in the packet
@@ -71,6 +72,7 @@ public:
     : d_pos(0), d_startrecordpos(0), d_content(content)
   {
     d_recordlen = content.size();
+    not_used = 0;
   }
 
   uint32_t get32BitInt();
@@ -117,9 +119,9 @@ public:
   }
 
 
-  void xfrLabel(string &label, bool compress=false)
+  void xfrName(DNSName &name, bool compress=false, bool noDot=false)
   {
-    label=getLabel();
+    name=getName();
   }
 
   void xfrText(string &text, bool multi=false)
@@ -133,13 +135,12 @@ public:
   void xfrHexBlob(string& blob, bool keepReading=false);
 
   static uint16_t get16BitInt(const vector<unsigned char>&content, uint16_t& pos);
-  static void getLabelFromContent(const vector<uint8_t>& content, uint16_t& frompos, string& ret, int recurs);
 
   void getDnsrecordheader(struct dnsrecordheader &ah);
   void copyRecord(vector<unsigned char>& dest, uint16_t len);
   void copyRecord(unsigned char* dest, uint16_t len);
 
-  string getLabel(unsigned int recurs=0);
+  DNSName getName();
   string getText(bool multi);
 
   uint16_t d_pos;
@@ -149,6 +150,7 @@ public:
 private:
   uint16_t d_startrecordpos; // needed for getBlob later on
   uint16_t d_recordlen;      // ditto
+  uint16_t not_used; // Alighns the whole class on 8-byte boundries
   const vector<uint8_t>& d_content;
 };
 
@@ -160,14 +162,15 @@ public:
   static DNSRecordContent* mastermake(const DNSRecord &dr, PacketReader& pr);
   static DNSRecordContent* mastermake(const DNSRecord &dr, PacketReader& pr, uint16_t opcode);
   static DNSRecordContent* mastermake(uint16_t qtype, uint16_t qclass, const string& zone);
+  static std::unique_ptr<DNSRecordContent> makeunique(uint16_t qtype, uint16_t qclass, const string& content);
 
-  virtual std::string getZoneRepresentation() const = 0;
+  virtual std::string getZoneRepresentation(bool noDot=false) const = 0;
   virtual ~DNSRecordContent() {}
   virtual void toPacket(DNSPacketWriter& pw)=0;
-  virtual string serialize(const string& qname, bool canonic=false, bool lowerCase=false) // it would rock if this were const, but it is too hard
+  virtual string serialize(const DNSName& qname, bool canonic=false, bool lowerCase=false) // it would rock if this were const, but it is too hard
   {
     vector<uint8_t> packet;
-    string empty;
+    DNSName empty;
     DNSPacketWriter pw(packet, empty, 1);
     if(canonic)
       pw.setCanonic(true);
@@ -175,7 +178,7 @@ public:
     if(lowerCase)
       pw.setLowercase(true);
 
-    pw.startRecord(qname, d_qtype);
+    pw.startRecord(qname, this->getType());
     this->toPacket(pw);
     pw.commit();
     
@@ -184,12 +187,9 @@ public:
     return record;
   }
 
-  static shared_ptr<DNSRecordContent> unserialize(const string& qname, uint16_t qtype, const string& serialized);
+  static shared_ptr<DNSRecordContent> unserialize(const DNSName& qname, uint16_t qtype, const string& serialized);
 
   void doRecordCheck(const struct DNSRecord&){}
-
-  std::string label;
-  struct dnsrecordheader header;
 
   typedef DNSRecordContent* makerfunc_t(const struct DNSRecord& dr, PacketReader& pr);  
   typedef DNSRecordContent* zmakerfunc_t(const string& str);  
@@ -219,7 +219,7 @@ public:
       return iter->second.second;
     
     if(boost::starts_with(name, "TYPE"))
-        return atoi(name.c_str()+4);
+      return pdns_stou(name.substr(4));
     
     throw runtime_error("Unknown DNS type '"+name+"'");
   }
@@ -228,25 +228,12 @@ public:
   {
     t2namemap_t::const_iterator iter = getT2Namemap().find(make_pair(classnum, num));
     if(iter == getT2Namemap().end()) 
-      return "TYPE" + lexical_cast<string>(num);
-      //      throw runtime_error("Unknown DNS type with numerical id "+lexical_cast<string>(num));
+      return "TYPE" + std::to_string(num);
+      //      throw runtime_error("Unknown DNS type with numerical id "+std::to_string(num));
     return iter->second;
   }
 
-  explicit DNSRecordContent(uint16_t type) : d_qtype(type)
-  {}
-  
-  
-  DNSRecordContent& operator=(const DNSRecordContent& orig) 
-  {
-    const_cast<uint16_t&>(d_qtype) = orig.d_qtype; // **COUGH**
-    label = orig.label;
-    header = orig.header;
-    return *this;
-  }
-
-  
-  const uint16_t d_qtype;
+  virtual uint16_t getType() const = 0;
 
 protected:
   typedef std::map<std::pair<uint16_t, uint16_t>, makerfunc_t* > typemap_t;
@@ -261,28 +248,37 @@ protected:
 
 struct DNSRecord
 {
-  std::string d_label;
+  DNSRecord() {
+    d_type = 0;
+    d_class = QClass::IN;
+    d_ttl = 0;
+    d_clen = 0;
+    d_place = DNSResourceRecord::ANSWER;
+  }
+  explicit DNSRecord(const DNSResourceRecord& rr);
+  DNSName d_name;
+  std::shared_ptr<DNSRecordContent> d_content;
   uint16_t d_type;
   uint16_t d_class;
   uint32_t d_ttl;
   uint16_t d_clen;
-  enum {Answer=1, Nameserver, Additional} d_place;
-  boost::shared_ptr<DNSRecordContent> d_content;
+  DNSResourceRecord::Place d_place;
 
   bool operator<(const DNSRecord& rhs) const
   {
+    if(tie(d_name, d_type, d_class) < tie(rhs.d_name, rhs.d_type, rhs.d_class))
+      return true;
+    
+    if(tie(d_name, d_type, d_class) != tie(rhs.d_name, rhs.d_type, rhs.d_class))
+      return false;
+    
     string lzrp, rzrp;
     if(d_content)
       lzrp=toLower(d_content->getZoneRepresentation());
     if(rhs.d_content)
       rzrp=toLower(rhs.d_content->getZoneRepresentation());
     
-    string llabel=toLower(d_label);
-    string rlabel=toLower(rhs.d_label);
-
-    return 
-      tie(llabel,     d_type,     d_class, lzrp) <
-      tie(rlabel, rhs.d_type, rhs.d_class, rzrp);
+    return lzrp < rzrp;
   }
 
   bool operator==(const DNSRecord& rhs) const
@@ -293,8 +289,8 @@ struct DNSRecord
     if(rhs.d_content)
       rzrp=toLower(rhs.d_content->getZoneRepresentation());
     
-    string llabel=toLower(d_label);
-    string rlabel=toLower(rhs.d_label);
+    string llabel=toLower(d_name.toString()); 
+    string rlabel=toLower(rhs.d_name.toString()); 
     
     return 
       tie(llabel,     d_type,     d_class, lzrp) ==
@@ -318,10 +314,10 @@ public:
     init(packet, len);
   }
 
-  dnsheader d_header;
-  string d_qname;
+  DNSName d_qname;
   uint16_t d_qclass, d_qtype;
   //uint8_t d_rcode;
+  dnsheader d_header;
 
   typedef vector<pair<DNSRecord, uint16_t > > answers_t;
   
@@ -349,4 +345,11 @@ private:
 string simpleCompress(const string& label, const string& root="");
 void simpleExpandTo(const string& label, unsigned int frompos, string& ret);
 void ageDNSPacket(std::string& packet, uint32_t seconds);
+
+template<typename T>
+std::shared_ptr<T> getRR(const DNSRecord& dr)
+{
+  return std::dynamic_pointer_cast<T>(dr.d_content);
+}
+
 #endif

@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <cryptopp/osrng.h>
 #include <cryptopp/aes.h>
 #include <cryptopp/integer.h>
@@ -42,7 +45,7 @@ private:
 template<class HASHER, class CURVE, int BITS> void CryptoPPECDSADNSCryptoKeyEngine<HASHER,CURVE,BITS>::create(unsigned int bits)
 {
   if(bits != BITS)
-    throw runtime_error("This CryptoPP class can only hosts keys of length "+lexical_cast<string>(BITS));
+    throw runtime_error("This CryptoPP class can only hosts keys of length "+std::to_string(BITS));
   AutoSeededRandomPool prng;
   privatekey_t* privateKey = new privatekey_t();
   CryptoPP::OID oid=CURVE();
@@ -65,7 +68,7 @@ DNSCryptoKeyEngine::storvector_t CryptoPPECDSADNSCryptoKeyEngine<HASHER,CURVE,BI
 {
    /* Algorithm: 13 (ECDSAP256SHA256)
    PrivateKey: GU6SnQ/Ou+xC5RumuIUIuJZteXT2z0O/ok1s38Et6mQ= */
-  string algostr=lexical_cast<string>(d_algorithm);
+  string algostr=std::to_string(d_algorithm);
   if(d_algorithm==13) 
     algostr+=" (ECDSAP256SHA256)";
   else if(d_algorithm==14)
@@ -77,8 +80,9 @@ DNSCryptoKeyEngine::storvector_t CryptoPPECDSADNSCryptoKeyEngine<HASHER,CURVE,BI
   storvect.push_back(make_pair("Algorithm", algostr));
   
   const CryptoPP::Integer& pe=d_key->GetPrivateExponent();
-  unsigned char buffer[pe.MinEncodedSize()];
-  pe.Encode(buffer, pe.MinEncodedSize());
+  size_t len = BITS/8;
+  unsigned char buffer[len];
+  pe.Encode(buffer, len);
   storvect.push_back(make_pair("PrivateKey", string((char*)buffer, sizeof(buffer))));
   return storvect;
 }
@@ -99,7 +103,7 @@ void CryptoPPECDSADNSCryptoKeyEngine<HASHER,CURVE,BITS>::fromISCMap(DNSKEYRecord
   publickey_t* publicKey = new publickey_t();
   d_key->MakePublicKey(*publicKey);
   d_pubkey = shared_ptr<publickey_t>(publicKey);
-  drc.d_algorithm = atoi(stormap["algorithm"].c_str());
+  drc.d_algorithm = pdns_stou(stormap["algorithm"]);
 }
 
 template<class HASHER, class CURVE, int BITS>
@@ -114,11 +118,12 @@ std::string CryptoPPECDSADNSCryptoKeyEngine<HASHER,CURVE,BITS>::getPublicKeyStri
 
   const CryptoPP::Integer& qx = q.x;
   const CryptoPP::Integer& qy = q.y;
-  
-  unsigned char buffer[qx.MinEncodedSize() + qy.MinEncodedSize()];
-  qx.Encode(buffer, qx.MinEncodedSize());
-  qy.Encode(buffer + qx.MinEncodedSize(), qy.MinEncodedSize());
-  
+
+  size_t len = BITS/8;
+  unsigned char buffer[len*2];
+  qx.Encode(buffer, len);
+  qy.Encode(buffer + len, len);
+
   return string((char*)buffer, sizeof(buffer));
 }
 template<class HASHER, class CURVE, int BITS>

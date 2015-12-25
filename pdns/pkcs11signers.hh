@@ -1,3 +1,6 @@
+#ifndef PDNS_PKCS11SIGNERS_HH
+#define PDNS_PKCS11SIGNERS_HH
+
 class PKCS11DNSCryptoKeyEngine : public DNSCryptoKeyEngine
 {
   protected:
@@ -42,3 +45,5 @@ class PKCS11DNSCryptoKeyEngine : public DNSCryptoKeyEngine
 };
 
 bool PKCS11ModuleSlotLogin(const std::string& module, const string& tokenId, const std::string& pin);
+
+#endif /* PDNS_PKCS11SIGNERS_HH */

@@ -1,0 +1,45 @@
+.TH "SDIG" "1" "September 2015" "" ""
+.SH NAME
+.PP
+\f[B]sdig\f[] \- Perform a DNS query and show the results
+.SH SYNOPSIS
+.PP
+\f[B]sdig\f[] \f[I]IPADDRESS\f[] \f[I]PORT\f[] \f[I]QNAME\f[]
+\f[I]QTYPE\f[] [\f[I]OPTIONS\f[]]
+.SH DESCRIPTION
+.PP
+\f[B]sdig\f[] sends a DNS query to \f[I]IPADDRESS\f[] on port
+\f[I]PORT\f[] and displays the answer in a formatted way.
+.SH OPTIONS
+.PP
+These options can be added to the commandline in any order.
+dnssec : Set the DO bit to request DNSSEC information.
+.TP
+.B hidesoadetails
+Don\[aq]t show the SOA serial in the response.
+.RS
+.RE
+.TP
+.B recurse
+Set the RD bit in the question.
+.RS
+.RE
+.TP
+.B showflags
+Show the NSEC3 flags in the response.
+.RS
+.RE
+.TP
+.B tcp
+Use TCP instead of UDP to send the query.
+.RS
+.RE
+.TP
+.B ednssubnet \f[I]SUBNET\f[]
+Send \f[I]SUBNET\f[] in the edns\-client\-subnet option.
+If this option is not set, no edns\-client\-subnet option is set in the
+query.
+.RS
+.RE
+.SH AUTHORS
+PowerDNS.com BV.

@@ -1,10 +1,13 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "remotebackend.hh"
 #ifdef REMOTEBACKEND_ZEROMQ
 
 #include <sys/socket.h>
 #include <unistd.h>
 #include <fcntl.h>
-#include <boost/foreach.hpp>
+
 #include <sstream>
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -24,7 +27,7 @@ ZeroMQConnector::ZeroMQConnector(std::map<std::string,std::string> options) {
   this->d_timeout=2000;
 
   if (options.find("timeout") != options.end()) {
-     this->d_timeout = boost::lexical_cast<int>(options.find("timeout")->second);
+     this->d_timeout = std::stoi(options.find("timeout")->second);
   }
 
   d_ctx = zmq_init(2);
@@ -44,7 +47,7 @@ ZeroMQConnector::ZeroMQConnector(std::map<std::string,std::string> options) {
   val.SetObject();
   init.AddMember("parameters", val, init.GetAllocator());
 
-  for(std::map<std::string,std::string>::iterator i = options.begin(); i != options.end(); i++) {
+  for(auto i = options.begin(); i != options.end(); i++) {
     val = i->second.c_str();
     init["parameters"].AddMember(i->first.c_str(), val, init.GetAllocator());
   }

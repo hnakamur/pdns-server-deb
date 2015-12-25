@@ -16,6 +16,9 @@
 */
 
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "luabackend.hh"
 
 #include "pdns/logger.hh"
@@ -320,7 +323,7 @@ bool LUABackend::removeDomainKey(const string& name, unsigned int id) {
 }
 
 int LUABackend::addDomainKey(const string& name, const KeyData& key) {
-// there is no logging function in pdnssec when running this routine?
+// there is no logging function in pdnsutil when running this routine?
 
 //key = id, flags, active, content
 

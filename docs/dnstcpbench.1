@@ -1,0 +1,87 @@
+.TH "DNSTCPBENCH" "1" "July 2013" "" ""
+.SH NAME
+.PP
+\f[B]dnstcpbench\f[] \- tool to perform TCP benchmarking of nameservers
+.SH SYNOPSIS
+.PP
+\f[B]dnstcpbench\f[] [\f[I]OPTION\f[]]...
+\f[I]REMOTE\-ADDRESS\f[] [\f[I]REMOTE\-PORT\f[]]
+.SH DESCRIPTION
+.PP
+\f[B]dnstcpbench\f[] reads DNS queries (by default from standard input)
+and sends them out in parallel to a remote nameserver.
+By default TCP/IP is used, but optionally, UDP is tried first, which
+allows for the benchmarking of TCP/IP fallback.
+.PP
+The program reports both mean and median numbers for queries per second
+and UDP and TCP latency.
+Each query only counts once, even if it is tried over UDP first.
+This effectively means that passing \[aq]\-u\[aq] can lower query rates
+if many queries get shunted to TCP.
+.PP
+The input format is one query per line: qname single\-space qtype.
+An example:
+.PP
+www.powerdns.com ANY
+.PP
+When benchmarking extended runs, it may be necessary to enable TIME_WAIT
+recycling, as TCP/IP port tuples may otherwise run out.
+On Linux this is performed by running:
+.PP
+echo 1 > /proc/sys/net/ipv4/tcp_tw_recycle
+.PP
+The equivalent for IPv6 is not known.
+.SH OPTIONS
+.TP
+.B \-f | \-\-file \f[I]FILENAME\f[]
+\f[I]FILENAME\f[] from which to read queries.
+Defaults to standard input if unspecified.
+.RS
+.RE
+.TP
+.B \-h | \-\-help
+Provide a helpful message.
+.RS
+.RE
+.TP
+.B \-\-timeout\-msec \f[I]MSEC\f[]
+\f[I]MSEC\f[] milliseconds to wait for an answer.
+.RS
+.RE
+.TP
+.B \-u | \-\-udp\-first
+Attempt resolution via UDP first, only do TCP if truncated answer is
+received.
+.RS
+.RE
+.TP
+.B \-v | \-\-verbose
+Be wordy on what the program is doing.
+.RS
+.RE
+.TP
+.B \-\-workers \f[I]NUM\f[]
+Use \f[I]NUM\f[] parallel worker threads.
+.RS
+.RE
+.TP
+.B REMOTE\-ADDRESS
+IPv4 or IPv6 to test against.
+.RS
+.RE
+.TP
+.B REMOTE\-PORT
+Port to test against, defaults to 53.
+.RS
+.RE
+.SH BUGS
+.PP
+Currently the timeout code does not actually perform non\-blocking
+connects or writes.
+So a slow connect or slow writes will still cause low performance and
+delays.
+.PP
+Median queries per second statistics are reported as 0 for sub\-second
+runs.
+.SH AUTHORS
+PowerDNS.COM BV.

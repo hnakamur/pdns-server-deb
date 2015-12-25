@@ -15,6 +15,9 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "luabackend.hh"
 
 #include "pdns/logger.hh"
@@ -104,10 +107,6 @@ void LUABackend::dnsrr_to_table(lua_State *lua, const DNSResourceRecord *rr) {
     
     lua_pushliteral(lua, "qclass");
     lua_pushnumber(lua, rr->qclass);
-    lua_settable(lua, -3);
-    
-    lua_pushliteral(lua, "priority");
-    lua_pushnumber(lua, rr->priority);
     lua_settable(lua, -3);
 
     lua_pushliteral(lua, "ttl");

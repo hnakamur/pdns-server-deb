@@ -19,9 +19,12 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "ws-recursor.hh"
 #include "json.hh"
-#include <boost/foreach.hpp>
+
 #include <string>
 #include "namespaces.hh"
 #include <iostream>
@@ -30,6 +33,7 @@
 #include "arguments.hh"
 #include "misc.hh"
 #include "syncres.hh"
+#include "dnsparser.hh"
 #include "rapidjson/document.h"
 #include "rapidjson/stringbuffer.h"
 #include "rapidjson/writer.h"
@@ -49,11 +53,11 @@ void productServerStatisticsFetch(map<string,string>& out)
 
 static void apiWriteConfigFile(const string& filebasename, const string& content)
 {
-  if (::arg()["experimental-api-config-dir"].empty()) {
-    throw ApiException("Config Option \"experimental-api-config-dir\" must be set");
+  if (::arg()["api-config-dir"].empty()) {
+    throw ApiException("Config Option \"api-config-dir\" must be set");
   }
 
-  string filename = ::arg()["experimental-api-config-dir"] + "/" + filebasename + ".conf";
+  string filename = ::arg()["api-config-dir"] + "/" + filebasename + ".conf";
   ofstream ofconf(filename.c_str());
   if (!ofconf) {
     throw ApiException("Could not open config fragment file '"+filename+"' for writing: "+stringerror());
@@ -65,7 +69,7 @@ static void apiWriteConfigFile(const string& filebasename, const string& content
 
 static void apiServerConfigAllowFrom(HttpRequest* req, HttpResponse* resp)
 {
-  if (req->method == "PUT" && !::arg().mustDo("experimental-api-readonly")) {
+  if (req->method == "PUT" && !::arg().mustDo("api-readonly")) {
     Document document;
     req->json(document);
     const Value &jlist = document["value"];
@@ -116,7 +120,7 @@ static void apiServerConfigAllowFrom(HttpRequest* req, HttpResponse* resp)
   vector<string> entries;
   t_allowFrom->toStringVector(&entries);
 
-  BOOST_FOREACH(const string& entry, entries) {
+  for(const string& entry :  entries) {
     Value jentry(entry.c_str(), document.GetAllocator()); // copy
     jlist.PushBack(jentry, document.GetAllocator());
   }
@@ -127,11 +131,11 @@ static void apiServerConfigAllowFrom(HttpRequest* req, HttpResponse* resp)
   resp->setBody(document);
 }
 
-static void fillZone(const string& zonename, HttpResponse* resp)
+static void fillZone(const DNSName& zonename, HttpResponse* resp)
 {
-  SyncRes::domainmap_t::const_iterator iter = t_sstorage->domainmap->find(zonename);
+  auto iter = t_sstorage->domainmap->find(zonename);
   if (iter == t_sstorage->domainmap->end())
-    throw ApiException("Could not find domain '"+zonename+"'");
+    throw ApiException("Could not find domain '"+zonename.toString()+"'");
 
   Document doc;
   doc.SetObject();
@@ -142,14 +146,15 @@ static void fillZone(const string& zonename, HttpResponse* resp)
   string zoneId = apiZoneNameToId(iter->first);
   Value jzoneid(zoneId.c_str(), doc.GetAllocator()); // copy
   doc.AddMember("id", jzoneid, doc.GetAllocator());
-  string url = "/servers/localhost/zones/" + zoneId;
+  string url = "/api/v1/servers/localhost/zones/" + zoneId;
   Value jurl(url.c_str(), doc.GetAllocator()); // copy
   doc.AddMember("url", jurl, doc.GetAllocator());
-  doc.AddMember("name", iter->first.c_str(), doc.GetAllocator());
+  Value jzonename(iter->first.toString().c_str(), doc.GetAllocator()); // copy
+  doc.AddMember("name", jzonename, doc.GetAllocator());
   doc.AddMember("kind", zone.d_servers.empty() ? "Native" : "Forwarded", doc.GetAllocator());
   Value servers;
   servers.SetArray();
-  BOOST_FOREACH(const ComboAddress& server, zone.d_servers) {
+  for(const ComboAddress& server :  zone.d_servers) {
     Value value(server.toStringWithPort().c_str(), doc.GetAllocator());
     servers.PushBack(value, doc.GetAllocator());
   }
@@ -159,16 +164,15 @@ static void fillZone(const string& zonename, HttpResponse* resp)
 
   Value records;
   records.SetArray();
-  BOOST_FOREACH(const SyncRes::AuthDomain::records_t::value_type& rr, zone.d_records) {
+  for(const SyncRes::AuthDomain::records_t::value_type& dr :  zone.d_records) {
     Value object;
     object.SetObject();
-    Value jname(rr.qname.c_str(), doc.GetAllocator()); // copy
+    Value jname(dr.d_name.toString().c_str(), doc.GetAllocator()); // copy
     object.AddMember("name", jname, doc.GetAllocator());
-    Value jtype(rr.qtype.getName().c_str(), doc.GetAllocator()); // copy
+    Value jtype(DNSRecordContent::NumberToType(dr.d_type).c_str(), doc.GetAllocator()); // copy
     object.AddMember("type", jtype, doc.GetAllocator());
-    object.AddMember("ttl", rr.ttl, doc.GetAllocator());
-    object.AddMember("priority", rr.priority, doc.GetAllocator());
-    Value jcontent(rr.content.c_str(), doc.GetAllocator()); // copy
+    object.AddMember("ttl", dr.d_ttl, doc.GetAllocator());
+    Value jcontent(dr.d_content->getZoneRepresentation().c_str(), doc.GetAllocator()); // copy
     object.AddMember("content", jcontent, doc.GetAllocator());
     records.PushBack(object, doc.GetAllocator());
   }
@@ -179,18 +183,12 @@ static void fillZone(const string& zonename, HttpResponse* resp)
 
 static void doCreateZone(const Value& document)
 {
-  if (::arg()["experimental-api-config-dir"].empty()) {
-    throw ApiException("Config Option \"experimental-api-config-dir\" must be set");
+  if (::arg()["api-config-dir"].empty()) {
+    throw ApiException("Config Option \"api-config-dir\" must be set");
   }
 
-  string zonename = stringFromJson(document, "name");
-  // TODO: better validation of zonename - apiZoneNameToId takes care of escaping / however
-  if(zonename.empty())
-    throw ApiException("Zone name empty");
-
-  if (zonename[zonename.size()-1] != '.') {
-    zonename += ".";
-  }
+  DNSName zonename = apiNameToDNSName(stringFromJson(document, "name"));
+  apiCheckNameAllowedCharacters(zonename.toString());
 
   string singleIPTarget = stringFromJson(document, "single_target_ip", "");
   string kind = toUpper(stringFromJson(document, "kind"));
@@ -211,7 +209,7 @@ static void doCreateZone(const Value& document)
 	throw ApiException("Single IP target '"+singleIPTarget+"' is invalid");
       }
     }
-    string zonefilename = ::arg()["experimental-api-config-dir"] + "/" + confbasename + ".zone";
+    string zonefilename = ::arg()["api-config-dir"] + "/" + confbasename + ".zone";
     ofstream ofzone(zonefilename.c_str());
     if (!ofzone) {
       throw ApiException("Could not open '"+zonefilename+"' for writing: "+stringerror());
@@ -224,7 +222,7 @@ static void doCreateZone(const Value& document)
     }
     ofzone.close();
 
-    apiWriteConfigFile(confbasename, "auth-zones+=" + zonename + "=" + zonefilename);
+    apiWriteConfigFile(confbasename, "auth-zones+=" + zonename.toString() + "=" + zonefilename);
   } else if (kind == "FORWARDED") {
     const Value &servers = document["servers"];
     if (kind == "FORWARDED" && (!servers.IsArray() || servers.Size() == 0))
@@ -241,31 +239,31 @@ static void doCreateZone(const Value& document)
     }
 
     if (rd) {
-      apiWriteConfigFile(confbasename, "forward-zones-recurse+=" + zonename + "=" + serverlist);
+      apiWriteConfigFile(confbasename, "forward-zones-recurse+=" + zonename.toString() + "=" + serverlist);
     } else {
-      apiWriteConfigFile(confbasename, "forward-zones+=" + zonename + "=" + serverlist);
+      apiWriteConfigFile(confbasename, "forward-zones+=" + zonename.toString() + "=" + serverlist);
     }
   } else {
     throw ApiException("invalid kind");
   }
 }
 
-static bool doDeleteZone(const string& zonename)
+static bool doDeleteZone(const DNSName& zonename)
 {
-  if (::arg()["experimental-api-config-dir"].empty()) {
-    throw ApiException("Config Option \"experimental-api-config-dir\" must be set");
+  if (::arg()["api-config-dir"].empty()) {
+    throw ApiException("Config Option \"api-config-dir\" must be set");
   }
 
   string filename;
 
   // this one must exist
-  filename = ::arg()["experimental-api-config-dir"] + "/zone-" + apiZoneNameToId(zonename) + ".conf";
+  filename = ::arg()["api-config-dir"] + "/zone-" + apiZoneNameToId(zonename) + ".conf";
   if (unlink(filename.c_str()) != 0) {
     return false;
   }
 
   // .zone file is optional
-  filename = ::arg()["experimental-api-config-dir"] + "/zone-" + apiZoneNameToId(zonename) + ".zone";
+  filename = ::arg()["api-config-dir"] + "/zone-" + apiZoneNameToId(zonename) + ".zone";
   unlink(filename.c_str());
 
   return true;
@@ -273,20 +271,17 @@ static bool doDeleteZone(const string& zonename)
 
 static void apiServerZones(HttpRequest* req, HttpResponse* resp)
 {
-  if (req->method == "POST" && !::arg().mustDo("experimental-api-readonly")) {
-    if (::arg()["experimental-api-config-dir"].empty()) {
-      throw ApiException("Config Option \"experimental-api-config-dir\" must be set");
+  if (req->method == "POST" && !::arg().mustDo("api-readonly")) {
+    if (::arg()["api-config-dir"].empty()) {
+      throw ApiException("Config Option \"api-config-dir\" must be set");
     }
 
     Document document;
     req->json(document);
 
-    string zonename = stringFromJson(document, "name");
-    if (zonename[zonename.size()-1] != '.') {
-      zonename += ".";
-    }
+    DNSName zonename = apiNameToDNSName(stringFromJson(document, "name"));
 
-    SyncRes::domainmap_t::const_iterator iter = t_sstorage->domainmap->find(zonename);
+    auto iter = t_sstorage->domainmap->find(zonename);
     if (iter != t_sstorage->domainmap->end())
       throw ApiException("Zone already exists");
 
@@ -303,7 +298,7 @@ static void apiServerZones(HttpRequest* req, HttpResponse* resp)
   Document doc;
   doc.SetArray();
 
-  BOOST_FOREACH(const SyncRes::domainmap_t::value_type& val, *t_sstorage->domainmap) {
+  for(const SyncRes::domainmap_t::value_type& val :  *t_sstorage->domainmap) {
     const SyncRes::AuthDomain& zone = val.second;
     Value jdi;
     jdi.SetObject();
@@ -311,14 +306,15 @@ static void apiServerZones(HttpRequest* req, HttpResponse* resp)
     string zoneId = apiZoneNameToId(val.first);
     Value jzoneid(zoneId.c_str(), doc.GetAllocator()); // copy
     jdi.AddMember("id", jzoneid, doc.GetAllocator());
-    string url = "/servers/localhost/zones/" + zoneId;
+    string url = "/api/v1/servers/localhost/zones/" + zoneId;
     Value jurl(url.c_str(), doc.GetAllocator()); // copy
     jdi.AddMember("url", jurl, doc.GetAllocator());
-    jdi.AddMember("name", val.first.c_str(), doc.GetAllocator());
+    Value jzonename(val.first.toString().c_str(), doc.GetAllocator()); // copy
+    jdi.AddMember("name", jzonename, doc.GetAllocator());
     jdi.AddMember("kind", zone.d_servers.empty() ? "Native" : "Forwarded", doc.GetAllocator());
     Value servers;
     servers.SetArray();
-    BOOST_FOREACH(const ComboAddress& server, zone.d_servers) {
+    for(const ComboAddress& server :  zone.d_servers) {
       Value value(server.toStringWithPort().c_str(), doc.GetAllocator());
       servers.PushBack(value, doc.GetAllocator());
     }
@@ -332,23 +328,22 @@ static void apiServerZones(HttpRequest* req, HttpResponse* resp)
 
 static void apiServerZoneDetail(HttpRequest* req, HttpResponse* resp)
 {
-  string zonename = apiZoneIdToName(req->parameters["id"]);
-  zonename += ".";
+  DNSName zonename = apiZoneIdToName(req->parameters["id"]);
 
   SyncRes::domainmap_t::const_iterator iter = t_sstorage->domainmap->find(zonename);
   if (iter == t_sstorage->domainmap->end())
-    throw ApiException("Could not find domain '"+zonename+"'");
+    throw ApiException("Could not find domain '"+zonename.toString()+"'");
 
-  if(req->method == "PUT" && !::arg().mustDo("experimental-api-readonly")) {
+  if(req->method == "PUT" && !::arg().mustDo("api-readonly")) {
     Document document;
     req->json(document);
 
     doDeleteZone(zonename);
     doCreateZone(document);
     reloadAuthAndForwards();
-    fillZone(stringFromJson(document, "name"), resp);
+    fillZone(apiNameToDNSName(stringFromJson(document, "name")), resp);
   }
-  else if(req->method == "DELETE" && !::arg().mustDo("experimental-api-readonly")) {
+  else if(req->method == "DELETE" && !::arg().mustDo("api-readonly")) {
     if (!doDeleteZone(zonename)) {
       throw ApiException("Deleting domain failed");
     }
@@ -375,28 +370,28 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp) {
   Document doc;
   doc.SetArray();
 
-  BOOST_FOREACH(const SyncRes::domainmap_t::value_type& val, *t_sstorage->domainmap) {
+  for(const SyncRes::domainmap_t::value_type& val :  *t_sstorage->domainmap) {
     string zoneId = apiZoneNameToId(val.first);
-    if (pdns_ci_find(val.first, q) != string::npos) {
+    if (pdns_ci_find(val.first.toString(), q) != string::npos) {
       Value object;
       object.SetObject();
       object.AddMember("type", "zone", doc.GetAllocator());
       Value jzoneId(zoneId.c_str(), doc.GetAllocator()); // copy
       object.AddMember("zone_id", jzoneId, doc.GetAllocator());
-      Value jzoneName(val.first.c_str(), doc.GetAllocator()); // copy
+      Value jzoneName(val.first.toString().c_str(), doc.GetAllocator()); // copy
       object.AddMember("name", jzoneName, doc.GetAllocator());
       doc.PushBack(object, doc.GetAllocator());
     }
 
     // if zone name is an exact match, don't bother with returning all records/comments in it
-    if (val.first == q) {
+    if (val.first == DNSName(q)) {
       continue;
     }
 
     const SyncRes::AuthDomain& zone = val.second;
 
-    BOOST_FOREACH(const SyncRes::AuthDomain::records_t::value_type& rr, zone.d_records) {
-      if (pdns_ci_find(rr.qname, q) == string::npos && pdns_ci_find(rr.content, q) == string::npos)
+    for(const SyncRes::AuthDomain::records_t::value_type& rr :  zone.d_records) {
+      if (pdns_ci_find(rr.d_name.toString(), q) == string::npos && pdns_ci_find(rr.d_content->getZoneRepresentation(), q) == string::npos)
         continue;
 
       Value object;
@@ -404,11 +399,11 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp) {
       object.AddMember("type", "record", doc.GetAllocator());
       Value jzoneId(zoneId.c_str(), doc.GetAllocator()); // copy
       object.AddMember("zone_id", jzoneId, doc.GetAllocator());
-      Value jzoneName(val.first.c_str(), doc.GetAllocator()); // copy
+      Value jzoneName(val.first.toString().c_str(), doc.GetAllocator()); // copy
       object.AddMember("zone_name", jzoneName, doc.GetAllocator());
-      Value jname(rr.qname.c_str(), doc.GetAllocator()); // copy
+      Value jname(rr.d_name.toString().c_str(), doc.GetAllocator()); // copy
       object.AddMember("name", jname, doc.GetAllocator());
-      Value jcontent(rr.content.c_str(), doc.GetAllocator()); // copy
+      Value jcontent(rr.d_content->getZoneRepresentation().c_str(), doc.GetAllocator()); // copy
       object.AddMember("content", jcontent, doc.GetAllocator());
 
       doc.PushBack(object, doc.GetAllocator());
@@ -417,15 +412,17 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp) {
   resp->setBody(doc);
 }
 
-static void apiServerFlushCache(HttpRequest* req, HttpResponse* resp) {
+static void apiServerCacheFlush(HttpRequest* req, HttpResponse* resp) {
   if(req->method != "PUT")
     throw HttpMethodNotAllowedException();
 
-  string canon = toCanonic("", req->getvars["domain"]);
-  int count = broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeCache, canon));
-  count += broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeAndCountNegCache, canon));
+  DNSName canon = apiNameToDNSName(req->getvars["domain"]);
+
+  int count = broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeCache, canon, false));
+  count += broadcastAccFunction<uint64_t>(boost::bind(pleaseWipePacketCache, canon, false));
+  count += broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeAndCountNegCache, canon, false));
   map<string, string> object;
-  object["count"] = lexical_cast<string>(count);
+  object["count"] = std::to_string(count);
   object["result"] = "Flushed cache.";
   resp->body = returnJsonObject(object);
 }
@@ -434,21 +431,21 @@ RecursorWebServer::RecursorWebServer(FDMultiplexer* fdm)
 {
   RecursorControlParser rcp; // inits
 
-  d_ws = new AsyncWebServer(fdm, arg()["experimental-webserver-address"], arg().asNum("experimental-webserver-port"));
+  d_ws = new AsyncWebServer(fdm, arg()["webserver-address"], arg().asNum("webserver-port"));
   d_ws->bind();
 
   // legacy dispatch
   d_ws->registerApiHandler("/jsonstat", boost::bind(&RecursorWebServer::jsonstat, this, _1, _2));
-  d_ws->registerApiHandler("/servers/localhost/flush-cache", &apiServerFlushCache);
-  d_ws->registerApiHandler("/servers/localhost/config/allow-from", &apiServerConfigAllowFrom);
-  d_ws->registerApiHandler("/servers/localhost/config", &apiServerConfig);
-  d_ws->registerApiHandler("/servers/localhost/search-log", &apiServerSearchLog);
-  d_ws->registerApiHandler("/servers/localhost/search-data", &apiServerSearchData);
-  d_ws->registerApiHandler("/servers/localhost/statistics", &apiServerStatistics);
-  d_ws->registerApiHandler("/servers/localhost/zones/<id>", &apiServerZoneDetail);
-  d_ws->registerApiHandler("/servers/localhost/zones", &apiServerZones);
-  d_ws->registerApiHandler("/servers/localhost", &apiServerDetail);
-  d_ws->registerApiHandler("/servers", &apiServer);
+  d_ws->registerApiHandler("/api/v1/servers/localhost/cache/flush", &apiServerCacheFlush);
+  d_ws->registerApiHandler("/api/v1/servers/localhost/config/allow-from", &apiServerConfigAllowFrom);
+  d_ws->registerApiHandler("/api/v1/servers/localhost/config", &apiServerConfig);
+  d_ws->registerApiHandler("/api/v1/servers/localhost/search-log", &apiServerSearchLog);
+  d_ws->registerApiHandler("/api/v1/servers/localhost/search-data", &apiServerSearchData);
+  d_ws->registerApiHandler("/api/v1/servers/localhost/statistics", &apiServerStatistics);
+  d_ws->registerApiHandler("/api/v1/servers/localhost/zones/<id>", &apiServerZoneDetail);
+  d_ws->registerApiHandler("/api/v1/servers/localhost/zones", &apiServerZones);
+  d_ws->registerApiHandler("/api/v1/servers/localhost", &apiServerDetail);
+  d_ws->registerApiHandler("/api/v1/servers", &apiServer);
 
   d_ws->go();
 }
@@ -462,112 +459,118 @@ void RecursorWebServer::jsonstat(HttpRequest* req, HttpResponse *resp)
     req->getvars.erase("command");
   }
 
-  map<string, string> stats; 
-  if(command == "domains") {
-    Document doc;
-    doc.SetArray();
-    BOOST_FOREACH(const SyncRes::domainmap_t::value_type& val, *t_sstorage->domainmap) {
-      Value jzone;
-      jzone.SetObject();
+  map<string, string> stats;
+  if(command == "get-query-ring") {
+    typedef pair<DNSName,uint16_t> query_t;
+    vector<query_t> queries;
+    bool filter=!req->getvars["public-filtered"].empty();
 
-      const SyncRes::AuthDomain& zone = val.second;
-      Value zonename(val.first.c_str(), doc.GetAllocator());
-      jzone.AddMember("name", zonename, doc.GetAllocator());
-      jzone.AddMember("type", "Zone", doc.GetAllocator());
-      jzone.AddMember("kind", zone.d_servers.empty() ? "Native" : "Forwarded", doc.GetAllocator());
-      Value servers;
-      servers.SetArray();
-      BOOST_FOREACH(const ComboAddress& server, zone.d_servers) {
-        Value value(server.toStringWithPort().c_str(), doc.GetAllocator());
-        servers.PushBack(value, doc.GetAllocator());
-      }
-      jzone.AddMember("servers", servers, doc.GetAllocator());
-      bool rdbit = zone.d_servers.empty() ? false : zone.d_rdForward;
-      jzone.AddMember("rdbit", rdbit, doc.GetAllocator());
+    if(req->getvars["name"]=="servfail-queries")
+      queries=broadcastAccFunction<vector<query_t> >(pleaseGetServfailQueryRing);
+    else if(req->getvars["name"]=="queries")
+      queries=broadcastAccFunction<vector<query_t> >(pleaseGetQueryRing);
 
-      doc.PushBack(jzone, doc.GetAllocator());
+    typedef map<query_t,unsigned int> counts_t;
+    counts_t counts;
+    unsigned int total=0;
+    for(const query_t& q :  queries) {
+      total++;
+      if(filter)
+	counts[make_pair(getRegisteredName(q.first), q.second)]++;
+      else
+	counts[make_pair(q.first, q.second)]++;
     }
+
+    typedef std::multimap<int, query_t> rcounts_t;
+    rcounts_t rcounts;
+
+    for(counts_t::const_iterator i=counts.begin(); i != counts.end(); ++i)
+      rcounts.insert(make_pair(-i->second, i->first));
+
+    Document doc;
+    doc.SetObject();
+    Value entries;
+    entries.SetArray();
+    unsigned int tot=0, totIncluded=0;
+    for(const rcounts_t::value_type& q :  rcounts) {
+      Value arr;
+
+      arr.SetArray();
+      totIncluded-=q.first;
+      arr.PushBack(-q.first, doc.GetAllocator());
+      arr.PushBack(q.second.first.toString().c_str(), doc.GetAllocator());
+      arr.PushBack(DNSRecordContent::NumberToType(q.second.second).c_str(), doc.GetAllocator());
+      entries.PushBack(arr, doc.GetAllocator());
+      if(tot++>=100)
+	break;
+    }
+    if(queries.size() != totIncluded) {
+      Value arr;
+      arr.SetArray();
+      arr.PushBack((unsigned int)(queries.size()-totIncluded), doc.GetAllocator());
+      arr.PushBack("", doc.GetAllocator());
+      arr.PushBack("", doc.GetAllocator());
+      entries.PushBack(arr, doc.GetAllocator());
+    }
+    doc.AddMember("entries", entries, doc.GetAllocator());
     resp->setBody(doc);
     return;
   }
-  else if(command == "zone") {
-    string arg_zone = req->getvars["zone"];
-    SyncRes::domainmap_t::const_iterator ret = t_sstorage->domainmap->find(arg_zone);
-    if (ret != t_sstorage->domainmap->end()) {
-      Document doc;
-      doc.SetObject();
-      Value root;
-      root.SetObject();
+  else if(command == "get-remote-ring") {
+    vector<ComboAddress> queries;
+    if(req->getvars["name"]=="remotes")
+      queries=broadcastAccFunction<vector<ComboAddress> >(pleaseGetRemotes);
+    else if(req->getvars["name"]=="servfail-remotes")
+      queries=broadcastAccFunction<vector<ComboAddress> >(pleaseGetServfailRemotes);
+    else if(req->getvars["name"]=="large-answer-remotes")
+      queries=broadcastAccFunction<vector<ComboAddress> >(pleaseGetLargeAnswerRemotes);
 
-      const SyncRes::AuthDomain& zone = ret->second;
-      Value zonename(ret->first.c_str(), doc.GetAllocator());
-      root.AddMember("name", zonename, doc.GetAllocator());
-      root.AddMember("type", "Zone", doc.GetAllocator());
-      root.AddMember("kind", zone.d_servers.empty() ? "Native" : "Forwarded", doc.GetAllocator());
-      Value servers;
-      servers.SetArray();
-      BOOST_FOREACH(const ComboAddress& server, zone.d_servers) {
-        Value value(server.toStringWithPort().c_str(), doc.GetAllocator());
-        servers.PushBack(value, doc.GetAllocator());
-      }
-      root.AddMember("servers", servers, doc.GetAllocator());
-      bool rdbit = zone.d_servers.empty() ? false : zone.d_rdForward;
-      root.AddMember("rdbit", rdbit, doc.GetAllocator());
-
-      Value records;
-      records.SetArray();
-      BOOST_FOREACH(const SyncRes::AuthDomain::records_t::value_type& rr, zone.d_records) {
-        Value object;
-        object.SetObject();
-        Value jname(rr.qname.c_str(), doc.GetAllocator()); // copy
-        object.AddMember("name", jname, doc.GetAllocator());
-        Value jtype(rr.qtype.getName().c_str(), doc.GetAllocator()); // copy
-        object.AddMember("type", jtype, doc.GetAllocator());
-        object.AddMember("ttl", rr.ttl, doc.GetAllocator());
-        object.AddMember("priority", rr.priority, doc.GetAllocator());
-        Value jcontent(rr.content.c_str(), doc.GetAllocator()); // copy
-        object.AddMember("content", jcontent, doc.GetAllocator());
-        records.PushBack(object, doc.GetAllocator());
-      }
-      root.AddMember("records", records, doc.GetAllocator());
-
-      doc.AddMember("zone", root, doc.GetAllocator());
-      resp->setBody(doc);
-      return;
-    } else {
-      resp->body = returnJsonError("Could not find domain '"+arg_zone+"'");
-      return;
+    typedef map<ComboAddress,unsigned int,ComboAddress::addressOnlyLessThan> counts_t;
+    counts_t counts;
+    unsigned int total=0;
+    for(const ComboAddress& q :  queries) {
+      total++;
+      counts[q]++;
     }
-  }
-  else if(command == "flush-cache") {
-    string canon=toCanonic("", req->getvars["domain"]);
-    int count = broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeCache, canon));
-    count+=broadcastAccFunction<uint64_t>(boost::bind(pleaseWipeAndCountNegCache, canon));
-    stats["number"]=lexical_cast<string>(count);
-    resp->body = returnJsonObject(stats);
-    return;
-  }
-  else if(command == "config") {
-    vector<string> items = ::arg().list();
-    BOOST_FOREACH(const string& var, items) {
-      stats[var] = ::arg()[var];
+
+    typedef std::multimap<int, ComboAddress> rcounts_t;
+    rcounts_t rcounts;
+
+    for(counts_t::const_iterator i=counts.begin(); i != counts.end(); ++i)
+      rcounts.insert(make_pair(-i->second, i->first));
+
+
+    Document doc;
+    doc.SetObject();
+    Value entries;
+    entries.SetArray();
+    unsigned int tot=0, totIncluded=0;
+    for(const rcounts_t::value_type& q :  rcounts) {
+      totIncluded-=q.first;
+      Value arr;
+
+      arr.SetArray();
+      arr.PushBack(-q.first, doc.GetAllocator());
+      Value jname(q.second.toString().c_str(), doc.GetAllocator()); // copy
+      arr.PushBack(jname, doc.GetAllocator());
+      entries.PushBack(arr, doc.GetAllocator());
+      if(tot++>=100)
+	break;
     }
-    resp->body = returnJsonObject(stats);
-    return;
-  }
-  else if(command == "log-grep") {
-    // legacy parameter name hack
-    req->getvars["q"] = req->getvars["needle"];
-    apiServerSearchLog(req, resp);
-    return;
-  }
-  else if(command == "stats") {
-    stats = getAllStatsMap();
-    resp->body = returnJsonObject(stats);
+    if(queries.size() != totIncluded) {
+      Value arr;
+      arr.SetArray();
+      arr.PushBack((unsigned int)(queries.size()-totIncluded), doc.GetAllocator());
+      arr.PushBack("", doc.GetAllocator());
+      entries.PushBack(arr, doc.GetAllocator());
+    }
+
+    doc.AddMember("entries", entries, doc.GetAllocator());
+    resp->setBody(doc);
     return;
   } else {
     resp->status = 404;
-    resp->body = returnJsonError("Not found");
+    resp->body = returnJsonError("Command '"+command+"' not found");
   }
 }
 
