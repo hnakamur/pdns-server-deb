@@ -1,3 +1,17 @@
+pdns (4.0.0~alpha1-1) unstable; urgency=medium
+
+  The "pdnssec" utility has been renamed to "pdnsutil".
+  The default listening addresses now include all IPv6 addresses.
+  The default DNSSEC parameters have changed to a single ECSA 256
+  key.
+  The "lmdb" backend has been removed.
+  Many options are no longer experimental.
+
+  Debian specific: the allow-recursion and listen-address parameters
+  are no longer set using debconf.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Fri, 25 Dec 2015 17:05:29 +0000
+
 pdns (3.4.6-2) unstable; urgency=medium
 
   The "geo" backend has been replaced by the much newer "geoip"
@@ -5,41 +19,3 @@ pdns (3.4.6-2) unstable; urgency=medium
   has a higher confidence of keeping it working in newer versions.
 
  -- Christian Hofstaedtler <zeha@debian.org>  Thu, 10 Sep 2015 21:51:38 +0000
-
-pdns (3.3-1~exp1) experimental; urgency=low
-
-  The sqlite backend was removed upstream in PowerDNS 3.3. If you're
-  using this backend, it is strongly recommended that you migrate to
-  sqlite3 or to an entirely different backend. Sorry, there is
-  currently no automated migration path. I will accept a tested and
-  documented patch for the package if you would like to contribute
-  one.
-  
-  In PowerDNS 3.3, upstream implemented an include directive for the
-  configuration file. Unlike the variant that we had patched into
-  PowerDNS up to 3.1, the directive is now called include-dir and not
-  include, and it only includes file that end in *.conf. If you choose
-  to keep your local configuration, you need to make those changes
-  manually in your configuration. If you choose to keep your old
-  configuration, the postinst takes care of the rename, but you need to
-  manually change your include directives to include-dir.
-  
-  The lazy-recursion parameter has been removed in PowerDNS 3.3.
-  If you choose to keep your old configuration, you need to manually
-  remove or comment it in your configuration.
-
- -- Marc Haber <mh+debian-packages@zugschlus.de>  Tue, 02 Jul 2013 07:40:36 +0000
-
-pdns (3.1-3) unstable; urgency=low
-
-  pdns now ships an empty, but activated bind backend so that the daemon
-  can launch immediately. Since PowerDNS only allows a single launch
-  statement (see http://wiki.powerdns.com/trac/ticket/502), you need to
-  adapt either the new simplebind configuration or your custom
-  configuration.
-
-  PowerDNS will not flag multiple launch statements as an error, but it
-  will only honor one of them. Be aware of that if your PowerDNS
-  complains about configuration for a not enabled backend.
-
- -- Marc Haber <mh+debian-packages@zugschlus.de>  Sun, 24 Jun 2012 11:11:27 +0200

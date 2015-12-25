@@ -1,3 +1,16 @@
+pdns (4.0.0~alpha1-1) unstable; urgency=medium
+
+  * New upstream version: 4.0.0-alpha1
+    * Update debian/copyright.
+    * Disable lmdb backend (gone upstream).
+    * Add curl to Build-Depends.
+    * Follow pdnssec -> pdnsutil rename.
+    * Drop our mbedtls patch, as upstream now natively supports it.
+  * Enable reproducible build.
+  * Drop debconf questions that didn't really work.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Fri, 25 Dec 2015 17:05:29 +0000
+
 pdns (3.4.7-2) unstable; urgency=medium
 
   * Switch from polarssl to mbedtls (Closes: #808065)
