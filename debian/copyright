@@ -39,23 +39,23 @@ Copyright: 2010 - 2011 Maik Zumstrull
  Karlsruhe Institute of Technology
 License: Expat
 
-Files: pdns/ext/yahttp/*
+Files: ext/yahttp/*
 Copyright: 2014 Aki Tuomi
 License: Expat
 
-Files: pdns/ext/rapidjson/*
+Files: ext/rapidjson/*
 Copyright: 2011 Milo Yip
 License: Expat
 
-Files: pdns/ext/mbedtls/*
+Files: ext/mbedtls/*
 Copyright: 2006-2015, ARM Limited
 License: GPL-2+
 
-Files: pdns/ext/json11/*
+Files: ext/json11/*
 Copyright: 2013 Dropbox, Inc.
 License: Expat
 
-Files: pdns/ext/luawrapper/*
+Files: ext/luawrapper/*
 Copyright: 2013, Pierre KRIEGER
 License: BSD-3
 
