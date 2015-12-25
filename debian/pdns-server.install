@@ -3,7 +3,7 @@ debian/config/pdns.local.conf usr/share/pdns-server/
 debian/config/pdns.simplebind.conf usr/share/pdns-server/
 debian/resolvconf/pdns etc/resolvconf/update.d/
 usr/bin/pdns_control
-usr/bin/pdnssec
+usr/bin/pdnsutil
 usr/bin/zone2sql
 usr/lib/*/pdns/libbindbackend.so*
 usr/sbin/pdns_server
