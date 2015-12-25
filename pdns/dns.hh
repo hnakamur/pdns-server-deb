@@ -21,41 +21,36 @@
 */
 // $Id$ 
 /* (C) 2002 POWERDNS.COM BV */
-#ifndef DNS_HH
-#define DNS_HH
+#pragma once
 #include <boost/multi_index_container.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 #include <boost/tuple/tuple_comparison.hpp>
 #include <boost/multi_index/key_extractors.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
-#include <boost/serialization/string.hpp>
-#include <boost/serialization/version.hpp>
-
-
-#include "utility.hh"
 #include "qtype.hh"
+#include "dnsname.hh"
 #include <time.h>
 #include <sys/types.h>
 class DNSBackend;
+class DNSName; // FIXME400
 
 struct SOAData
 {
-  SOAData() : ttl(0), serial(0), refresh(0), retry(0), expire(0), domain_id(-1), db(0), scopeMask(0) {};
+  SOAData() : ttl(0), serial(0), refresh(0), retry(0), expire(0), default_ttl(0), db(0), domain_id(-1), scopeMask(0) {};
 
-  string qname;
-  string nameserver;
-  string hostmaster;
+  DNSName qname;
+  DNSName nameserver;
+  DNSName hostmaster;
   uint32_t ttl;
   uint32_t serial;
   uint32_t refresh;
   uint32_t retry;
   uint32_t expire;
   uint32_t default_ttl;
-  int domain_id;
   DNSBackend *db;
+  int domain_id;
   uint8_t scopeMask;
 };
-
 
 class RCode
 {
@@ -71,35 +66,42 @@ public:
   enum { Query=0, IQuery=1, Status=2, Notify=4, Update=5 };
 };
 
+// enum for policy decisions, used by both auth and recursor. Not all values supported everywhere.
+namespace PolicyDecision { enum returnTypes { PASS=-1, DROP=-2, TRUNCATE=-3 }; };
+
 //! This class represents a resource record
 class DNSResourceRecord
 {
 public:
-  DNSResourceRecord() : qclass(1), priority(0), signttl(0), last_modified(0), d_place(ANSWER), auth(1), disabled(0), scopeMask(0) {};
-  DNSResourceRecord(const struct DNSRecord&);
+  DNSResourceRecord() : last_modified(0), ttl(0), signttl(0), domain_id(-1), qclass(1), d_place(ANSWER), scopeMask(0), auth(1), disabled(0) {};
+  explicit DNSResourceRecord(const struct DNSRecord&);
   ~DNSResourceRecord(){};
 
+  enum Place : uint8_t {QUESTION=0, ANSWER=1, AUTHORITY=2, ADDITIONAL=3}; //!< Type describing the positioning of a DNSResourceRecord within, say, a DNSPacket
+
   void setContent(const string& content);
-  string getZoneRepresentation() const;
+  string getZoneRepresentation(bool noDot=false) const;
 
   // data
-  
-  QType qtype; //!< qtype of this record, ie A, CNAME, MX etc
-  uint16_t qclass; //!< class of this record
-  string qname; //!< the name of this record, for example: www.powerdns.com
-  string wildcardname;
+  DNSName qname; //!< the name of this record, for example: www.powerdns.com
+  DNSName wildcardname;
   string content; //!< what this record points to. Example: 10.1.2.3
-  uint16_t priority; //!< For qtypes that support a priority or preference (MX, SRV)
+
+  // Aligned on 8-byte boundries on systems where time_t is 8 bytes and int
+  // is 4 bytes, aka modern linux on x86_64
+  time_t last_modified; //!< For autocalculating SOA serial numbers - the backend needs to fill this in
+
   uint32_t ttl; //!< Time To Live of this record
   uint32_t signttl; //!< If non-zero, use this TTL as original TTL in the RRSIG
-  int domain_id; //!< If a backend implements this, the domain_id of the zone this record is in
-  time_t last_modified; //!< For autocalculating SOA serial numbers - the backend needs to fill this in
-  enum Place {QUESTION=0, ANSWER=1, AUTHORITY=2, ADDITIONAL=3}; //!< Type describing the positioning of a DNSResourceRecord within, say, a DNSPacket
-  Place d_place; //!< This specifies where a record goes within the packet
 
+  int domain_id; //!< If a backend implements this, the domain_id of the zone this record is in
+  QType qtype; //!< qtype of this record, ie A, CNAME, MX etc
+  uint16_t qclass; //!< class of this record
+
+  Place d_place; //!< This specifies where a record goes within the packet
+  uint8_t scopeMask;
   bool auth;
   bool disabled;
-  uint8_t scopeMask;
 
   template<class Archive>
   void serialize(Archive & ar, const unsigned int version)
@@ -109,7 +111,6 @@ public:
     ar & qname;
     ar & wildcardname;
     ar & content;
-    ar & priority;
     ar & ttl;
     ar & domain_id;
     ar & last_modified;
@@ -146,68 +147,7 @@ struct EDNS0Record
         uint16_t Z; 
 } GCCPACKATTRIBUTE;
 
-enum  {
-        ns_t_invalid = 0,       /* Cookie. */
-        ns_t_a = 1,             /* Host address. */
-        ns_t_ns = 2,            /* Authoritative server. */
-        ns_t_md = 3,            /* Mail destination. */
-        ns_t_mf = 4,            /* Mail forwarder. */
-        ns_t_cname = 5,         /* Canonical name. */
-        ns_t_soa = 6,           /* Start of authority zone. */
-        ns_t_mb = 7,            /* Mailbox domain name. */
-        ns_t_mg = 8,            /* Mail group member. */
-        ns_t_mr = 9,            /* Mail rename name. */
-        ns_t_null = 10,         /* Null resource record. */
-        ns_t_wks = 11,          /* Well known service. */
-        ns_t_ptr = 12,          /* Domain name pointer. */
-        ns_t_hinfo = 13,        /* Host information. */
-        ns_t_minfo = 14,        /* Mailbox information. */
-        ns_t_mx = 15,           /* Mail routing information. */
-        ns_t_txt = 16,          /* Text strings. */
-        ns_t_rp = 17,           /* Responsible person. */
-        ns_t_afsdb = 18,        /* AFS cell database. */
-        ns_t_x25 = 19,          /* X_25 calling address. */
-        ns_t_isdn = 20,         /* ISDN calling address. */
-        ns_t_rt = 21,           /* Router. */
-        ns_t_nsap = 22,         /* NSAP address. */
-        ns_t_nsap_ptr = 23,     /* Reverse NSAP lookup (deprecated). */
-        ns_t_sig = 24,          /* Security signature. */
-        ns_t_key = 25,          /* Security key. */
-        ns_t_px = 26,           /* X.400 mail mapping. */
-        ns_t_gpos = 27,         /* Geographical position (withdrawn). */
-        ns_t_aaaa = 28,         /* Ip6 Address. */
-        ns_t_loc = 29,          /* Location Information. */
-        ns_t_nxt = 30,          /* Next domain (security). */
-        ns_t_eid = 31,          /* Endpoint identifier. */
-        ns_t_nimloc = 32,       /* Nimrod Locator. */
-        ns_t_srv = 33,          /* Server Selection. */
-        ns_t_atma = 34,         /* ATM Address */
-        ns_t_naptr = 35,        /* Naming Authority PoinTeR */
-        ns_t_kx = 36,           /* Key Exchange */
-        ns_t_cert = 37,         /* Certification record */
-        ns_t_a6 = 38,           /* IPv6 address (deprecates AAAA) */
-        ns_t_dname = 39,        /* Non-terminal DNAME (for IPv6) */
-        ns_t_sink = 40,         /* Kitchen sink (experimental) */
-        ns_t_opt = 41,          /* EDNS0 option (meta-RR) */
-        ns_t_ds = 43,           /* Delegation signer */
-        ns_t_ipseckey = 45,     /* IPSEC Key */
-        ns_t_rrsig = 46,        /* Resoure Record signature */
-        ns_t_nsec = 47,         /* Next Record */
-        ns_t_dnskey = 48,       /* DNSKEY record */
-        ns_t_nsec3 = 50,        /* Next Record v3 */
-        ns_t_nsec3param = 51,   /* NSEC Parameters */
-        ns_t_tlsa = 52,         /* TLSA */
-        ns_t_eui48 = 108,       /* EUI-48 */
-        ns_t_eui64 = 109,       /* EUI-64 */
-        ns_t_tsig = 250,        /* Transaction signature. */
-        ns_t_ixfr = 251,        /* Incremental zone transfer. */
-        ns_t_axfr = 252,        /* Transfer zone of authority. */
-        ns_t_mailb = 253,       /* Transfer mailbox records. */
-        ns_t_maila = 254,       /* Transfer mail agent records. */
-        ns_t_any = 255,         /* Wildcard match. */
-};
-
-#if __FreeBSD__ || __APPLE__ || __OpenBSD__ || __DragonFly__ || defined(__FreeBSD_kernel__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__OpenBSD__) || defined(__DragonFly__) || defined(__FreeBSD_kernel__)
 #include <machine/endian.h>
 #elif __linux__ || __GNU__
 # include <endian.h>
@@ -278,18 +218,120 @@ struct dnsheader {
         unsigned        arcount :16;    /* number of resource entries */
 };
 
+static_assert(sizeof(dnsheader) == 12, "dnsheader size must be 12");
+
+inline uint16_t * getFlagsFromDNSHeader(struct dnsheader * dh)
+{
+  return (uint16_t*) (((char *) dh) + sizeof(uint16_t));
+}
+
+#define DNS_TYPE_SIZE (2)
+#define DNS_CLASS_SIZE (2)
+#define DNS_TTL_SIZE (4)
+#define DNS_RDLENGTH_SIZE (2)
+#define EDNS_EXTENDED_RCODE_SIZE (1)
+#define EDNS_VERSION_SIZE (1)
+#define EDNS_OPTION_CODE_SIZE (2)
+#define EDNS_OPTION_LENGTH_SIZE (2)
+
+#if BYTE_ORDER == BIG_ENDIAN
+#define FLAGS_RD_OFFSET (8)
+#define FLAGS_CD_OFFSET (12)
+#elif BYTE_ORDER == LITTLE_ENDIAN || BYTE_ORDER == PDP_ENDIAN
+#define FLAGS_RD_OFFSET (0)
+#define FLAGS_CD_OFFSET (12)
+#endif
 
 #define L theL()
 extern time_t s_starttime;
-std::string questionExpand(const char* packet, uint16_t len, uint16_t& type);
-uint32_t hashQuestion(const char* packet, uint16_t len, uint32_t init);
-bool dnspacketLessThan(const std::string& a, const std::string& b);
 
-/** helper function for both DNSPacket and addSOARecord() - converts a line into a struct, for easier parsing */
-void fillSOAData(const string &content, SOAData &data);
+uint32_t hashQuestion(const char* packet, uint16_t len, uint32_t init);
+
+//! compares two dns packets in canonical order, skipping the header, but including the question and the qtype
+inline bool dnspacketLessThan(const std::string& a, const std::string& b)
+{
+  /* BEFORE YOU ATTEMPT TO MERGE THIS WITH DNSNAME::CANONICALCOMPARE! 
+     Please note that that code is subtly different, and for example only has
+     to deal with a string of labels, and not a trailing packet. Also, the comparison
+     rules are different since we also have to take into account qname and qtype.
+     So just grin and bear it.
+   */
+
+  if(a.length() <= 12 || b.length() <= 12) 
+    return a.length() < b.length();
+
+  uint8_t ourpos[64], rhspos[64];
+  uint8_t ourcount=0, rhscount=0;
+  //cout<<"Asked to compare "<<toString()<<" to "<<rhs.toString()<<endl;
+  const unsigned char* p;
+  for(p = (const unsigned char*)a.c_str()+12; p < (const unsigned char*)a.c_str() + a.size() && *p && ourcount < sizeof(ourpos); p+=*p+1)
+    ourpos[ourcount++]=(p-(const unsigned char*)a.c_str());
+  if(p>=(const unsigned char*)a.c_str() + a.size())
+    return true;
+
+  uint16_t aQtype = *(p+1)*256 + *(p+2);
+  uint16_t aQclass =*(p+3)*256 + *(p+4);
+
+  for(p = (const unsigned char*)b.c_str()+12; p < (const unsigned char*)b.c_str() + b.size() && *p && rhscount < sizeof(rhspos); p+=*p+1)
+    rhspos[rhscount++]=(p-(const unsigned char*)b.c_str());
+
+  if(p>=(const unsigned char*)b.c_str() + b.size())
+    return false;
+
+  uint16_t bQtype = *(p+1)*256 + *(p+2);
+  uint16_t bQclass =*(p+3)*256 + *(p+4);
+
+  if(ourcount == sizeof(ourpos) || rhscount==sizeof(rhspos)) {
+    DNSName aname(a.c_str(), a.size(), 12, false, &aQtype, &aQclass);
+    DNSName bname(b.c_str(), b.size(), 12, false, &bQtype, &bQclass);
+
+    if(aname.slowCanonCompare(bname))
+      return true;
+    if(aname!=bname)
+      return false;
+    return boost::tie(aQtype, aQclass) < boost::tie(bQtype, bQclass);
+  }
+  for(;;) {
+    if(ourcount == 0 && rhscount != 0)
+      return true;
+    if(ourcount == 0 && rhscount == 0)
+      break;
+    if(ourcount !=0 && rhscount == 0)
+      return false;
+    ourcount--;
+    rhscount--;
+
+    bool res=std::lexicographical_compare(
+					  a.c_str() + ourpos[ourcount] + 1, 
+					  a.c_str() + ourpos[ourcount] + 1 + *(a.c_str() + ourpos[ourcount]),
+					  b.c_str() + rhspos[rhscount] + 1, 
+					  b.c_str() + rhspos[rhscount] + 1 + *(b.c_str() + rhspos[rhscount]),
+					  [](const char& a, const char& b) {
+					    return dns2_tolower(a) < dns2_tolower(b); 
+					  });
+    
+    //    cout<<"Forward: "<<res<<endl;
+    if(res)
+      return true;
+
+    res=std::lexicographical_compare(	  b.c_str() + rhspos[rhscount] + 1, 
+					  b.c_str() + rhspos[rhscount] + 1 + *(b.c_str() + rhspos[rhscount]),
+					  a.c_str() + ourpos[ourcount] + 1, 
+					  a.c_str() + ourpos[ourcount] + 1 + *(a.c_str() + ourpos[ourcount]),
+					  [](const char& a, const char& b) {
+					    return dns2_tolower(a) < dns2_tolower(b); 
+					  });
+    //    cout<<"Reverse: "<<res<<endl;
+    if(res)
+      return false;
+  }
+  
+  return boost::tie(aQtype, aQclass) < boost::tie(bQtype, bQclass);
+}
+
 
 /** for use by DNSPacket, converts a SOAData class to a ascii line again */
 string serializeSOAData(const SOAData &data);
 string &attodot(string &str);  //!< for when you need to insert an email address in the SOA
-string strrcode(unsigned char rcode);
-#endif
+
+vector<DNSResourceRecord> convertRRS(const vector<DNSRecord>& in);

@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "lua-auth.hh"
 
 #if !defined(HAVE_LUA)
@@ -13,7 +16,16 @@ DNSPacket* AuthLua::prequery(DNSPacket *p)
   return 0;
 }
 
-bool AuthLua::axfrfilter(const ComboAddress& remote, const string& zone, const DNSResourceRecord& in, vector<DNSResourceRecord>& out)
+int AuthLua::police(DNSPacket *req, DNSPacket *resp, bool isTcp)
+{
+  return PolicyDecision::PASS;
+}
+
+string AuthLua::policycmd(const vector<string>&parts) {
+  return "no policy script loaded";
+}
+
+bool AuthLua::axfrfilter(const ComboAddress& remote, const DNSName& zone, const DNSResourceRecord& in, vector<DNSResourceRecord>& out)
 {
   return false;
 }
@@ -34,7 +46,7 @@ extern "C" {
 #include <string>
 #include <vector>
 #include <stdexcept>
-#include <boost/foreach.hpp>
+
 #include "logger.hh"
 #include "namespaces.hh"
 
@@ -42,9 +54,10 @@ AuthLua::AuthLua(const std::string &fname)
   : PowerDNSLua(fname)
 {
   registerLuaDNSPacket();
+  pthread_mutex_init(&d_lock,0);
 }
 
-bool AuthLua::axfrfilter(const ComboAddress& remote, const string& zone, const DNSResourceRecord& in, vector<DNSResourceRecord>& out)
+bool AuthLua::axfrfilter(const ComboAddress& remote, const DNSName& zone, const DNSResourceRecord& in, vector<DNSResourceRecord>& out)
 {
   lua_getglobal(d_lua,  "axfrfilter");
   if(!lua_isfunction(d_lua, -1)) {
@@ -54,14 +67,13 @@ bool AuthLua::axfrfilter(const ComboAddress& remote, const string& zone, const D
   }
   
   lua_pushstring(d_lua,  remote.toString().c_str() );
-  lua_pushstring(d_lua,  zone.c_str() );
-  lua_pushstring(d_lua,  in.qname.c_str() );
+  lua_pushstring(d_lua,  zone.toString().c_str() ); // FIXME400 expose DNSName to Lua?
+  lua_pushstring(d_lua,  in.qname.toString().c_str() );
   lua_pushnumber(d_lua,  in.qtype.getCode() );
   lua_pushnumber(d_lua,  in.ttl );
-  lua_pushnumber(d_lua,  in.priority );
   lua_pushstring(d_lua,  in.content.c_str() );
 
-  if(lua_pcall(d_lua,  7, 2, 0)) { // error 
+  if(lua_pcall(d_lua,  6, 2, 0)) { // error
     string error=string("lua error in axfrfilter: ")+lua_tostring(d_lua, -1);
     lua_pop(d_lua, 1);
     throw runtime_error(error);
@@ -101,18 +113,14 @@ bool AuthLua::axfrfilter(const ComboAddress& remote, const string& zone, const D
     if(!getFromTable("ttl", rr.ttl))
       rr.ttl=3600;
 
-    if(!getFromTable("priority", tmpnum))
-      rr.priority=0;
-    else
-      rr.priority=tmpnum;
-
-    if(!getFromTable("qname", rr.qname))
+    string qname = rr.qname.toString();
+    if(!getFromTable("qname", qname))
       rr.qname = zone;
 
     if(!getFromTable("place", tmpnum))
       rr.d_place = DNSResourceRecord::ANSWER;
     else
-      rr.d_place = (DNSResourceRecord::Place) tmpnum;
+      rr.d_place = static_cast<DNSResourceRecord::Place>(tmpnum);
 
     /* removes 'value'; keeps 'key' for next iteration */
     lua_pop(d_lua, 1); // table
@@ -148,17 +156,29 @@ static int ldp_setRcode(lua_State *L) {
 
 static int ldp_getQuestion(lua_State *L) {
   DNSPacket *p=ldp_checkDNSPacket(L);
-  lua_pushstring(L, p->qdomain.c_str());
+  lua_pushstring(L, p->qdomain.toString().c_str());
   lua_pushnumber(L, p->qtype.getCode());
   return 2;
 }
 
+static int ldp_getWild(lua_State *L) {
+  DNSPacket *p=ldp_checkDNSPacket(L);
+  lua_pushstring(L, p->qdomainwild.toString().c_str());
+  return 1;
+}
+
+static int ldp_getZone(lua_State *L) {
+  DNSPacket *p=ldp_checkDNSPacket(L);
+  lua_pushstring(L, p->qdomainzone.toString().c_str());
+  return 1;
+}
+
 static int ldp_addRecords(lua_State *L) {
   DNSPacket *p=ldp_checkDNSPacket(L);
-  vector<DNSResourceRecord> rrs;
-  popResourceRecordsTable(L, "BOGUS", rrs);
-  BOOST_FOREACH(DNSResourceRecord rr, rrs) {
-    p->addRecord(rr);
+  vector<DNSRecord> rrs;
+  popResourceRecordsTable(L, DNSName("BOGUS"), rrs);
+  for(const DNSRecord& dr :  rrs) {
+    p->addRecord(DNSResourceRecord(dr));
   }
   return 0;
 }
@@ -169,16 +189,42 @@ static int ldp_getRemote(lua_State *L) {
   return 1;
 }
 
-// these functions are used for PowerDNS recursor regresseion testing against auth. The Lua 5.2 implementation is most likely broken.
-#if LUA_VERSION_NUM < 502
-static const struct luaL_reg ldp_methods [] = {
+static int ldp_getRcode(lua_State *L) {
+  DNSPacket *p=ldp_checkDNSPacket(L);
+  lua_pushnumber(L, p->d.rcode);
+  return 1;
+}
+
+static int ldp_getSize(lua_State *L) {
+  DNSPacket *p=ldp_checkDNSPacket(L);
+  lua_pushnumber(L, p->getString().size());
+  return 1;
+}
+
+static int ldp_getRRCounts(lua_State *L) {
+  DNSPacket *p=ldp_checkDNSPacket(L);
+  lua_pushnumber(L, ntohs(p->d.ancount));
+  lua_pushnumber(L, ntohs(p->d.nscount));
+  lua_pushnumber(L, ntohs(p->d.arcount));
+  return 3;
+}
+
+// these functions are used for PowerDNS recursor regression testing against auth,
+// and for the Lua Policy Engine. The Lua 5.2 implementation is untested.
+static const struct luaL_Reg ldp_methods [] = {
       {"setRcode", ldp_setRcode},
       {"getQuestion", ldp_getQuestion},
+      {"getWild", ldp_getWild},
+      {"getZone", ldp_getZone},
       {"addRecords", ldp_addRecords},
       {"getRemote", ldp_getRemote},
+      {"getSize", ldp_getSize},
+      {"getRRCounts", ldp_getRRCounts},
+      {"getRcode", ldp_getRcode},
       {NULL, NULL}
     };
 
+#if LUA_VERSION_NUM < 502
 void AuthLua::registerLuaDNSPacket(void) {
 
   luaL_newmetatable(d_lua, "LuaDNSPacket");
@@ -192,13 +238,6 @@ void AuthLua::registerLuaDNSPacket(void) {
   lua_pop(d_lua, 1);
 }
 #else
-static const struct luaL_Reg ldp_methods [] = {
-      {"setRcode", ldp_setRcode},
-      {"getQuestion", ldp_getQuestion},
-      {"addRecords", ldp_addRecords},
-      {"getRemote", ldp_getRemote},
-      {NULL, NULL}
-    };
 
 void AuthLua::registerLuaDNSPacket(void) {
 
@@ -257,5 +296,78 @@ DNSPacket* AuthLua::prequery(DNSPacket *p)
   }
 }
 
+int AuthLua::police(DNSPacket *req, DNSPacket *resp, bool isTcp)
+{
+  Lock l(&d_lock);
+
+  lua_getglobal(d_lua,  "police");
+  if(!lua_isfunction(d_lua, -1)) {
+    // cerr<<"No such function 'police'\n"; FIXME: raise Exception? check this beforehand so we can log it once?
+    lua_pop(d_lua, 1);
+    return PolicyDecision::PASS;
+  }
+
+  /* wrap request */
+  LuaDNSPacket* lreq = (LuaDNSPacket *)lua_newuserdata(d_lua, sizeof(LuaDNSPacket));
+  lreq->d_p=req;
+  luaL_getmetatable(d_lua, "LuaDNSPacket");
+  lua_setmetatable(d_lua, -2);
+
+  /* wrap response */
+  if(resp) {
+    LuaDNSPacket* lresp = (LuaDNSPacket *)lua_newuserdata(d_lua, sizeof(LuaDNSPacket));
+    lresp->d_p=resp;
+    luaL_getmetatable(d_lua, "LuaDNSPacket");
+    lua_setmetatable(d_lua, -2);
+  }
+  else
+  {
+    lua_pushnil(d_lua);
+  }
+
+  lua_pushboolean(d_lua, isTcp);
+
+  if(lua_pcall(d_lua, 3, 1, 0)) {
+    string error=string("lua error in police: ")+lua_tostring(d_lua, -1);
+    lua_pop(d_lua, 1);
+    theL()<<Logger::Error<<"police error: "<<error<<endl;
+
+    throw runtime_error(error);
+  }
+
+  int res = (int) lua_tonumber(d_lua, 1);
+  lua_pop(d_lua, 1);
+
+  return res;
+}
+
+string AuthLua::policycmd(const vector<string>&parts) {
+  Lock l(&d_lock);
+
+  lua_getglobal(d_lua, "policycmd");
+  if(!lua_isfunction(d_lua, -1)) {
+    // cerr<<"No such function 'police'\n"; FIXME: raise Exception? check this beforehand so we can log it once?
+    lua_pop(d_lua, 1);
+    return "no policycmd function in policy script";
+  }
+
+  for(vector<string>::size_type i=1; i<parts.size(); i++)
+    lua_pushstring(d_lua, parts[i].c_str());
+
+  if(lua_pcall(d_lua, parts.size()-1, 1, 0)) {
+    string error = string("lua error in policycmd: ")+lua_tostring(d_lua, -1);
+    lua_pop(d_lua, 1);
+    return error;
+  }
+
+  const char *ret = lua_tostring(d_lua, 1);
+  string rets;
+  if(ret)
+    rets = ret;
+
+  lua_pop(d_lua, 1);
+
+  return rets;
+}
 
 #endif

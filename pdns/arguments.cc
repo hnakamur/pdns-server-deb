@@ -19,11 +19,14 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "arguments.hh"
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/compare.hpp>
 #include <boost/algorithm/string/predicate.hpp>
-#include <boost/foreach.hpp>
+
 #include "namespaces.hh"
 #include "logger.hh"
 #include <sys/types.h>
@@ -252,7 +255,7 @@ int ArgvMap::asNum(const string &arg, int def)
   cptr_orig = params[arg].c_str();
   retval = static_cast<int>(strtol(cptr_orig, &cptr_ret, 0));
   if (!retval && cptr_ret == cptr_orig)
-   throw ArgException("'"+arg+string("' is not valid number"));
+   throw ArgException("'"+arg+"' value '"+string(cptr_orig) + string( "' is not a valid number"));
 
   return retval;
 }
@@ -448,7 +451,7 @@ bool ArgvMap::file(const char *fname, bool lax, bool included)
   if (!included && !params["include-dir"].empty()) {
     std::vector<std::string> extraConfigs;
     gatherIncludes(extraConfigs); 
-    BOOST_FOREACH(const std::string& fn, extraConfigs) {
+    for(const std::string& fn :  extraConfigs) {
       if (!file(fn.c_str(), lax, true)) {
         L << Logger::Error << fn << " could not be parsed" << std::endl;
         throw ArgException(fn + " could not be parsed");

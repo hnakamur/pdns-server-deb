@@ -20,10 +20,13 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "dnsseckeeper.hh"
 #include "dnspacket.hh"
 #include "namespaces.hh"
-#include <boost/foreach.hpp>
+
 
 uint32_t localtime_format_YYYYMMDDSS(time_t t, uint32_t seq)
 {
@@ -36,11 +39,11 @@ uint32_t localtime_format_YYYYMMDDSS(time_t t, uint32_t seq)
     + seq;
 }
 
-bool editSOA(DNSSECKeeper& dk, const string& qname, DNSPacket* dp)
+bool editSOA(DNSSECKeeper& dk, const DNSName& qname, DNSPacket* dp)
 {
   vector<DNSResourceRecord>& rrs = dp->getRRS();
-  BOOST_FOREACH(DNSResourceRecord& rr, rrs) {
-    if(rr.qtype.getCode() == QType::SOA && pdns_iequals(rr.qname,qname)) {
+  for(DNSResourceRecord& rr :  rrs) {
+    if(rr.qtype.getCode() == QType::SOA && rr.qname == qname) {
       string kind;
       dk.getSoaEdit(qname, kind);
       return editSOARecord(rr, kind);
@@ -124,7 +127,7 @@ uint32_t calculateIncreaseSOA(SOAData sd, const string& increaseKind, const stri
   localtime_r(&now, &tm);
   boost::format fmt("%04d%02d%02d%02d");
   string newdate = (fmt % (tm.tm_year + 1900) % (tm.tm_mon + 1) % tm.tm_mday % 1).str();
-  uint32_t new_serial = atol(newdate.c_str());
+  uint32_t new_serial = pdns_stou(newdate);
   if (new_serial <= sd.serial) {
     new_serial = sd.serial + 1;
   }

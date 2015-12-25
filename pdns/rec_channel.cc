@@ -1,4 +1,8 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "rec_channel.hh"
+#include "utility.hh"
 #include <sys/socket.h>
 #include <cerrno>
 #include "misc.hh"
@@ -30,7 +34,7 @@ RecursorControlChannel::~RecursorControlChannel()
 int RecursorControlChannel::listen(const string& fname)
 {
   d_fd=socket(AF_UNIX,SOCK_DGRAM,0);
-  Utility::setCloseOnExec(d_fd);
+  setCloseOnExec(d_fd);
 
   if(d_fd < 0) 
     throw PDNSException("Creating UNIX domain socket: "+stringerror());
@@ -57,7 +61,7 @@ void RecursorControlChannel::connect(const string& path, const string& fname)
   struct sockaddr_un remote;
 
   d_fd=socket(AF_UNIX,SOCK_DGRAM,0);
-  Utility::setCloseOnExec(d_fd);
+  setCloseOnExec(d_fd);
 
   if(d_fd < 0) 
     throw PDNSException("Creating UNIX domain socket: "+string(strerror(errno)));
@@ -68,6 +72,7 @@ void RecursorControlChannel::connect(const string& path, const string& fname)
       throw PDNSException("Setsockopt failed: "+stringerror());
   
     string localname=path+"/lsockXXXXXX";
+    *d_local.sun_path=0;
     if (makeUNsockaddr(localname, &d_local))
       throw PDNSException("Unable to bind to local temporary file, path '"+localname+"' is not a valid UNIX socket path.");
 
@@ -88,8 +93,11 @@ void RecursorControlChannel::connect(const string& path, const string& fname)
     if (makeUNsockaddr(remotename, &remote))
       throw PDNSException("Unable to connect to controlsocket, path '"+remotename+"' is not a valid UNIX socket path.");
 
-    if(::connect(d_fd, (sockaddr*)&remote, sizeof(remote)) < 0)
+    if(::connect(d_fd, (sockaddr*)&remote, sizeof(remote)) < 0) {
+      if(*d_local.sun_path)
+	unlink(d_local.sun_path);
       throw PDNSException("Unable to connect to remote '"+string(remote.sun_path)+"': "+stringerror());
+    }
 
   } catch (...) {
     close(d_fd);
@@ -121,8 +129,12 @@ string RecursorControlChannel::recv(std::string* remote, unsigned int timeout)
   ssize_t len;
   struct sockaddr_un remoteaddr;
   socklen_t addrlen=sizeof(remoteaddr);
-    
-  if((waitForData(d_fd, timeout, 0 ) != 1) || (len=::recvfrom(d_fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&remoteaddr, &addrlen)) < 0)
+  
+  int ret=waitForData(d_fd, timeout, 0);
+  if(ret==0)
+    throw PDNSException("Timeout waiting for answer from control channel");
+  
+  if( ret < 0 || (len=::recvfrom(d_fd, buffer, sizeof(buffer), 0, (struct sockaddr*)&remoteaddr, &addrlen)) < 0)
     throw PDNSException("Unable to receive message over control channel: "+string(strerror(errno)));
 
   if(remote)

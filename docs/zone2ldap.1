@@ -1,0 +1,64 @@
+.TH "ZONE2LDAP" "1" "November 2004" "" ""
+.SH NAME
+.PP
+\f[B]zone2ldap\f[] \- convert zonefiles to ldif
+.SH SYNOPSIS
+.PP
+\f[B]zone2ldap\f[]
+{\f[B]\-\-named\-conf=\f[]\f[I]PATH\f[],\f[B]\-\-zone\-file=\f[]\f[I]PATH\f[]
+\f[B]\-\-zone\-name=\f[]\f[I]NAME\f[]} [\f[I]OPTION\f[]]...
+.SH DESCRIPTION
+.PP
+\f[B]zone2ldap\f[] is a program that converts bind zonefiles to ldif
+format which can inserted to an LDAP server.
+.SH OPTIONS
+.TP
+.B \-\-help
+Show summary of options.
+.RS
+.RE
+.TP
+.B \-\-basedn=\f[I]DN\f[]
+Base DN to store objects below
+.RS
+.RE
+.TP
+.B \-\-dnsttl
+Add dnsttl attribute to every entry
+.RS
+.RE
+.TP
+.B \-\-layout={\f[B]simple,tree\f[]}
+How to arrange entries in the directory (simple or as tree)
+.RS
+.RE
+.TP
+.B \-\-named\-conf=\f[I]PATH\f[]
+Path to a Bind 8 named.conf to parse
+.RS
+.RE
+.TP
+.B \-\-resume
+Continue after errors
+.RS
+.RE
+.TP
+.B \-\-verbose
+verbose comments on operation
+.RS
+.RE
+.TP
+.B \-\-zone\-file=\f[I]PATH\f[]
+Zone file to parse
+.RS
+.RE
+.TP
+.B \-\-zone\-name=\f[I]NAME\f[]
+Specify a zone name if zone is set
+.RS
+.RE
+.SH SEE ALSO
+.PP
+pdns_server(1)
+.SH AUTHORS
+Matthijs Möhlmann <matthijs@cacholong.nl>.

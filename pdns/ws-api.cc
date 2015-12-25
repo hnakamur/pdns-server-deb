@@ -18,13 +18,15 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
-#include <boost/foreach.hpp>
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <boost/tokenizer.hpp>
 #include <boost/circular_buffer.hpp>
 #include "namespaces.hh"
 #include "ws-api.hh"
 #include "json.hh"
-#include "config.h"
 #include "version.hh"
 #include "arguments.hh"
 #include <stdio.h>
@@ -84,11 +86,12 @@ static void fillServerDetail(Value& out, Value::AllocatorType& allocator)
   out.SetObject();
   out.AddMember("type", "Server", allocator);
   out.AddMember("id", "localhost", allocator);
-  out.AddMember("url", "/servers/localhost", allocator);
+  out.AddMember("url", "/api/v1/servers/localhost", allocator);
   out.AddMember("daemon_type", jdaemonType, allocator);
-  out.AddMember("version", VERSION, allocator);
-  out.AddMember("config_url", "/servers/localhost/config{/config_setting}", allocator);
-  out.AddMember("zones_url", "/servers/localhost/zones{/zone}", allocator);
+  Value jversion(getPDNSVersion().c_str(), allocator);
+  out.AddMember("version", jversion, allocator);
+  out.AddMember("config_url", "/api/v1/servers/localhost/config{/config_setting}", allocator);
+  out.AddMember("zones_url", "/api/v1/servers/localhost/zones{/zone}", allocator);
 }
 
 void apiServer(HttpRequest* req, HttpResponse* resp) {
@@ -120,7 +123,7 @@ void apiServerConfig(HttpRequest* req, HttpResponse* resp) {
   string value;
   Document doc;
   doc.SetArray();
-  BOOST_FOREACH(const string& item, items) {
+  for(const string& item :  items) {
     Value jitem;
     jitem.SetObject();
     jitem.AddMember("type", "ConfigSetting", doc.GetAllocator());
@@ -147,7 +150,7 @@ static string logGrep(const string& q, const string& fname, const string& prefix
   if(!ptr) {
     throw ApiException("Opening \"" + fname + "\" failed: " + stringerror());
   }
-  boost::shared_ptr<FILE> fp(ptr, fclose);
+  std::shared_ptr<FILE> fp(ptr, fclose);
 
   string line;
   string needle = q;
@@ -176,7 +179,7 @@ static string logGrep(const string& q, const string& fname, const string& prefix
   Document doc;
   doc.SetArray();
   if(!lines.empty()) {
-    BOOST_FOREACH(const string& line, lines) {
+    for(const string& line :  lines) {
       doc.PushBack(line.c_str(), doc.GetAllocator());
     }
   }
@@ -188,7 +191,7 @@ void apiServerSearchLog(HttpRequest* req, HttpResponse* resp) {
     throw HttpMethodNotAllowedException();
 
   string prefix = " " + s_programname + "[";
-  resp->body = logGrep(req->getvars["q"], ::arg()["experimental-logfile"], prefix);
+  resp->body = logGrep(req->getvars["q"], ::arg()["api-logfile"], prefix);
 }
 
 void apiServerStatistics(HttpRequest* req, HttpResponse* resp) {
@@ -201,7 +204,7 @@ void apiServerStatistics(HttpRequest* req, HttpResponse* resp) {
   Document doc;
   doc.SetArray();
   typedef map<string, string> items_t;
-  BOOST_FOREACH(const items_t::value_type& item, items) {
+  for(const items_t::value_type& item :  items) {
     Value jitem;
     jitem.SetObject();
     jitem.AddMember("type", "StatisticItem", doc.GetAllocator());
@@ -218,7 +221,18 @@ void apiServerStatistics(HttpRequest* req, HttpResponse* resp) {
   resp->setBody(doc);
 }
 
-string apiZoneIdToName(const string& id) {
+DNSName apiNameToDNSName(const string& name) {
+  if (!isCanonical(name)) {
+    throw ApiException("DNS Name '" + name + "' is not canonical");
+  }
+  try {
+    return DNSName(name);
+  } catch (...) {
+    throw ApiException("Unable to parse DNS Name '" + name + "'");
+  }
+}
+
+DNSName apiZoneIdToName(const string& id) {
   string zonename;
   ostringstream ss;
 
@@ -258,14 +272,15 @@ string apiZoneIdToName(const string& id) {
 
   zonename = ss.str();
 
-  // strip trailing dot
-  if (zonename.size() > 0 && zonename.substr(zonename.size()-1) == ".") {
-    zonename.resize(zonename.size()-1);
+  try {
+    return DNSName(zonename);
+  } catch (...) {
+    throw ApiException("Unable to parse DNS Name '" + zonename + "'");
   }
-  return zonename;
 }
 
-string apiZoneNameToId(const string& name) {
+string apiZoneNameToId(const DNSName& dname) {
+  string name=dname.toString();
   ostringstream ss;
 
   for(string::const_iterator iter = name.begin(); iter != name.end(); ++iter) {
@@ -292,4 +307,9 @@ string apiZoneNameToId(const string& name) {
     id = (boost::format("=%02X") % (int)('.')).str();
   }
   return id;
+}
+
+void apiCheckNameAllowedCharacters(const string& label) {
+  if (label.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890_/.-") != std::string::npos)
+    throw ApiException("Label '"+label+"' contains unsupported characters");
 }

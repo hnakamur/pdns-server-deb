@@ -81,10 +81,15 @@ public:
 
 class HttpUnauthorizedException : public HttpException {
 public:
-  HttpUnauthorizedException() : HttpException(401)
+  HttpUnauthorizedException(string const &scheme) : HttpException(401)
   {
-    d_response.headers["WWW-Authenticate"] = "Basic realm=\"PowerDNS\"";
+    d_response.headers["WWW-Authenticate"] = scheme + " realm=\"PowerDNS\"";
   }
+};
+
+class HttpForbiddenException : public HttpException {
+public:
+  HttpForbiddenException() : HttpException(403) { };
 };
 
 class HttpNotFoundException : public HttpException {
@@ -143,8 +148,6 @@ public:
   void registerWebHandler(const string& url, HandlerFunction handler);
 
 protected:
-  static char B64Decode1(char cInChar);
-  static int B64Decode(const std::string& strInput, std::string& strOutput);
   void registerBareHandler(const string& url, HandlerFunction handler);
 
   virtual Server* createServer() {

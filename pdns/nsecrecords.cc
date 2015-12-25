@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "dnsrecords.hh"
 
 void NSECRecordContent::report(void)
@@ -10,10 +13,10 @@ DNSRecordContent* NSECRecordContent::make(const string& content)
   return new NSECRecordContent(content);
 }
 
-NSECRecordContent::NSECRecordContent(const string& content, const string& zone) : DNSRecordContent(47)
+NSECRecordContent::NSECRecordContent(const string& content, const string& zone) 
 {
   RecordTextReader rtr(content, zone);
-  rtr.xfrLabel(d_next);
+  rtr.xfrName(d_next);
 
   while(!rtr.eof()) {
     uint16_t type;
@@ -24,7 +27,7 @@ NSECRecordContent::NSECRecordContent(const string& content, const string& zone) 
 
 void NSECRecordContent::toPacket(DNSPacketWriter& pw) 
 {
-  pw.xfrLabel(d_next);
+  pw.xfrName(d_next);
 
   uint8_t res[34];
   set<uint16_t>::const_iterator i;
@@ -60,7 +63,7 @@ void NSECRecordContent::toPacket(DNSPacketWriter& pw)
 NSECRecordContent::DNSRecordContent* NSECRecordContent::make(const DNSRecord &dr, PacketReader& pr) 
 {
   NSECRecordContent* ret=new NSECRecordContent();
-  pr.xfrLabel(ret->d_next);
+  pr.xfrName(ret->d_next);
   string bitmap;
   pr.xfrBlob(bitmap);
  
@@ -91,11 +94,11 @@ NSECRecordContent::DNSRecordContent* NSECRecordContent::make(const DNSRecord &dr
   return ret;
 }
 
-string NSECRecordContent::getZoneRepresentation() const
+string NSECRecordContent::getZoneRepresentation(bool noDot) const
 {
   string ret;
   RecordTextWriter rtw(ret);
-  rtw.xfrLabel(d_next);
+  rtw.xfrName(d_next);
   
   for(set<uint16_t>::const_iterator i=d_set.begin(); i!=d_set.end(); ++i) {
     ret+=" ";
@@ -117,7 +120,7 @@ DNSRecordContent* NSEC3RecordContent::make(const string& content)
   return new NSEC3RecordContent(content);
 }
 
-NSEC3RecordContent::NSEC3RecordContent(const string& content, const string& zone) : DNSRecordContent(50)
+NSEC3RecordContent::NSEC3RecordContent(const string& content, const string& zone)
 {
   RecordTextReader rtr(content, zone);
   rtr.xfr8BitInt(d_algorithm);
@@ -224,7 +227,7 @@ NSEC3RecordContent::DNSRecordContent* NSEC3RecordContent::make(const DNSRecord &
   return ret;
 }
 
-string NSEC3RecordContent::getZoneRepresentation() const
+string NSEC3RecordContent::getZoneRepresentation(bool noDot) const
 {
   string ret;
   RecordTextWriter rtw(ret);
@@ -254,7 +257,7 @@ DNSRecordContent* NSEC3PARAMRecordContent::make(const string& content)
   return new NSEC3PARAMRecordContent(content);
 }
 
-NSEC3PARAMRecordContent::NSEC3PARAMRecordContent(const string& content, const string& zone) : DNSRecordContent(51)
+NSEC3PARAMRecordContent::NSEC3PARAMRecordContent(const string& content, const string& zone) 
 {
   RecordTextReader rtr(content, zone);
   rtr.xfr8BitInt(d_algorithm); 
@@ -285,7 +288,7 @@ NSEC3PARAMRecordContent::DNSRecordContent* NSEC3PARAMRecordContent::make(const D
   return ret;
 }
 
-string NSEC3PARAMRecordContent::getZoneRepresentation() const
+string NSEC3PARAMRecordContent::getZoneRepresentation(bool noDot) const
 {
   string ret;
   RecordTextWriter rtw(ret);

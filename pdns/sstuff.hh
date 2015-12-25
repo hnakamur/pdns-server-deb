@@ -14,7 +14,7 @@
 #include <sys/select.h>
 #include <fcntl.h>
 #include <stdexcept>
-#include <boost/shared_ptr.hpp>
+
 #include <boost/utility.hpp>
 #include <csignal>
 #include "namespaces.hh"
@@ -49,7 +49,7 @@ public:
   {
     if((d_socket=(int)socket(af,st, pt))<0)
       throw NetworkError(strerror(errno));
-    Utility::setCloseOnExec(d_socket);
+    setCloseOnExec(d_socket);
 
     d_buflen=4096;
     d_buffer=new char[d_buflen];
@@ -57,7 +57,7 @@ public:
 
   ~Socket()
   {
-    Utility::closesocket(d_socket);
+    closesocket(d_socket);
     delete[] d_buffer;
   }
 
@@ -97,12 +97,12 @@ public:
   //! Set the socket to non-blocking
   void setNonBlocking()
   {
-    Utility::setNonBlocking(d_socket);
+    ::setNonBlocking(d_socket);
   }
   //! Set the socket to blocking
   void setBlocking()
   {
-    Utility::setBlocking(d_socket);
+    ::setBlocking(d_socket);
   }
 
   void setReuseAddr()
@@ -120,7 +120,7 @@ public:
       throw NetworkError(string("Setsockopt failed: ")+strerror(errno));
 
     if(::bind(d_socket,(struct sockaddr *)&local, local.getSocklen())<0)
-      throw NetworkError(strerror(errno));
+      throw NetworkError("While binding: "+string(strerror(errno)));
   }
 
 #if 0
@@ -140,7 +140,7 @@ public:
   void connect(const ComboAddress &ep)
   {
     if(::connect(d_socket,(struct sockaddr *)&ep, ep.getSocklen()) < 0 && errno != EINPROGRESS)
-      throw NetworkError(strerror(errno));
+      throw NetworkError("While connecting: "+string(strerror(errno)));
   }
 
 
@@ -153,7 +153,7 @@ public:
     socklen_t remlen=sizeof(ep);
     int bytes;
     if((bytes=recvfrom(d_socket, d_buffer, d_buflen, 0, (sockaddr *)&ep , &remlen)) <0)
-      throw NetworkError(strerror(errno));
+      throw NetworkError("After recvfrom: "+string(strerror(errno)));
     
     dgram.assign(d_buffer,bytes);
   }
@@ -165,7 +165,7 @@ public:
     int bytes;
     if((bytes=recvfrom(d_socket, d_buffer, d_buflen, 0, (sockaddr *)&remote, &remlen))<0) {
       if(errno!=EAGAIN) {
-        throw NetworkError(strerror(errno));
+        throw NetworkError("After async recvfrom: "+string(strerror(errno)));
       }
       else {
         return false;
@@ -180,9 +180,17 @@ public:
   void sendTo(const char* msg, unsigned int len, const ComboAddress &ep)
   {
     if(sendto(d_socket, msg, len, 0, (sockaddr *)&ep, ep.getSocklen())<0)
-      throw NetworkError(strerror(errno));
+      throw NetworkError("After sendto: "+string(strerror(errno)));
   }
 
+  //! For connected datagram sockets, send a datagram
+  void send(const std::string& msg)
+  {
+    if(::send(d_socket, msg.c_str(), msg.size(), 0)<0)
+      throw NetworkError("After send: "+string(strerror(errno)));
+  }
+
+  
   /** For datagram sockets, send a datagram to a destination
       \param dgram The datagram
       \param ep The intended destination of the datagram */
@@ -341,8 +349,8 @@ public:
   }
   
 private:
-  int d_socket;
   char *d_buffer;
+  int d_socket;
   int d_buflen;
 };
 

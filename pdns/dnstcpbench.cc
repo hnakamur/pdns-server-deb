@@ -19,6 +19,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <boost/accumulators/statistics/median.hpp>
 #include <boost/accumulators/statistics/mean.hpp>
 #include <boost/accumulators/accumulators.hpp>
@@ -34,7 +37,7 @@
 #include <netinet/tcp.h>
 #include <boost/array.hpp>
 #include <boost/program_options.hpp>
-#include <boost/foreach.hpp>
+
 
 StatBag S;
 namespace po = boost::program_options;
@@ -59,7 +62,7 @@ struct BenchQuery
 {
   BenchQuery(const std::string& qname_, uint16_t qtype_) : qname(qname_), qtype(qtype_), udpUsec(0), tcpUsec(0), answerSecond(0) {}
   BenchQuery(){}
-  std::string qname;
+  DNSName qname;
   uint16_t qtype;
   uint32_t udpUsec, tcpUsec;
   time_t answerSecond;
@@ -266,7 +269,7 @@ try
   
   using namespace boost::accumulators;
   typedef accumulator_set<
-    unsigned int
+    double
     , stats<boost::accumulators::tag::median(with_p_square_quantile),
       boost::accumulators::tag::mean(immediate)
     >
@@ -277,13 +280,13 @@ try
   typedef map<time_t, uint32_t> counts_t;
   counts_t counts;
 
-  BOOST_FOREACH(const BenchQuery& bq, g_queries) {
+  for(const BenchQuery& bq :  g_queries) {
     counts[bq.answerSecond]++;
     udpspeeds(bq.udpUsec);
     tcpspeeds(bq.tcpUsec);
   }
 
-  BOOST_FOREACH(const counts_t::value_type& val, counts) {
+  for(const counts_t::value_type& val :  counts) {
     qps(val.second);
   }
 

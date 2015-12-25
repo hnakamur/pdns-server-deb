@@ -26,11 +26,8 @@
 #include "dnsparser.hh"
 #include "dnswriter.hh"
 #include "rcpgenerator.hh"
-#include <boost/lexical_cast.hpp>
 #include <set>
 #include <bitset>
-
-#include "namespaces.hh"
 #include "namespaces.hh"
 
 #define includeboilerplate(RNAME)   RNAME##RecordContent(const DNSRecord& dr, PacketReader& pr); \
@@ -39,31 +36,33 @@
   static void unreport(void);                                                                    \
   static DNSRecordContent* make(const DNSRecord &dr, PacketReader& pr);                          \
   static DNSRecordContent* make(const string& zonedata);                                         \
-  string getZoneRepresentation() const;                                                          \
-  void toPacket(DNSPacketWriter& pw);                                                            \
-  template<class Convertor> void xfrPacket(Convertor& conv);                             
+  string getZoneRepresentation(bool noDot=false) const override;                                 \
+  void toPacket(DNSPacketWriter& pw) override;                                                   \
+  uint16_t getType() const override { return QType::RNAME; }                                   \
+  template<class Convertor> void xfrPacket(Convertor& conv, bool noDot=false);
 
 class NAPTRRecordContent : public DNSRecordContent
 {
 public:
-  NAPTRRecordContent(uint16_t order, uint16_t preference, string flags, string services, string regexp, string replacement);
+  NAPTRRecordContent(uint16_t order, uint16_t preference, string flags, string services, string regexp, DNSName replacement);
 
   includeboilerplate(NAPTR);
   template<class Convertor> void xfrRecordContent(Convertor& conv);
 private:
   uint16_t d_order, d_preference;
-  string d_flags, d_services, d_regexp, d_replacement;
+  string d_flags, d_services, d_regexp;
+  DNSName d_replacement;
 };
 
 
 class ARecordContent : public DNSRecordContent
 {
 public:
+  explicit ARecordContent(const ComboAddress& ca);
   explicit ARecordContent(uint32_t ip);
   includeboilerplate(A);
   void doRecordCheck(const DNSRecord& dr);
-  uint32_t getIP() const;
-
+  ComboAddress getCA(int port=0) const;
 private:
   uint32_t d_ip;
 };
@@ -72,47 +71,49 @@ class AAAARecordContent : public DNSRecordContent
 {
 public:
   AAAARecordContent(std::string &val);
+  explicit AAAARecordContent(const ComboAddress& ca);
   includeboilerplate(AAAA);
+  ComboAddress getCA(int port=0) const;
 private:
-  std::string d_ip6;
+  string d_ip6; // why??
 };
 
 class MXRecordContent : public DNSRecordContent
 {
 public:
-  MXRecordContent(uint16_t preference, const string& mxname);
+  MXRecordContent(uint16_t preference, const DNSName& mxname);
 
   includeboilerplate(MX)
 
-private:
   uint16_t d_preference;
-  string d_mxname;
+  DNSName d_mxname;
 };
 
 class KXRecordContent : public DNSRecordContent
 {
 public:
-  KXRecordContent(uint16_t preference, const string& exchanger);
+  KXRecordContent(uint16_t preference, const DNSName& exchanger);
 
   includeboilerplate(KX)
 
 private:
   uint16_t d_preference;
-  string d_exchanger;
+  DNSName d_exchanger;
 };
 
 class IPSECKEYRecordContent : public DNSRecordContent
 {
 public:
-  IPSECKEYRecordContent(uint16_t preference, uint8_t gatewaytype, uint8_t algo, const std::string& gateway, const std::string &publickey);
+  IPSECKEYRecordContent(uint16_t preference, uint8_t gatewaytype, uint8_t algo, const DNSName& gateway, const string& publickey);
 
   includeboilerplate(IPSECKEY)
 
 private:
-  uint8_t d_preference, d_gatewaytype, d_algorithm;
-  string d_gateway, d_publickey;
   uint32_t d_ip4;
+  DNSName d_gateway;
+  string d_publickey;
   string d_ip6;
+  uint8_t d_preference, d_gatewaytype, d_algorithm;
 };
 
 class DHCIDRecordContent : public DNSRecordContent
@@ -128,30 +129,31 @@ private:
 class SRVRecordContent : public DNSRecordContent
 {
 public:
-  SRVRecordContent(uint16_t preference, uint16_t weight, uint16_t port, const string& target);
+  SRVRecordContent(uint16_t preference, uint16_t weight, uint16_t port, const DNSName& target);
 
   includeboilerplate(SRV)
 
-private:
-  uint16_t d_preference, d_weight, d_port;
-  string d_target;
+  uint16_t d_weight, d_port;
+  DNSName d_target;
+  uint16_t d_preference;
 };
 
 class TSIGRecordContent : public DNSRecordContent
 {
 public:
   includeboilerplate(TSIG)
-  TSIGRecordContent() : DNSRecordContent(QType::TSIG) {}
+  TSIGRecordContent() {}
 
-  string d_algoName;
-  uint64_t d_time; // 48 bits
-  uint16_t d_fudge;
-  //  uint16_t d_macSize;
-  string d_mac;
   uint16_t d_origID;
+  uint16_t d_fudge;
+
+  DNSName d_algoName;
+  string d_mac;
+  string d_otherData;
+  uint64_t d_time;
+  //  uint16_t d_macSize;
   uint16_t d_eRcode;
   // uint16_t d_otherLen
-  string d_otherData;
 };
 
 
@@ -178,9 +180,10 @@ class NSRecordContent : public DNSRecordContent
 {
 public:
   includeboilerplate(NS)
-
+  explicit NSRecordContent(const DNSName& content) : d_content(content){}
+  DNSName getNS() const { return d_content; } 
 private:
-  string d_content;
+  DNSName d_content;
 };
 
 class PTRRecordContent : public DNSRecordContent
@@ -189,17 +192,27 @@ public:
   includeboilerplate(PTR)
 
 private:
-  string d_content;
+  DNSName d_content;
 };
 
 class CNAMERecordContent : public DNSRecordContent
 {
 public:
   includeboilerplate(CNAME)
+  DNSName getTarget() const { return d_content; }
+private:
+  DNSName d_content;
+};
+
+class ALIASRecordContent : public DNSRecordContent
+{
+public:
+  includeboilerplate(ALIAS)
 
 private:
-  string d_content;
+  DNSName d_content;
 };
+
 
 class DNAMERecordContent : public DNSRecordContent
 {
@@ -207,7 +220,7 @@ public:
   includeboilerplate(DNAME)
 
 private:
-  string d_content;
+  DNSName d_content;
 };
 
 
@@ -217,7 +230,7 @@ public:
   includeboilerplate(MR)
 
 private:
-  string d_alias;
+  DNSName d_alias;
 };
 
 class MINFORecordContent : public DNSRecordContent
@@ -226,13 +239,14 @@ public:
   includeboilerplate(MINFO)
 
 private:
-  string d_rmailbx;
-  string d_emailbx;
+  DNSName d_rmailbx;
+  DNSName d_emailbx;
 };
 
 class OPTRecordContent : public DNSRecordContent
 {
 public:
+  OPTRecordContent(){}
   includeboilerplate(OPT)
   void getData(vector<pair<uint16_t, string> > &opts);
 private:
@@ -255,7 +269,7 @@ public:
   includeboilerplate(RP)
 
 private:
-  string d_mbox, d_info;
+  DNSName d_mbox, d_info;
 };
 
 
@@ -264,6 +278,25 @@ class DNSKEYRecordContent : public DNSRecordContent
 public:
   DNSKEYRecordContent();
   includeboilerplate(DNSKEY)
+  uint16_t getTag() const;
+  uint16_t getTag();
+
+  uint16_t d_flags;
+  uint8_t d_protocol;
+  uint8_t d_algorithm;
+  string d_key;
+  bool operator<(const DNSKEYRecordContent& rhs) const
+  {
+    return tie(d_flags, d_protocol, d_algorithm, d_key) < 
+      tie(rhs.d_flags, rhs.d_protocol, rhs.d_algorithm, rhs.d_key);
+  }
+};
+
+class CDNSKEYRecordContent : public DNSRecordContent
+{
+public:
+  CDNSKEYRecordContent();
+  includeboilerplate(CDNSKEY)
   uint16_t getTag();
 
   uint16_t d_flags;
@@ -276,7 +309,29 @@ class DSRecordContent : public DNSRecordContent
 {
 public:
   DSRecordContent();
+  bool operator==(const DSRecordContent& rhs) const
+  {
+    return tie(d_tag, d_algorithm, d_digesttype, d_digest) ==
+      tie(rhs.d_tag, rhs.d_algorithm, rhs.d_digesttype, rhs.d_digest);
+  }
+  bool operator<(const DSRecordContent& rhs) const
+  {
+    return tie(d_tag, d_algorithm, d_digesttype, d_digest) <
+      tie(rhs.d_tag, rhs.d_algorithm, rhs.d_digesttype, rhs.d_digest);
+  }
+
   includeboilerplate(DS)
+
+  uint16_t d_tag;
+  uint8_t d_algorithm, d_digesttype;
+  string d_digest;
+};
+
+class CDSRecordContent : public DNSRecordContent
+{
+public:
+  CDSRecordContent();
+  includeboilerplate(CDS)
 
   uint16_t d_tag;
   uint8_t d_algorithm, d_digesttype;
@@ -323,7 +378,7 @@ public:
 
 private:
   uint16_t d_subtype;
-  string d_hostname;
+  DNSName d_hostname;
 };
 
 
@@ -334,8 +389,8 @@ public:
 
 private:
   uint16_t d_type, d_tag;
-  uint8_t d_algorithm;
   string d_certificate;
+  uint8_t d_algorithm;
 };
 
 class TLSARecordContent : public DNSRecordContent
@@ -365,13 +420,12 @@ public:
   includeboilerplate(RRSIG)
 
   uint16_t d_type;
-  uint8_t d_algorithm, d_labels;
-  uint32_t d_originalttl, d_sigexpire, d_siginception;
   uint16_t d_tag;
-  string d_signer, d_signature;
+  DNSName d_signer;
+  string d_signature;
+  uint32_t d_originalttl, d_sigexpire, d_siginception;
+  uint8_t d_algorithm, d_labels;
 };
-
-
 
 //namespace {
   struct soatimes 
@@ -398,26 +452,30 @@ class SOARecordContent : public DNSRecordContent
 {
 public:
   includeboilerplate(SOA)
-  SOARecordContent(const string& mname, const string& rname, const struct soatimes& st);
+  SOARecordContent(const DNSName& mname, const DNSName& rname, const struct soatimes& st);
 
-  string d_mname;
-  string d_rname;
   struct soatimes d_st;
+  DNSName d_mname;
+  DNSName d_rname;
 };
 
 class NSECRecordContent : public DNSRecordContent
 {
 public:
   static void report(void);
-  NSECRecordContent() : DNSRecordContent(47)
+  NSECRecordContent()
   {}
-  NSECRecordContent(const string& content, const string& zone="");
+  NSECRecordContent(const string& content, const string& zone=""); //FIXME400: DNSName& zone?
 
   static DNSRecordContent* make(const DNSRecord &dr, PacketReader& pr);
   static DNSRecordContent* make(const string& content);
-  string getZoneRepresentation() const;
-  void toPacket(DNSPacketWriter& pw);
-  string d_next;
+  string getZoneRepresentation(bool noDot=false) const override;
+  void toPacket(DNSPacketWriter& pw) override;
+  uint16_t getType() const override
+  {
+    return QType::NSEC;
+  }
+  DNSName d_next;
   std::set<uint16_t> d_set;
 private:
 };
@@ -426,22 +484,28 @@ class NSEC3RecordContent : public DNSRecordContent
 {
 public:
   static void report(void);
-  NSEC3RecordContent() : DNSRecordContent(50)
+  NSEC3RecordContent()
   {}
-  NSEC3RecordContent(const string& content, const string& zone="");
+  NSEC3RecordContent(const string& content, const string& zone=""); //FIXME400: DNSName& zone?
 
   static DNSRecordContent* make(const DNSRecord &dr, PacketReader& pr);
   static DNSRecordContent* make(const string& content);
-  string getZoneRepresentation() const;
-  void toPacket(DNSPacketWriter& pw);
+  string getZoneRepresentation(bool noDot=false) const override;
+  void toPacket(DNSPacketWriter& pw) override;
 
   uint8_t d_algorithm, d_flags;
   uint16_t d_iterations;
-  uint8_t d_saltlength;
   string d_salt;
-  uint8_t d_nexthashlength;
   string d_nexthash;
   std::set<uint16_t> d_set;
+  uint8_t d_saltlength;
+  uint8_t d_nexthashlength;
+
+  uint16_t getType() const override
+  {
+    return QType::NSEC3;
+  }
+
 
 private:
 };
@@ -451,20 +515,25 @@ class NSEC3PARAMRecordContent : public DNSRecordContent
 {
 public:
   static void report(void);
-  NSEC3PARAMRecordContent() : DNSRecordContent(51)
+  NSEC3PARAMRecordContent()
   {}
-  NSEC3PARAMRecordContent(const string& content, const string& zone="");
+  NSEC3PARAMRecordContent(const string& content, const string& zone=""); // FIXME400: DNSName& zone?
 
   static DNSRecordContent* make(const DNSRecord &dr, PacketReader& pr);
   static DNSRecordContent* make(const string& content);
-  string getZoneRepresentation() const;
-  void toPacket(DNSPacketWriter& pw);
+  string getZoneRepresentation(bool noDot=false) const override;
+  void toPacket(DNSPacketWriter& pw) override;
+
+  uint16_t getType() const override
+  {
+    return QType::NSEC3PARAM;
+  }
 
 
   uint8_t d_algorithm, d_flags;
   uint16_t d_iterations;
-  uint8_t d_saltlength;
   string d_salt;
+  uint8_t d_saltlength;
 };
 
 
@@ -472,18 +541,22 @@ class LOCRecordContent : public DNSRecordContent
 {
 public:
   static void report(void);
-  LOCRecordContent() : DNSRecordContent(ns_t_loc)
+  LOCRecordContent()
   {}
   LOCRecordContent(const string& content, const string& zone="");
 
   static DNSRecordContent* make(const DNSRecord &dr, PacketReader& pr);
   static DNSRecordContent* make(const string& content);
-  string getZoneRepresentation() const;
-  void toPacket(DNSPacketWriter& pw);
+  string getZoneRepresentation(bool noDot=false) const override;
+  void toPacket(DNSPacketWriter& pw) override;
 
   uint8_t d_version, d_size, d_horizpre, d_vertpre;
   uint32_t d_latitude, d_longitude, d_altitude;
-  
+  uint16_t getType() const override
+  {
+    return QType::LOC;
+  }
+
 private:
 };
 
@@ -492,46 +565,30 @@ class WKSRecordContent : public DNSRecordContent
 {
 public:
   static void report(void);
-  WKSRecordContent() : DNSRecordContent(ns_t_wks)
+  WKSRecordContent() 
   {}
-  WKSRecordContent(const string& content, const string& zone="");
+  WKSRecordContent(const string& content, const string& zone=""); // FIXME400: DNSName& zone?
 
   static DNSRecordContent* make(const DNSRecord &dr, PacketReader& pr);
   static DNSRecordContent* make(const string& content);
-  string getZoneRepresentation() const;
-  void toPacket(DNSPacketWriter& pw);
+  string getZoneRepresentation(bool noDot=false) const override;
+  void toPacket(DNSPacketWriter& pw) override;
 
   uint32_t d_ip;
   std::bitset<65535> d_services;
 private:
 };
 
-
-class URLRecordContent : public DNSRecordContent // Fake, 'fancy record' with type 256
-{
-public:
-  includeboilerplate(URL)
-private:
-  string d_url;
-};
-
-class MBOXFWRecordContent : public DNSRecordContent // Fake, 'fancy record' with type 256
-{
-public:
-  includeboilerplate(MBOXFW)
-private:
-  string d_mboxfw;
-};
-
 class EUI48RecordContent : public DNSRecordContent 
 {
 public:
-  EUI48RecordContent() : DNSRecordContent(ns_t_eui48) {};
+  EUI48RecordContent() {};
   static void report(void);
   static DNSRecordContent* make(const DNSRecord &dr, PacketReader& pr);
-  static DNSRecordContent* make(const string& zone);
-  void toPacket(DNSPacketWriter& pw);
-  string getZoneRepresentation() const;
+  static DNSRecordContent* make(const string& zone); // FIXME400: DNSName& zone?
+  string getZoneRepresentation(bool noDot=false) const override;
+  void toPacket(DNSPacketWriter& pw) override;
+  uint16_t getType() const override { return QType::EUI48; }
 private:
  // storage for the bytes
  uint8_t d_eui48[6]; 
@@ -540,12 +597,13 @@ private:
 class EUI64RecordContent : public DNSRecordContent
 {
 public:
-  EUI64RecordContent() : DNSRecordContent(ns_t_eui64) {};
+  EUI64RecordContent() {};
   static void report(void);
   static DNSRecordContent* make(const DNSRecord &dr, PacketReader& pr);
-  static DNSRecordContent* make(const string& zone);
-  void toPacket(DNSPacketWriter& pw);
-  string getZoneRepresentation() const;
+  static DNSRecordContent* make(const string& zone); // FIXME400: DNSName& zone?
+  string getZoneRepresentation(bool noDot=false) const override;
+  void toPacket(DNSPacketWriter& pw) override;
+  uint16_t getType() const override { return QType::EUI64; }
 private:
  // storage for the bytes
  uint8_t d_eui64[8];
@@ -558,15 +616,17 @@ public:
   includeboilerplate(TKEY)
 
   // storage for the bytes
-  string d_algo;
+  uint16_t d_othersize;
+  uint16_t d_mode;
   uint32_t d_inception;
   uint32_t d_expiration;
-  uint16_t d_mode;
+
+  DNSName d_algo;
+  string d_key;
+  string d_other;
+
   uint16_t d_error;
   uint16_t d_keysize;
-  string d_key;
-  uint16_t d_othersize;
-  string d_other;
 private:
 };
 
@@ -576,7 +636,7 @@ RNAME##RecordContent::DNSRecordContent* RNAME##RecordContent::make(const DNSReco
   return new RNAME##RecordContent(dr, pr);                                                         \
 }                                                                                                  \
                                                                                                    \
-RNAME##RecordContent::RNAME##RecordContent(const DNSRecord& dr, PacketReader& pr) : DNSRecordContent(RTYPE) \
+RNAME##RecordContent::RNAME##RecordContent(const DNSRecord& dr, PacketReader& pr)                  \
 {                                                                                                  \
   doRecordCheck(dr);                                                                               \
   xfrPacket(pr);                                                                                   \
@@ -603,21 +663,21 @@ void RNAME##RecordContent::unreport(void)                                       
   unregist(254, RTYPE);                                                                            \
 }                                                                                                  \
                                                                                                    \
-RNAME##RecordContent::RNAME##RecordContent(const string& zoneData) : DNSRecordContent(RTYPE)       \
+RNAME##RecordContent::RNAME##RecordContent(const string& zoneData)                                 \
 {                                                                                                  \
   try {                                                                                            \
     RecordTextReader rtr(zoneData);                                                                \
     xfrPacket(rtr);                                                                                \
   }                                                                                                \
   catch(RecordTextException& rtr) {                                                                \
-    throw MOADNSException("Parsing record content: "+string(rtr.what()));                          \
+    throw MOADNSException("Parsing record content (try 'pdnsutil check-zone'): "+string(rtr.what()));  \
   }        											   \
 }                                                                                                  \
                                                                                                    \
-string RNAME##RecordContent::getZoneRepresentation() const                                         \
+string RNAME##RecordContent::getZoneRepresentation(bool noDot) const                               \
 {                                                                                                  \
   string ret;                                                                                      \
-  RecordTextWriter rtw(ret);                                                                       \
+  RecordTextWriter rtw(ret, noDot);                                                                       \
   const_cast<RNAME##RecordContent*>(this)->xfrPacket(rtw);                                         \
   return ret;                                                                                      \
 }                                                                                                  
@@ -626,7 +686,7 @@ string RNAME##RecordContent::getZoneRepresentation() const                      
 #define boilerplate_conv(RNAME, TYPE, CONV)                       \
 boilerplate(RNAME, TYPE)                                          \
 template<class Convertor>                                         \
-void RNAME##RecordContent::xfrPacket(Convertor& conv)             \
+void RNAME##RecordContent::xfrPacket(Convertor& conv, bool noDot) \
 {                                                                 \
   CONV;                                                           \
   if (conv.eof() == false) throw MOADNSException("All data was not consumed"); \
@@ -634,20 +694,19 @@ void RNAME##RecordContent::xfrPacket(Convertor& conv)             \
 
 struct EDNSOpts
 {
-  uint16_t d_packetsize;
-  uint8_t d_extRCode, d_version;
-  uint16_t d_Z;
-  vector<pair<uint16_t, string> > d_options;
   enum zFlags { DNSSECOK=32768 };
+  vector<pair<uint16_t, string> > d_options;
+  uint16_t d_packetsize{0};
+  uint16_t d_Z{0};
+  uint8_t d_extRCode, d_version;
 };
 //! Convenience function that fills out EDNS0 options, and returns true if there are any
 
 class MOADNSParser;
 bool getEDNSOpts(const MOADNSParser& mdp, EDNSOpts* eo);
-
+DNSRecord makeOpt(int udpsize, int extRCode, int Z);
 void reportBasicTypes();
 void reportOtherTypes();
 void reportAllTypes();
-void reportFancyTypes();
 
 #endif 

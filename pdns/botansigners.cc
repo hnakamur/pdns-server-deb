@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <botan/botan.h>
 #include <botan/sha160.h>
 #include <botan/sha2_32.h>
@@ -8,6 +11,7 @@
 #include <botan/look_pk.h>
 #include <botan/numthry.h>
 #include "dnssecinfra.hh"
+#include <stdlib.h>
 
 using namespace Botan;
 
@@ -74,7 +78,7 @@ BigInt fromRaw(const std::string& raw)
 DNSCryptoKeyEngine::storvector_t BotanRSADNSCryptoKeyEngine::convertToISCVector() const
 {
   storvector_t storvect;
-  string algorithm =  lexical_cast<string>(d_algorithm);
+  string algorithm = std::to_string(d_algorithm);
   if(d_algorithm == 5 || d_algorithm ==7 )
     algorithm += " (RSASHA1)";
   else if(d_algorithm == 8)
@@ -116,7 +120,7 @@ void BotanRSADNSCryptoKeyEngine::fromISCMap(DNSKEYRecordContent& drc, std::map<s
   e=fromRaw(stormap["publicexponent"]);
   n=fromRaw(stormap["modulus"]);
   
-  drc.d_algorithm = atoi(stormap["algorithm"].c_str());
+  drc.d_algorithm = pdns_stou(stormap["algorithm"]);
   if(drc.d_algorithm != d_algorithm) 
     throw runtime_error("Unpossible, loaded a key from storage with wrong algorithm!");
     

@@ -19,6 +19,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <iostream>
 #include <cstdio>
 #include <cstring>
@@ -31,14 +34,13 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <sys/types.h>
-#include <boost/shared_ptr.hpp>
+
 
 #include <sys/stat.h>
 #include "pdnsexception.hh"
 #include "misc.hh"
 #include "dynmessenger.hh"
 #include "arguments.hh"
-#include "config.h"
 #include "statbag.hh"
 #include "misc.hh"
 #include "namespaces.hh"
@@ -57,7 +59,7 @@ int main(int argc, char **argv)
   string s_programname="pdns";
 
   ::arg().set("config-dir","Location of configuration directory (pdns.conf)")=SYSCONFDIR;
-  ::arg().set("socket-dir","Where the controlsocket will live")=LOCALSTATEDIR;
+  ::arg().set("socket-dir",string("Where the controlsocket will live, ")+LOCALSTATEDIR+" when unset and not chrooted" )="";
   ::arg().set("remote-address","Remote address to query");
   ::arg().set("remote-port","Remote port to query")="53000";
   ::arg().set("secret","Secret needed to connect to remote PowerDNS");
@@ -71,6 +73,7 @@ int main(int argc, char **argv)
   if(::arg().mustDo("help")) {
     cout<<"syntax:"<<endl<<endl;
     cout<<::arg().helpstring(::arg()["help"])<<endl;
+    cout<<"In addition, 'pdns_control help' can be used to retrieve a list\nof available commands from PowerDNS"<<endl;
     exit(0);
   }
 
@@ -91,8 +94,18 @@ int main(int argc, char **argv)
     ::arg().laxFile(configname.c_str());
     ::arg().laxParse(argc,argv); // reparse so the commandline still wins
   }
-  
-  string socketname=::arg()["socket-dir"]+"/"+s_programname+".controlsocket";
+
+  string socketname=::arg()["socket-dir"];
+  if (::arg()["socket-dir"].empty()) {
+    if (::arg()["chroot"].empty())
+      socketname = LOCALSTATEDIR;
+    else
+      socketname = ::arg()["chroot"] + "/";
+  } else if (!::arg()["socket-dir"].empty() && !::arg()["chroot"].empty()) {
+    socketname = ::arg()["chroot"] + ::arg()["socket-dir"];
+  }
+
+  socketname += "/" + s_programname + ".controlsocket";
   cleanSlashes(socketname);
   
   try {
@@ -103,7 +116,7 @@ int main(int argc, char **argv)
     else {
       uint16_t port;
       try {
-        port  = lexical_cast<uint16_t>(::arg()["remote-port"]);
+        port = static_cast<uint16_t>(pdns_stou(::arg()["remote-port"]));
       }
       catch(...) {
         cerr<<"Unable to convert '"<<::arg()["remote-port"]<<"' to a port number for connecting to remote PowerDNS\n";

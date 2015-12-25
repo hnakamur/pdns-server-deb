@@ -1,6 +1,9 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "remotebackend.hh"
 #include <sys/socket.h>
-#include <pdns/lock.hh> 
+#include "pdns/lock.hh" 
 #include <unistd.h>
 #include <fcntl.h>
 #ifndef UNIX_PATH_MAX 
@@ -14,7 +17,7 @@ UnixsocketConnector::UnixsocketConnector(std::map<std::string,std::string> optio
   } 
   this->timeout = 2000;
   if (options.find("timeout") != options.end()) { 
-    this->timeout = boost::lexical_cast<int>(options.find("timeout")->second);
+    this->timeout = std::stoi(options.find("timeout")->second);
   }
   this->path = options.find("path")->second;
   this->options = options;
@@ -165,7 +168,7 @@ void UnixsocketConnector::reconnect() {
   val.SetObject();
   init.AddMember("parameters", val, init.GetAllocator());
 
-  for(std::map<std::string,std::string>::iterator i = options.begin(); i != options.end(); i++) {
+  for(auto i = options.begin(); i != options.end(); i++) {
     val = i->second.c_str();
     init["parameters"].AddMember(i->first.c_str(), val, init.GetAllocator());
   } 

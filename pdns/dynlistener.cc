@@ -19,6 +19,9 @@
     along with this program; if not, write to the Free Software
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <cstring>
 #include <string>
 #include <map>
@@ -28,7 +31,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <boost/algorithm/string.hpp>
-#include <boost/shared_ptr.hpp>
+
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <errno.h>
@@ -64,7 +67,7 @@ DynListener::~DynListener()
 void DynListener::createSocketAndBind(int family, struct sockaddr*local, size_t len)
 {
   d_s=socket(family, SOCK_STREAM,0);
-  Utility::setCloseOnExec(d_s);
+  setCloseOnExec(d_s);
 
   if(d_s < 0) {
     if (family == AF_UNIX)
@@ -161,18 +164,35 @@ DynListener::DynListener(const ComboAddress& local)
 {
   listenOnTCP(local);
   d_tcp=true;
+  d_client=-1;
+  d_tid=0;
+  d_ppid=0;
 }
 
 DynListener::DynListener(const string &progname)
 {
+  d_client=-1;
+  d_tid=0;
+  d_ppid=0;
+  d_s=-1;
+
   if(!progname.empty()) {
-    string socketname=arg()["socket-dir"]+"/";
+    string socketname = ::arg()["socket-dir"];
+    if (::arg()["socket-dir"].empty()) {
+      if (::arg()["chroot"].empty())
+        socketname = LOCALSTATEDIR;
+      else
+        socketname = ::arg()["chroot"];
+    } else if (!::arg()["socket-dir"].empty() && !::arg()["chroot"].empty()) {
+      socketname = ::arg()["chroot"] + ::arg()["socket-dir"];
+    }
+    socketname += "/";
     cleanSlashes(socketname);
     
     if(!mkdir(socketname.c_str(),0700)) // make /var directory, if needed
       L<<Logger::Warning<<"Created local state directory '"<<socketname<<"'"<<endl;
     else if(errno!=EEXIST) {
-      L<<Logger::Critical<<"FATAL: Unable to create socket directory ("<<socketname<<") and it does not exist yet"<<endl;
+      L<<Logger::Critical<<"Unable to create socket directory ("<<socketname<<") and it does not exist yet"<<endl;
       exit(1);
     }
     
@@ -224,7 +244,7 @@ string DynListener::getLine()
         continue;
       }
 
-      boost::shared_ptr<FILE> fp=boost::shared_ptr<FILE>(fdopen(dup(d_client), "r"), fclose);
+      std::shared_ptr<FILE> fp=std::shared_ptr<FILE>(fdopen(dup(d_client), "r"), fclose);
       if(d_tcp) {
         if(!fgets(&mesg[0], mesg.size(), fp.get())) {
           L<<Logger::Error<<"Unable to receive password from controlsocket ("<<d_client<<"): "<<strerror(errno)<<endl;

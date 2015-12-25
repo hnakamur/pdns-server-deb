@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <sys/types.h>
 #include <sys/wait.h>
 #include "remotebackend.hh"
@@ -12,7 +15,7 @@ PipeConnector::PipeConnector(std::map<std::string,std::string> options) {
   d_timeout=2000;
 
   if (options.find("timeout") != options.end()) {
-     d_timeout = boost::lexical_cast<int>(options.find("timeout")->second);
+     d_timeout = std::stoi(options.find("timeout")->second);
   }
 
   d_pid = -1;
@@ -60,9 +63,9 @@ void PipeConnector::launch() {
     throw PDNSException("Unable to fork for coprocess: "+stringerror());
   else if(d_pid>0) { // parent speaking
     close(d_fd1[0]);
-    Utility::setCloseOnExec(d_fd1[1]);
+    setCloseOnExec(d_fd1[1]);
     close(d_fd2[1]);
-    Utility::setCloseOnExec(d_fd2[0]);
+    setCloseOnExec(d_fd2[0]);
     if(!(d_fp=fdopen(d_fd2[0],"r")))
       throw PDNSException("Unable to associate a file pointer with pipe: "+stringerror());
     if (d_timeout) 
@@ -101,7 +104,7 @@ void PipeConnector::launch() {
   val.SetObject();
   init.AddMember("parameters", val, init.GetAllocator());
 
-  for(std::map<std::string,std::string>::iterator i = options.begin(); i != options.end(); i++) {
+  for(auto i = options.begin(); i != options.end(); i++) {
     val = i->second.c_str();
     init["parameters"].AddMember(i->first.c_str(), val, init.GetAllocator());
   }

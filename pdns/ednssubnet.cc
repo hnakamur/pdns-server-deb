@@ -1,6 +1,6 @@
 /*
     PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2011  Netherlabs Computer Consulting BV
+    Copyright (C) 2015  Netherlabs Computer Consulting BV
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as 
@@ -20,6 +20,9 @@
     Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include "ednssubnet.hh"
 #include "dns.hh"
 
@@ -29,7 +32,7 @@ namespace {
                 uint16_t family;
                 uint8_t sourceMask;
                 uint8_t scopeMask;
-        } GCCPACKATTRIBUTE;
+        } GCCPACKATTRIBUTE;  // BRRRRR
 
 }
 

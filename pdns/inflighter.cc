@@ -1,7 +1,10 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <vector>
 #include <deque>
 #include <iostream>
-#include <boost/foreach.hpp>
+
 #include <boost/multi_index_container.hpp>
 #include <boost/format.hpp>
 #include <sys/time.h>

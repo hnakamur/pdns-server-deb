@@ -15,20 +15,23 @@ public:
   ~SPgSQL();
   
   SSqlException sPerrorException(const string &reason);
-  int doQuery(const string &query, result_t &result);
-  int doQuery(const string &query);
-  int doCommand(const string &query);
-  bool getRow(row_t &row);
-  string escape(const string &str);    
   void setLog(bool state);
+  SSqlStatement* prepare(const string& query, int nparams);
+  void execute(const string& query);
+
+  void startTransaction();
+  void rollback();
+  void commit();
+
+  PGconn* db() { return d_db; }
+  bool in_trx() { return d_in_trx; }
+
 private:
-  void ensureConnect();
-  PGconn* d_db; 
+  PGconn* d_db;
   string d_connectstr;
   string d_connectlogstr;
-  PGresult* d_result;
-  int d_count;
   static bool s_dolog;
+  bool d_in_trx;
 };
       
 #endif /* SPGSQL_HH */

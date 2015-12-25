@@ -21,6 +21,9 @@
 */
 /* accepts a named.conf or a zone as parameter and outputs heaps of sql */
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
 #include <unistd.h>
 #include <string>
 #include <map>
@@ -41,11 +44,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <boost/foreach.hpp>
+
 
 
 StatBag S;
-static bool g_doDNSSEC;
 
 enum dbmode_t {MYSQL, GORACLE, POSTGRES, SQLITE, MYDNS, ORACLE};
 static dbmode_t g_mode;
@@ -126,7 +128,7 @@ static void emitDomain(const string& domain, const vector<string> *masters = 0) 
     if(g_mode==POSTGRES || g_mode==MYSQL || g_mode==SQLITE) {
       string mstrs;
       if (masters != 0 && ! masters->empty()) {
-        BOOST_FOREACH(const string& mstr, *masters) {
+        for(const string& mstr :  *masters) {
           mstrs.append(mstr);
           mstrs.append(1, ' ');
         }                  
@@ -143,8 +145,10 @@ static void emitDomain(const string& domain, const vector<string> *masters = 0) 
 }
 
 bool g_doJSONComments;
-static void emitRecord(const string& zoneName, const string &qname, const string &qtype, const string &ocontent, int ttl, int prio, const string& comment="")
+static void emitRecord(const string& zoneName, const DNSName &DNSqname, const string &qtype, const string &ocontent, int ttl, const string& comment="")
 {
+  string qname = stripDot(DNSqname.toString());
+  int prio=0;
   int disabled=0;
   string recordcomment;
 
@@ -154,7 +158,7 @@ static void emitRecord(const string& zoneName, const string &qname, const string
       string json = comment.substr(pos+5);
       rapidjson::Document document;
       if(document.Parse<0>(json.c_str()).HasParseError())
-	throw runtime_error("Could not parse JSON '"+json+"'");
+        throw runtime_error("Could not parse JSON '"+json+"'");
 
       disabled=boolFromJson(document, "disabled", false);
       recordcomment=stringFromJson(document, "comment", "");
@@ -168,7 +172,7 @@ static void emitRecord(const string& zoneName, const string &qname, const string
     return; // NSECs do not go in the database
 
   if((qtype == "MX" || qtype == "SRV") && g_mode!=ORACLE) {
-    prio=atoi(content.c_str());
+    prio=pdns_stou(content);
     
     string::size_type pos = content.find_first_not_of("0123456789");
     if(pos != string::npos)
@@ -177,60 +181,39 @@ static void emitRecord(const string& zoneName, const string &qname, const string
   }
 
   bool auth = true;
-  if(qtype == "NS" && !pdns_iequals(stripDot(qname), zoneName)) {
+  if(qtype == "NS" && !pdns_iequals(qname, zoneName)) {
     auth=false;
   }
 
   if(g_mode==MYSQL || g_mode==SQLITE) {
-    if(!g_doDNSSEC) {
-      cout<<"insert into records (domain_id, name, type,content,ttl,prio,disabled) select id ,"<<
-        sqlstr(toLower(stripDot(qname)))<<", "<<
-        sqlstr(qtype)<<", "<<
-        sqlstr(stripDotContent(content))<<", "<<ttl<<", "<<prio<<", "<<disabled<<
-        " from domains where name="<<toLower(sqlstr(zoneName))<<";\n";
+    cout<<"insert into records (domain_id, name, type,content,ttl,prio,disabled) select id ,"<<
+      sqlstr(toLower(qname))<<", "<<
+      sqlstr(qtype)<<", "<<
+      sqlstr(stripDotContent(content))<<", "<<ttl<<", "<<prio<<", "<<disabled<<
+      " from domains where name="<<toLower(sqlstr(zoneName))<<";\n";
 
-      if(!recordcomment.empty()) {
-        cout<<"insert into comments (domain_id,name,type,modified_at, comment) select id, "<<toLower(sqlstr(stripDot(qname)))<<", "<<sqlstr(qtype)<<", "<<time(0)<<", "<<sqlstr(recordcomment)<<" from domains where name="<<toLower(sqlstr(zoneName))<<";\n";
-       
-      }
-
-    } else
-    {
-      cout<<"insert into records (domain_id, name, ordername, auth, type,content,ttl,prio,disabled) select id ,"<<
-        sqlstr(toLower(stripDot(qname)))<<", "<<
-        sqlstr(toLower(labelReverse(makeRelative(stripDot(qname), zoneName))))<<", "<<auth<<", "<<
-        sqlstr(qtype)<<", "<<
-        sqlstr(stripDotContent(content))<<", "<<ttl<<", "<<prio<<", "<<disabled<<
-        " from domains where name="<<toLower(sqlstr(zoneName))<<";\n";
+    if(!recordcomment.empty()) {
+      cout<<"insert into comments (domain_id,name,type,modified_at, comment) select id, "<<toLower(sqlstr(stripDot(qname)))<<", "<<sqlstr(qtype)<<", "<<time(0)<<", "<<sqlstr(recordcomment)<<" from domains where name="<<toLower(sqlstr(zoneName))<<";\n";
     }
   }
   else if(g_mode==POSTGRES) {
-    if(!g_doDNSSEC) {
-      cout<<"insert into records (domain_id, name,type,content,ttl,prio,disabled) select id ,"<<
-        sqlstr(toLower(stripDot(qname)))<<", "<<
-        sqlstr(qtype)<<", "<<
-        sqlstr(stripDotContent(content))<<", "<<ttl<<", "<<prio<<", '"<< (disabled ? 't': 'f')<<
-        "' from domains where name="<<toLower(sqlstr(zoneName))<<";\n";
-    } else
-    {
-      cout<<"insert into records (domain_id, name, ordername, auth, type,content,ttl,prio,disabled) select id ,"<<
-        sqlstr(toLower(stripDot(qname)))<<", "<<
-        sqlstr(toLower(labelReverse(makeRelative(stripDot(qname), zoneName))))<<", '"<< (auth  ? 't' : 'f') <<"', "<<
-        sqlstr(qtype)<<", "<<
-        sqlstr(stripDotContent(content))<<", "<<ttl<<", "<<prio<<", '"<<(disabled ? 't': 'f') <<
-        "' from domains where name="<<toLower(sqlstr(zoneName))<<";\n";
-    }
+    cout<<"insert into records (domain_id, name, ordername, auth, type,content,ttl,prio,disabled) select id ,"<<
+      sqlstr(toLower(qname))<<", "<<
+      sqlstr(toLower(labelReverse(makeRelative(qname, zoneName))))<<", '"<< (auth  ? 't' : 'f') <<"', "<<
+      sqlstr(qtype)<<", "<<
+      sqlstr(stripDotContent(content))<<", "<<ttl<<", "<<prio<<", '"<<(disabled ? 't': 'f') <<
+      "' from domains where name="<<toLower(sqlstr(zoneName))<<";\n";
   }
   else if(g_mode==GORACLE) {
     cout<<"insert into Records (id, domain_id, name, type, content, ttl, prio, disabled) select RECORDS_ID_SEQUENCE.nextval,id ,"<<
-      sqlstr(toLower(stripDot(qname)))<<", "<<
+      sqlstr(toLower(qname))<<", "<<
       sqlstr(qtype)<<", "<<
       sqlstr(stripDotContent(content))<<", "<<ttl<<", "<<prio<<", "<<disabled<<
       " from Domains where name="<<toLower(sqlstr(zoneName))<<";\n";
   }
   else if(g_mode==ORACLE) {
     cout<<"INSERT INTO Records (id, zone_id, fqdn, ttl, type, content) SELECT records_id_seq.nextval, id, "<<
-      sqlstr(toLower(stripDot(qname)))<<", "<<
+      sqlstr(toLower(qname))<<", "<<
       ttl<<", "<<sqlstr(qtype)<<", "<<
       sqlstr(stripDotContent(content))<<
       " FROM Zones WHERE name="<<toLower(sqlstr(zoneName))<<";"<<endl;
@@ -245,7 +228,7 @@ static void emitRecord(const string& zoneName, const string &qname, const string
       cout<<"INSERT INTO rr(zone, name, type, data, aux, ttl) VALUES("<<
       "(SELECT id FROM soa WHERE origin = "<< 
       sqlstr(toLower(zoneNameDot))<<"), "<<
-      sqlstr(toLower(qname))<<", "<<
+      sqlstr(toLower(DNSqname.toString()))<<", "<<
       sqlstr(qtype)<<", "<<sqlstr(content)<<", "<<prio<<", "<<ttl<<");\n";
     }
     else if (qtype == "SOA") {
@@ -254,8 +237,8 @@ static void emitRecord(const string& zoneName, const string &qname, const string
       stringtok(parts, content);
  
       cout<<"INSERT INTO soa(origin, ns, mbox, serial, refresh, retry, expire, minimum, ttl) VALUES("<<
-      sqlstr(toLower(zoneNameDot))<<", "<<sqlstr(parts[0])<<", "<<sqlstr(parts[1])<<", "<<atoi(parts[2].c_str())<<", "<<
-      atoi(parts[3].c_str())<<", "<<atoi(parts[4].c_str())<<", "<<atoi(parts[5].c_str())<<", "<<atoi(parts[6].c_str())<<", "<<ttl<<");\n";
+      sqlstr(toLower(zoneNameDot))<<", "<<sqlstr(parts[0])<<", "<<sqlstr(parts[1])<<", "<<pdns_stou(parts[2])<<", "<<
+      pdns_stou(parts[3])<<", "<<pdns_stou(parts[4])<<", "<<pdns_stou(parts[5])<<", "<<pdns_stou(parts[6])<<", "<<ttl<<");\n";
     }
     else
     {
@@ -291,7 +274,6 @@ try
     ::arg().setSwitch("oracle","Output in format suitable for the oraclebackend")="no";
     ::arg().setSwitch("gsqlite","Output in format suitable for default gsqlitebackend")="no";
     ::arg().setSwitch("verbose","Verbose comments on operation")="no";
-    ::arg().setSwitch("dnssec","Add DNSSEC related data")="no";
     ::arg().setSwitch("slave","Keep BIND slaves as slaves. Only works with named-conf.")="no";
     ::arg().setSwitch("json-comments","Parse json={} field for disabled & comments")="no";
     ::arg().setSwitch("transactions","If target SQL supports it, use transactions")="no";
@@ -353,8 +335,6 @@ try
     if((g_mode==GORACLE || g_mode==ORACLE) && !::arg().mustDo("transactions"))
       cout<<"set autocommit on;"<<endl;
 
-    g_doDNSSEC=::arg().mustDo("dnssec");
-      
     namedfile=::arg()["named-conf"];
     zonefile=::arg()["zone"];
 
@@ -384,25 +364,26 @@ try
           ++i)
         {
           if(i->type!="master" && i->type!="slave") {
-            cerr<<" Warning! Skipping '"<<i->type<<"' zone '"<<i->name<<"'"<<endl;
+            cerr<<" Warning! Skipping '"<<i->type<<"' zone '"<<i->name.toString()<<"'"<<endl;
             continue;
           }
           try {
             startNewTransaction();
             
-            emitDomain(i->name, &(i->masters));
+            emitDomain(i->name.toStringNoDot(), &(i->masters));
             
             ZoneParserTNG zpt(i->filename, i->name, BP.getDirectory());
             DNSResourceRecord rr;
-	    bool seenSOA=false;
-	    string comment;
+            bool seenSOA=false;
+            string comment;
             while(zpt.get(rr, &comment)) {
-	      if(filterDupSOA && seenSOA && rr.qtype.getCode() == QType::SOA)
-		continue;
-	      if(rr.qtype.getCode() == QType::SOA)
-		seenSOA=true;
-              emitRecord(i->name, rr.qname, rr.qtype.getName(), rr.content, rr.ttl, rr.priority, comment);
-	    }
+              if(filterDupSOA && seenSOA && rr.qtype.getCode() == QType::SOA)
+                continue;
+              if(rr.qtype.getCode() == QType::SOA)
+                seenSOA=true;
+
+              emitRecord(i->name.toStringNoDot(), rr.qname, rr.qtype.getName(), rr.content, rr.ttl, comment);
+            }
             num_domainsdone++;
           }
           catch(std::exception &ae) {
@@ -425,20 +406,32 @@ try
       cerr<<"\r100% done\033\133\113"<<endl;
     }
     else {
-      string zonename = ::arg()["zone-name"];
+      DNSName zonename;
+      if(!::arg()["zone-name"].empty())
+        zonename = DNSName(::arg()["zone-name"]);
+
       ZoneParserTNG zpt(zonefile, zonename);
       DNSResourceRecord rr;
       startNewTransaction();
-      emitDomain(zonename);
       string comment;
       bool seenSOA=false;
+      bool haveEmittedZone = false;
       while(zpt.get(rr, &comment))  {
 	if(filterDupSOA && seenSOA && rr.qtype.getCode() == QType::SOA)
 	  continue;
 	if(rr.qtype.getCode() == QType::SOA)
 	  seenSOA=true;
+        if(!haveEmittedZone) {
+          if(!zpt.getZoneName().empty()){
+            emitDomain(zpt.getZoneName().toStringNoDot());
+            haveEmittedZone = true;
+          } else {
+            // We have no zonename yet, don't emit
+            continue;
+          }
+        }
 
-        emitRecord(zonename, rr.qname, rr.qtype.getName(), rr.content, rr.ttl, rr.priority, comment);
+        emitRecord(zpt.getZoneName().toStringNoDot(), rr.qname, rr.qtype.getName(), rr.content, rr.ttl, comment);
       }
       num_domainsdone=1;
     }

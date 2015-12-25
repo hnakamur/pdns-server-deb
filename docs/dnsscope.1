@@ -1,0 +1,67 @@
+.TH "DNSSCOPE" "1" "September 2012" "" ""
+.SH NAME
+.PP
+\f[B]dnsscope\f[] \- A PowerDNS nameserver debugging tool
+.SH SYNOPSIS
+.PP
+\f[B]dnsscope\f[] [\f[I]OPTION\f[]]...
+\f[I]INFILE\f[]
+.SH DESCRIPTION
+.PP
+\f[B]dnsscope\f[] takes an \f[I]INFILE\f[] in PCAP format.
+It generates some simple statistics outputs these to STDOUT.
+.SH OPTIONS
+.TP
+.B INFILE
+Path to a PCAP file.
+.RS
+.RE
+.TP
+.B \-h | \-\-help
+Show the help.
+.RS
+.RE
+.TP
+.B \-\-rd
+Only process packets in \f[I]INFILE\f[] with the RD (Recursion Desired)
+flag set.
+By default, we process all DNS packets in \f[I]INFILE\f[].
+.RS
+.RE
+.TP
+.B \-\-ipv4
+Process IPv4 packets.
+On by default, disable with \f[B]\-\-ipv4 false\f[].
+.RS
+.RE
+.TP
+.B \-\-ipv6
+Process IPv6 packets.
+On by default, disable with \f[B]\-\-ipv6 false\f[].
+.RS
+.RE
+.TP
+.B \-\-servfail\-tree
+Figure out subtrees that generate servfails.
+.RS
+.RE
+.TP
+.B \-l | \-\-load\-stats
+Emit per\-second load statistics (questions, answers, outstanding).
+.RS
+.RE
+.TP
+.B \-w | \-\-write\-failures \f[I]FILENAME\f[]
+Write weird packets to a PCAP file at \f[I]FILENAME\f[].
+.RS
+.RE
+.TP
+.B \-v | \-\-verbose
+Be more verbose.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+pcap(3PCAP), tcpdump(8)
+.SH AUTHORS
+Joerg Jungermann (jj+debian At borkum.net).
