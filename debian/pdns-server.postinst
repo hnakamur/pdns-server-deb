@@ -4,9 +4,6 @@
 
 set -e
 
-# Load debconf
-. /usr/share/debconf/confmodule
-
 if [ -n "$PDNSDEBUG" ]; then
   echo "now debugging $0 $@"
   set -x
@@ -47,7 +44,7 @@ renameconffile() {
 #   target already exists, we can later call ucf straight as there
 #   is already a version of the file available, althought never
 #   provided by this package, but we can just propose the new file anyway.
-    ucf --debconf-ok $sourcefile $newname
+    ucf $sourcefile $newname
     ucfr $PKGNAME $newname
     rm -f $newname
   fi
@@ -65,23 +62,6 @@ case "$1" in
       echo "done"
     fi
 
-    # Fill the temporary files with config items.
-    cat /usr/share/pdns-server/pdns.conf > $PDNSCONFTEMP
-    cat /usr/share/pdns-server/pdns.local.conf > $PDNSLOCALTEMP
-    cat /usr/share/pdns-server/pdns > $PDNSDEFAULTTEMP
-
-    # Do we listen on a specified address
-    db_get pdns-server/localaddress || true
-    if [ ! -z "$RET" ]; then
-      sed -i -e "s|^\(#\)\?\(# \)\?local-address=.*$|local-address=$RET|" $PDNSCONFTEMP
-    fi
-
-    # Allow recursion subnets ?
-    db_get pdns-server/allowrecursion || true
-    if [ ! -z "$RET" ]; then
-      sed -i -e "s|^\(#\)\?\(# \)\?allow-recursion=.*$|allow-recursion=$RET|" $PDNSCONFTEMP
-    fi
-    
     # this can be removed once we do not have to update from
     # wheezy (pdns 3.1) any more. Note: there was never pdns 3.2 in Debian
     if [ -n "$2" ] && dpkg --compare-versions "$2" lt 3.3; then
@@ -97,16 +77,11 @@ case "$1" in
 
 
     # Install the new configuration files if the user wants it.
-    ucf --debconf-ok $PDNSCONFTEMP $PDNSCONF
-    ucf --debconf-ok $PDNSDEFAULTTEMP $PDNSDEFAULT
-    ucf --debconf-ok $PDNSLOCALTEMP $PDNSLOCAL
-    ucf --debconf-ok /usr/share/pdns-server/pdns.simplebind.conf $PDNSDIR/pdns.simplebind.conf
+    ucf /usr/share/pdns-server/pdns.conf $PDNSCONF
+    ucf /usr/share/pdns-server/pdns $PDNSDEFAULT
+    ucf /usr/share/pdns-server/pdns.local.conf $PDNSLOCAL
+    ucf /usr/share/pdns-server/pdns.simplebind.conf $PDNSDIR/pdns.simplebind.conf
 
-    # Stop the debconf stuff
-    db_stop || true
-
-    # Clean up temporary files.
-    rm -f $PDNSCONFTEMP $PDNSLOCALTEMP $PDNSDEFAULTTEMP
 
     # There could be passwords in these files. PowerDNS first reads the
     # configuration files and then drop root privileges.
@@ -130,9 +105,6 @@ case "$1" in
 
   triggered)
     invoke-rc.d pdns restart || exit $?
-
-    # Stop the debconf stuff
-    db_stop || true
   ;;
 
   abort-upgrade|abort-remove|abort-deconfigure)
