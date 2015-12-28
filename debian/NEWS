@@ -2,7 +2,7 @@ pdns (4.0.0~alpha1-1) unstable; urgency=medium
 
   The "pdnssec" utility has been renamed to "pdnsutil".
   The default listening addresses now include all IPv6 addresses.
-  The default DNSSEC parameters have changed to a single ECSA 256
+  The default DNSSEC parameters have changed to a single ECDSA 256
   key.
   The "lmdb" backend has been removed.
   Many options are no longer experimental.
