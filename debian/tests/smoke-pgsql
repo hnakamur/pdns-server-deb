@@ -19,7 +19,7 @@ example.org.           172800  IN      NS      ns1.example.org.
 smoke.example.org.     172800  IN      A       127.0.0.125
 EOF
 
-zone2sql --dnssec=no --gpgsql --zone-name=example.org --zone=/etc/powerdns/example.org | \
+zone2sql --gpgsql --zone-name=example.org --zone=/etc/powerdns/example.org | \
     PGPASSWORD="$DBPASS" psql -h "$DBHOST" -U "$DBUSER" "$DBNAME"
 
 service pdns restart

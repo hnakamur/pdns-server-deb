@@ -16,7 +16,7 @@ example.org.           172800  IN      NS      ns1.example.org.
 smoke.example.org.     172800  IN      A       127.0.0.124
 EOF
 
-zone2sql --dnssec=no --gmysql --zone-name=example.org --zone=/etc/powerdns/example.org | \
+zone2sql --gmysql --zone-name=example.org --zone=/etc/powerdns/example.org | \
     mysql -uroot $DBNAME
 
 service pdns restart
