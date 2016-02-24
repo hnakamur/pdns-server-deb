@@ -25,8 +25,8 @@ Build-Depends: autoconf,
                libgeoip-dev,
                libldap2-dev,
                liblua5.3-dev,
-               libmysqlclient-dev,
                libmbedtls-dev,
+               libmysqlclient-dev,
                libpq-dev,
                libsqlite3-dev,
                libtool,
@@ -47,7 +47,8 @@ Depends: adduser,
          ${misc:Depends},
          ${shlibs:Depends}
 Replaces: pdns
-Suggests: pdns-backend, pdns-recursor
+Suggests: pdns-backend,
+          pdns-recursor
 Description: extremely powerful and versatile nameserver
  PowerDNS is a versatile nameserver which supports a large number
  of different backends ranging from simple zonefiles to relational
@@ -61,7 +62,8 @@ Description: extremely powerful and versatile nameserver
 
 Package: pdns-tools
 Architecture: any
-Depends: ${misc:Depends}, ${shlibs:Depends}
+Depends: ${misc:Depends},
+         ${shlibs:Depends}
 Replaces: pdns-server (<< 3.4.6-2)
 Breaks: pdns-server (<< 3.4.6-2)
 Description: Tools for DNS debugging by PowerDNS
@@ -85,7 +87,9 @@ Description: Tools for DNS debugging by PowerDNS
 
 Package: pdns-backend-pipe
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
+Depends: pdns-server (>= ${source:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Provides: pdns-backend
 Description: pipe/coprocess backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -99,7 +103,9 @@ Description: pipe/coprocess backend for PowerDNS
 
 Package: pdns-backend-ldap
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
+Depends: pdns-server (>= ${source:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Provides: pdns-backend
 Description: LDAP backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -111,7 +117,9 @@ Description: LDAP backend for PowerDNS
 
 Package: pdns-backend-geoip
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
+Depends: pdns-server (>= ${source:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Provides: pdns-backend
 Description: geoip backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -181,7 +189,9 @@ Description: sqlite 3 backend for PowerDNS
 
 Package: pdns-backend-lua
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
+Depends: pdns-server (>= ${source:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Provides: pdns-backend
 Description: Lua backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -193,7 +203,9 @@ Description: Lua backend for PowerDNS
 
 Package: pdns-backend-remote
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
+Depends: pdns-server (>= ${source:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Provides: pdns-backend
 Description: remote backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -206,7 +218,9 @@ Description: remote backend for PowerDNS
 
 Package: pdns-backend-mydns
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
+Depends: pdns-server (>= ${source:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Provides: pdns-backend
 Description: MyDNS compatibility backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
@@ -218,7 +232,9 @@ Description: MyDNS compatibility backend for PowerDNS
 
 Package: pdns-backend-tinydns
 Architecture: any
-Depends: pdns-server (>= ${source:Version}), ${misc:Depends}, ${shlibs:Depends}
+Depends: pdns-server (>= ${source:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
 Provides: pdns-backend
 Description: tinydns compatibility backend for PowerDNS
  PowerDNS is a versatile nameserver which supports a large number
