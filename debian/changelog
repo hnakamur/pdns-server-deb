@@ -1,3 +1,17 @@
+pdns (4.0.0~alpha1-2) unstable; urgency=medium
+
+  * Update systemd unit file from upstream.
+  * Build with Lua 5.3 instead of 5.1.
+  * Drop pdns-server-dbg in favor of automated dbgsym packages.
+  * Fix zone2sql call in autopkgtests.
+  * Use dbconfig-x metapackages instead of direct SQL DB clients.
+    (Closes: #801565)
+  * Disable secpoll by default.
+  * Move daemon startup options out of default config. They are included in
+    the sysvinit script and systemd unit file instead.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Wed, 24 Feb 2016 21:52:47 +0000
+
 pdns (4.0.0~alpha1-1) unstable; urgency=medium
 
   * New upstream version: 4.0.0-alpha1
