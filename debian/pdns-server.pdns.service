@@ -6,7 +6,7 @@ After=network-online.target mysqld.service postgresql.service slapd.service
 
 [Service]
 Type=forking
-ExecStart=/usr/sbin/pdns_server --daemon
+ExecStart=/usr/sbin/pdns_server --daemon --guardian=yes
 Restart=on-failure
 RestartSec=2
 TimeoutStopSec=5
