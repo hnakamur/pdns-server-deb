@@ -154,7 +154,7 @@ Description: generic MySQL backend for PowerDNS
 Package: pdns-backend-pgsql
 Architecture: any
 Depends: dbconfig-common,
-         dbconfig-postgresql,
+         dbconfig-pgsql,
          pdns-server (>= ${source:Version}),
          ucf (>= 0.28),
          ${misc:Depends},
