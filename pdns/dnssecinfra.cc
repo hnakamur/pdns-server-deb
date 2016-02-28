@@ -12,19 +12,11 @@
 #include <boost/algorithm/string.hpp>
 #include "dnssecinfra.hh" 
 #include "dnsseckeeper.hh"
-#ifdef HAVE_MBEDTLS2
-#include <mbedtls/md_internal.h>
-#include <mbedtls/md.h>
-#else
-#include <polarssl/md5.h>
-#include <polarssl/sha1.h>
-#include <polarssl/md.h>
-#include "mbedtlscompat.hh"
-#endif
+#include <openssl/hmac.h>
+#include <openssl/sha.h>
 #include <boost/assign/std/vector.hpp> // for 'operator+=()'
 #include <boost/assign/list_inserter.hpp>
 #include "base64.hh"
-#include "sha.hh"
 #include "namespaces.hh"
 #ifdef HAVE_P11KIT1
 #include "pkcs11signers.hh"
@@ -129,6 +121,21 @@ DNSCryptoKeyEngine* DNSCryptoKeyEngine::make(unsigned int algo)
   else {
     throw runtime_error("Request to create key object for unknown algorithm number "+std::to_string(algo));
   }
+}
+
+/**
+ * Returns the supported DNSSEC algorithms with the name of the Crypto Backend used
+ *
+ * @return   A vector with pairs of (algorithm-number (int), backend-name (string))
+ */
+vector<pair<uint8_t, string>> DNSCryptoKeyEngine::listAllAlgosWithBackend()
+{
+  vector<pair<uint8_t, string>> ret;
+  for (auto const& value : getMakers()) {
+    shared_ptr<DNSCryptoKeyEngine> dcke(value.second(value.first));
+    ret.push_back(make_pair(value.first, dcke->getName()));
+  }
+  return ret;
 }
 
 void DNSCryptoKeyEngine::report(unsigned int algo, maker_t* maker, bool fallback)
@@ -403,7 +410,7 @@ string hashQNameWithSalt(const NSEC3PARAMRecordContent& ns3prc, const DNSName& q
 
   for(;;) {
     toHash.append(ns3prc.d_salt);
-    mbedtls_sha1((unsigned char*)toHash.c_str(), toHash.length(), hash);
+    SHA1((unsigned char*)toHash.c_str(), toHash.length(), hash);
     toHash.assign((char*)hash, sizeof(hash));
     if(!times--)
       break;
@@ -495,37 +502,36 @@ void decodeDERIntegerSequence(const std::string& input, vector<string>& output)
 
 string calculateHMAC(const std::string& key, const std::string& text, TSIGHashEnum hasher) {
 
-  mbedtls_md_type_t md_type;
-  const mbedtls_md_info_t *md_info;
-
-  unsigned char hash[MBEDTLS_MD_MAX_SIZE];
-
+  const EVP_MD* md_type;
+  unsigned int outlen;
+  unsigned char hash[EVP_MAX_MD_SIZE];
   switch(hasher) {
     case TSIG_MD5:
-      md_type = MBEDTLS_MD_MD5;
+      md_type = EVP_md5();
       break;
     case TSIG_SHA1:
-      md_type = MBEDTLS_MD_SHA1;
+      md_type = EVP_sha1();
       break;
     case TSIG_SHA224:
-      md_type = MBEDTLS_MD_SHA224;
+      md_type = EVP_sha224();
       break;
     case TSIG_SHA256:
-      md_type = MBEDTLS_MD_SHA256;
+      md_type = EVP_sha256();
       break;
     case TSIG_SHA384:
-      md_type = MBEDTLS_MD_SHA384;
+      md_type = EVP_sha384();
       break;
     case TSIG_SHA512:
-      md_type = MBEDTLS_MD_SHA512;
+      md_type = EVP_sha512();
       break;
     default:
       throw new PDNSException("Unknown hash algorithm requested from calculateHMAC()");
   }
 
-  md_info = mbedtls_md_info_from_type( md_type );
-  if( mbedtls_md_hmac( md_info, reinterpret_cast<const unsigned char*>(key.c_str()), key.size(), reinterpret_cast<const unsigned char*>(text.c_str()), text.size(), hash ) == 0 )
-    return string( (char*) hash, mbedtls_md_get_size( md_info ) );
+  unsigned char* out = HMAC(md_type, reinterpret_cast<const unsigned char*>(key.c_str()), key.size(), reinterpret_cast<const unsigned char*>(text.c_str()), text.size(), hash, &outlen);
+  if (out != NULL && outlen > 0) {
+    return string((char*) hash, outlen);
+  }
 
   return "";
 }

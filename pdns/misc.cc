@@ -174,10 +174,13 @@ int writen2WithTimeout(int fd, const void * buffer, size_t len, int timeout)
 
 string nowTime()
 {
-  time_t now=time(0);
-  string t=ctime(&now);
-  boost::trim_right(t);
-  return t;
+  time_t now = time(nullptr);
+  struct tm* tm = localtime(&now);
+  char buffer[30];
+  // YYYY-mm-dd HH:MM:SS TZOFF
+  strftime(buffer, sizeof(buffer), "%F %T %z", tm);
+  buffer[sizeof(buffer)-1] = '\0';
+  return buffer;
 }
 
 uint16_t getShort(const unsigned char *p)
@@ -865,7 +868,7 @@ Regex::Regex(const string &expr)
     throw PDNSException("Regular expression did not compile");
 }
 
-void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* source)
+void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* source, int itfIndex)
 {
   struct cmsghdr *cmsg = NULL;
 
@@ -883,6 +886,7 @@ void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* sour
     pkt = (struct in6_pktinfo *) CMSG_DATA(cmsg);
     memset(pkt, 0, sizeof(*pkt));
     pkt->ipi6_addr = source->sin6.sin6_addr;
+    pkt->ipi6_ifindex = itfIndex;
     msgh->msg_controllen = cmsg->cmsg_len; // makes valgrind happy and is slightly better style
   }
   else {
@@ -900,6 +904,7 @@ void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* sour
     pkt = (struct in_pktinfo *) CMSG_DATA(cmsg);
     memset(pkt, 0, sizeof(*pkt));
     pkt->ipi_spec_dst = source->sin4.sin_addr;
+    pkt->ipi_ifindex = itfIndex;
     msgh->msg_controllen = cmsg->cmsg_len;
 #endif
 #ifdef IP_SENDSRCADDR
@@ -1075,6 +1080,32 @@ bool setCloseOnExec(int sock)
   if(flags<0 || fcntl(sock, F_SETFD,flags|FD_CLOEXEC) <0)
     return false;
   return true;
+}
+
+string getMACAddress(const ComboAddress& ca)
+{
+  string ret;
+#ifdef __linux__
+  ifstream ifs("/proc/net/arp");
+  if(!ifs)
+    return ret;
+  string line;
+  string match=ca.toString()+' ';
+  while(getline(ifs, line)) {
+    if(boost::starts_with(line, match)) {
+      vector<string> parts;
+      stringtok(parts, line, " \n\t\r");
+      if(parts.size() < 4)
+        return ret;
+      unsigned int tmp[6];
+      sscanf(parts[3].c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", tmp, tmp+1, tmp+2, tmp+3, tmp+4, tmp+5);
+      for(int i = 0 ; i< 6 ; ++i)
+        ret.append(1, (char)tmp[i]);
+      return ret;
+    }
+  }
+#endif
+  return ret;
 }
 
 uint64_t udpErrorStats(const std::string& str)

@@ -312,7 +312,6 @@ boilerplate_conv(OPENPGPKEY, 61,
                  conv.xfrBlob(d_keyring);
                  )
 
-#undef DS
 DSRecordContent::DSRecordContent() {}
 boilerplate_conv(DS, 43, 
                  conv.xfr16BitInt(d_tag); 
@@ -608,6 +607,16 @@ void reportAllTypes()
   reportBasicTypes();
   reportOtherTypes();
 }
+
+ComboAddress getAddr(const DNSRecord& dr, uint16_t defport)
+{
+  if(auto addr=getRR<ARecordContent>(dr)) {
+    return addr->getCA(defport);
+  }
+  else
+    return getRR<AAAARecordContent>(dr)->getCA(defport);
+}
+
 
 #if 0
 static struct Reporter

@@ -1,6 +1,6 @@
 /*
     PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002-2012  PowerDNS.COM BV
+    Copyright (C) 2002-2015  PowerDNS.COM BV
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2
@@ -473,14 +473,6 @@ inline bool isCanonical(const string& qname)
   return qname[qname.size()-1]=='.';
 }
 
-inline bool isCanonical(const DNSName& qname)
-{
-  if(qname.empty())
-    return false;
-  return true;
-}
-
-
 inline DNSName toCanonic(const DNSName& zone, const string& qname)
 {
   if(qname.size()==1 && qname[0]=='@')
@@ -587,7 +579,8 @@ private:
 };
 
 union ComboAddress;
-void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* source);
+/* itfIndex is an interface index, as returned by if_nametoindex(). 0 means default. */
+void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* source, int itfIndex);
 
 unsigned int getFilenumLimit(bool hardOrSoft=0);
 void setFilenumLimit(unsigned int lim);
@@ -608,7 +601,7 @@ uint64_t getRealMemoryUsage(const std::string&);
 uint64_t getOpenFileDescriptors(const std::string&);
 uint64_t getCPUTimeUser(const std::string&);
 uint64_t getCPUTimeSystem(const std::string&);
-
+std::string getMACAddress(const ComboAddress& ca);
 template<typename T, typename... Args>
 std::unique_ptr<T> make_unique(Args&&... args)
 {

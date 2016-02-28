@@ -3,10 +3,12 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/assign/std/map.hpp>
 #include <numeric>
+#include <math.h>
 #include "dnsname.hh"
 #include "misc.hh"
 #include "dnswriter.hh"
 #include "dnsrecords.hh"
+#include <unordered_set>
 using namespace boost;
 using std::string;
 
@@ -279,6 +281,25 @@ BOOST_AUTO_TEST_CASE(test_hash) {
   BOOST_CHECK(stdev < 10);      
 }
 
+BOOST_AUTO_TEST_CASE(test_hashContainer) {
+  std::unordered_set<DNSName> s;
+  s.insert(DNSName("www.powerdns.com"));
+  BOOST_CHECK(s.count(DNSName("WwW.PoWerDNS.CoM")));
+  BOOST_CHECK_EQUAL(s.size(), 1);
+  s.insert(DNSName("www.POWERDNS.com"));
+  BOOST_CHECK_EQUAL(s.size(), 1);
+  s.insert(DNSName("www2.POWERDNS.com"));
+  BOOST_CHECK_EQUAL(s.size(), 2);
+
+  s.clear();
+  unsigned int n=0;
+  for(; n < 100000; ++n)
+    s.insert(DNSName(std::to_string(n)+".test.nl"));
+  BOOST_CHECK_EQUAL(s.size(), n);
+
+}
+
+
 BOOST_AUTO_TEST_CASE(test_QuestionHash) {
   vector<unsigned char> packet;
   reportBasicTypes();
@@ -408,6 +429,13 @@ BOOST_AUTO_TEST_CASE(test_compare_naive) {
   BOOST_CHECK(DNSName("Abc.com.") < DNSName("Zdf.com."));
   BOOST_CHECK(DNSName("abc.com.") < DNSName("Zdf.com."));
 }
+
+BOOST_AUTO_TEST_CASE(test_compare_empty) {
+  DNSName a, b;
+  BOOST_CHECK(!(a<b));
+  BOOST_CHECK(!a.canonCompare(b));
+}
+
 
 BOOST_AUTO_TEST_CASE(test_compare_canonical) {
   DNSName lower("bert.com."), higher("alpha.nl.");
@@ -616,5 +644,6 @@ BOOST_AUTO_TEST_CASE(test_wirelength) { // Testing if we get the correct value f
   sname.prependRawLabel(string("www\x00", 4));
   BOOST_CHECK_EQUAL(sname.wirelength(), 19);
 }
+
 
 BOOST_AUTO_TEST_SUITE_END()

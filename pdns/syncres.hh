@@ -460,7 +460,7 @@ public:
 
 private:
   struct GetBestNSAnswer;
-  int doResolveAt(set<DNSName> nameservers, DNSName auth, bool flawedNSSet, const DNSName &qname, const QType &qtype, vector<DNSRecord>&ret,
+  int doResolveAt(map<DNSName, pair<ComboAddress, bool> > &nameservers, DNSName auth, bool flawedNSSet, const DNSName &qname, const QType &qtype, vector<DNSRecord>&ret,
         	  int depth, set<GetBestNSAnswer>&beenthere);
   int doResolve(const DNSName &qname, const QType &qtype, vector<DNSRecord>&ret, int depth, set<GetBestNSAnswer>& beenthere);
   bool doOOBResolve(const DNSName &qname, const QType &qtype, vector<DNSRecord>&ret, int depth, int &res);
@@ -468,9 +468,9 @@ private:
   bool doCNAMECacheCheck(const DNSName &qname, const QType &qtype, vector<DNSRecord>&ret, int depth, int &res);
   bool doCacheCheck(const DNSName &qname, const QType &qtype, vector<DNSRecord>&ret, int depth, int &res);
   void getBestNSFromCache(const DNSName &qname, const QType &qtype, vector<DNSRecord>&bestns, bool* flawedNSSet, int depth, set<GetBestNSAnswer>& beenthere);
-  DNSName getBestNSNamesFromCache(const DNSName &qname, const QType &qtype, set<DNSName>& nsset, bool* flawedNSSet, int depth, set<GetBestNSAnswer>&beenthere);
+  DNSName getBestNSNamesFromCache(const DNSName &qname, const QType &qtype, map<DNSName, pair<ComboAddress, bool> >& nsset, bool* flawedNSSet, int depth, set<GetBestNSAnswer>&beenthere);
 
-  inline vector<DNSName> shuffleInSpeedOrder(set<DNSName> &nameservers, const string &prefix);
+  inline vector<DNSName> shuffleInSpeedOrder(map<DNSName, pair<ComboAddress, bool> > &nameservers, const string &prefix);
   bool moreSpecificThan(const DNSName& a, const DNSName &b);
   vector<ComboAddress> getAddrs(const DNSName &qname, int depth, set<GetBestNSAnswer>& beenthere);
 private:
@@ -513,21 +513,21 @@ struct PacketID
   }
 
   uint16_t id;  // wait for a specific id/remote pair
+  uint16_t type;             // and this is its type
   ComboAddress remote;  // this is the remote
   DNSName domain;             // this is the question
-  uint16_t type;             // and this is its type
 
   Socket* sock;  // or wait for an event on a TCP fd
-  int inNeeded; // if this is set, we'll read until inNeeded bytes are read
   string inMSG; // they'll go here
+  int inNeeded; // if this is set, we'll read until inNeeded bytes are read
   bool inIncompleteOkay;
 
   string outMSG; // the outgoing message that needs to be sent
   string::size_type outPos;    // how far we are along in the outMSG
 
-  mutable uint32_t nearMisses; // number of near misses - host correct, id wrong
   typedef set<uint16_t > chain_t;
   mutable chain_t chain;
+  mutable uint32_t nearMisses; // number of near misses - host correct, id wrong
   int fd;
 
   bool operator<(const PacketID& b) const
@@ -554,7 +554,7 @@ struct PacketIDBirthdayCompare: public std::binary_function<PacketID, PacketID, 
     if( tie(a.remote, ourSock, a.type) > tie(b.remote, bSock, b.type))
       return false;
 
-    return pdns_ilexicographical_compare(a.domain.toString(), b.domain.toString()); // FIXME400
+    return a.domain < b.domain;
   }
 };
 extern __thread MemRecursorCache* t_RC;
@@ -610,9 +610,9 @@ public:
   {
     return d_fd;
   }
-  enum stateenum {BYTE0, BYTE1, GETQUESTION, DONE} state;
-  int qlen;
-  int bytesread;
+  enum stateenum {BYTE0, BYTE1, GETQUESTION, DONE} state{BYTE0};
+  uint16_t qlen{0};
+  uint16_t bytesread{0};
   const ComboAddress d_remote;
   char data[65535]; // damn
 
@@ -676,5 +676,6 @@ void doCarbonDump(void*);
 boost::optional<Netmask> getEDNSSubnetMask(const ComboAddress& local, const DNSName&dn, const ComboAddress& rem);
 void  parseEDNSSubnetWhitelist(const std::string& wlist);
 
+extern __thread struct timeval g_now;
 
 #endif

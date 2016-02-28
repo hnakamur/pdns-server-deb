@@ -63,15 +63,16 @@ public:
  
   UeberBackend *getBackend();
 
-  int trySuperMasterSynchronous(DNSPacket *p);
+  int trySuperMasterSynchronous(DNSPacket *p, const DNSName& tsigkeyname);
   static NetmaskGroup s_allowNotifyFrom;
 
 private:
-  int trySuperMaster(DNSPacket *p);
+  int trySuperMaster(DNSPacket *p, const DNSName& tsigkeyname);
   int processNotify(DNSPacket *);
   void addRootReferral(DNSPacket *r);
   int doChaosRequest(DNSPacket *p, DNSPacket *r, DNSName &target);
-  bool addDNSKEY(DNSPacket *p, DNSPacket *r, const SOAData& sd, bool doCDNSKEY);
+  bool addDNSKEY(DNSPacket *p, DNSPacket *r, const SOAData& sd);
+  bool addCDNSKEY(DNSPacket *p, DNSPacket *r, const SOAData& sd);
   bool addCDS(DNSPacket *p, DNSPacket *r, const SOAData& sd);
   bool addNSEC3PARAM(DNSPacket *p, DNSPacket *r, const SOAData& sd);
   int doAdditionalProcessingAndDropAA(DNSPacket *p, DNSPacket *r, const SOAData& sd, bool retargeted);

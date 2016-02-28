@@ -218,7 +218,7 @@ public:
     if(iter != getN2Typemap().end())
       return iter->second.second;
     
-    if(boost::starts_with(name, "TYPE"))
+    if(boost::starts_with(name, "TYPE") || boost::starts_with(name, "type"))
       return pdns_stou(name.substr(4));
     
     throw runtime_error("Unknown DNS type '"+name+"'");
@@ -266,10 +266,10 @@ struct DNSRecord
 
   bool operator<(const DNSRecord& rhs) const
   {
-    if(tie(d_name, d_type, d_class) < tie(rhs.d_name, rhs.d_type, rhs.d_class))
+    if(tie(d_name, d_type, d_class, d_ttl) < tie(rhs.d_name, rhs.d_type, rhs.d_class, rhs.d_ttl))
       return true;
     
-    if(tie(d_name, d_type, d_class) != tie(rhs.d_name, rhs.d_type, rhs.d_class))
+    if(tie(d_name, d_type, d_class, d_ttl) != tie(rhs.d_name, rhs.d_type, rhs.d_class, rhs.d_ttl))
       return false;
     
     string lzrp, rzrp;
@@ -344,6 +344,7 @@ private:
 
 string simpleCompress(const string& label, const string& root="");
 void simpleExpandTo(const string& label, unsigned int frompos, string& ret);
+void ageDNSPacket(char* packet, size_t length, uint32_t seconds);
 void ageDNSPacket(std::string& packet, uint32_t seconds);
 
 template<typename T>

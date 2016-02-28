@@ -16,10 +16,7 @@ Data format
 
 Input data format: JSON.
 
-Output data formats: JSON, JSONP
-
-All GET requests support appending a `_callback` URL parameter, which, if
-present, will turn the response into a JSONP response.
+Output data formats: JSON.
 
 The `Accept:` header determines the output format. An unknown value or
 `*/*` will cause a `400 Bad Request`.
@@ -304,8 +301,35 @@ zone_collection
       "nameservers": ["<string>", ...],
       "servers": ["<string>", ...],
       "recursion_desired": <bool>,
-      "records": [<record>, ...],
-      "comments": [<comment>, ...],
+      "rrset": [<RRset>, ...],
+    }
+
+
+Where `RRset` is defined as:
+
+    {
+      "name": "<string>",
+      "type": "<type>",
+      "ttl": <int>,
+      "records": [<Record>, ...],
+      "comments": [<Comment>, ...]
+    }
+
+
+Where `Record` is defined as:
+
+    {
+      "content": "<string>",
+      "disabled": <bool>
+    }
+
+
+Where `Comment` is defined as:
+
+    {
+      "content": "<string>",
+      "account": "<string>",
+      "modified_at": <int>
     }
 
 
@@ -348,7 +372,7 @@ zone_collection
   If not set at all during zone creation, defaults to `DEFAULT`.
   **Note**: Authoritative only.
 
-* `account` MAY be set. It's value is defined by local policy.
+* `account` MAY be set. Its value is defined by local policy.
   **Note**: Authoritative only.
 
 * `notified_serial`, `serial` MUST NOT be sent in client bodies.
@@ -367,11 +391,11 @@ zone_collection
   be set.
   **Note**: Authoritative only.
 
-* `records`: list of DNS records in the zone.
+* `rrsets`: list of DNS records and comments in the zone.
   **Note**: Modifications are supported on Authoritative only.
 
-* `comments`: list of comments in the zone.
-  **Note**: Authoritative only.
+Please see the description for `PATCH` for details on the fields in
+`RRset`, `Record` and `Comment`.
 
 ##### Notes:
 
@@ -438,14 +462,12 @@ Client body for PATCH:
         {
           "name": <string>,
           "type": <string>,
+          "ttl": <int>,
           "changetype": <changetype>,
           "records":
             [
               {
                 "content": <string>,
-                "name": <string>,
-                "ttl": <int>,
-                "type": <string>,
                 "disabled": <bool>,
                 "set-ptr": <bool>
               }, ...
@@ -463,13 +485,15 @@ Client body for PATCH:
       ]
     }
 
-Having `type` inside an RR differ from `type` at the RRset level is an error.
 
 * `name`
   Full name of the RRset to modify. (Example: `foo.example.org.`)
 
 * `type`
   Type of the RRset to modify. (Example: `AAAA`)
+
+* `ttl`
+  DNS TTL to apply to records replaced, in seconds. MUST NOT be included when `changetype` is set to `DELETE`.
 
 * `changetype`
   Must be `REPLACE` or `DELETE`.
@@ -482,9 +506,6 @@ Having `type` inside an RR differ from `type` at the RRset level is an error.
   List of new records (replacing the old ones). Must be empty when `changetype` is set to `DELETE`.
   An empty list results in deletion of all records (and comments).
   A record consists of these fields:
-  * `type`: DNS type (MUST match outer `type`)
-  * `name`: full name (MUST match outer `name`)
-  * `ttl`: DNS TTL in seconds
   * `content`: the record content. Must confirm to the DNS content rules for the specified `type`. (PowerDNS hint: includes the backend's `priority` field.)
   * `disabled`: if this record will be hidden from DNS. (true: hidden, false: visible (the default)).
   * `set-ptr`: If set to true, the server will find the matching reverse zone and create a `PTR` there. Existing `PTR` records are replaced. If no matching reverse Zone, an error is thrown. Only valid in client bodies, only valid for `A` and `AAAA` types. Not returned by the server. Only valid for the Authoritative server.

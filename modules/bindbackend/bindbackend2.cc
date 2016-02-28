@@ -257,13 +257,26 @@ bool Bind2Backend::feedRecord(const DNSResourceRecord &rr, string *ordername)
   BB2DomainInfo bbd;
   safeGetBBDomainInfo(d_transaction_id, &bbd);
 
-  string name=bbd.d_name.toStringNoDot();
-  string qname=rr.qname.toStringNoDot();
+  string qname;
+  string name = bbd.d_name.toString();
+  if (bbd.d_name.empty()) {
+    qname = rr.qname.toString();
+  }
+  else if (rr.qname.isPartOf(bbd.d_name)) {
+    if (rr.qname == bbd.d_name) {
+      qname = "@";
+    }
+    else {
+      DNSName relName = rr.qname.makeRelative(bbd.d_name);
+      qname = relName.toStringNoDot();
+    }
+  }
+  else {
+    throw DBException("out-of-zone data '"+rr.qname.toString()+"' during AXFR of zone '"+bbd.d_name.toString()+"'");
+  }
 
-  if(!stripDomainSuffix(&qname, name))
-    throw DBException("out-of-zone data '"+qname+".' during AXFR of zone '"+name+".'");
-
-  string content=rr.content;
+  shared_ptr<DNSRecordContent> drc(DNSRecordContent::mastermake(rr.qtype.getCode(), 1, rr.content));
+  string content = drc->getZoneRepresentation();
 
   // SOA needs stripping too! XXX FIXME - also, this should not be here I think
   switch(rr.qtype.getCode()) {
@@ -272,8 +285,7 @@ bool Bind2Backend::feedRecord(const DNSResourceRecord &rr, string *ordername)
   case QType::CNAME:
   case QType::DNAME:
   case QType::NS:
-    if(!stripDomainSuffix(&content, name))
-      content=stripDot(content)+".";
+    stripDomainSuffix(&content, name);
     // falltrough
   default:
     *d_of<<qname<<"\t"<<rr.ttl<<"\t"<<rr.qtype.getName()<<"\t"<<content<<endl;
@@ -741,7 +753,7 @@ void Bind2Backend::loadConfig(string* status)
     }
     catch(PDNSException &ae) {
       L<<Logger::Error<<"Error parsing bind configuration: "<<ae.reason<<endl;
-      return;
+      throw;
     }
       
     vector<BindDomainInfo> domains=BP.getDomains();

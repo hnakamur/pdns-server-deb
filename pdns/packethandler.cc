@@ -133,34 +133,27 @@ void PacketHandler::addRootReferral(DNSPacket* r)
 }
 
 /**
- * This adds DNSKEY records to the answer packet. Returns true if one was added.
- * The optional doCDNSKEY parameter signifies that we need to add a CDNSKEY (RFC 7344)
- * instead of DNSKEY.
+ * This adds CDNSKEY records to the answer packet. Returns true if one was added.
  *
  * @param p          Pointer to the DNSPacket containing the original question
  * @param r          Pointer to the DNSPacket where the records should be inserted into
- * @param sd         SOAData of the zone for which DNSKEY records sets should be added
- * @param doCDNSKEY  When set to true, add CDNSKEYs instead of DNSKEYs
+ * @param sd         SOAData of the zone for which CDNSKEY records sets should be added
  * @return           bool that shows if any records were added
 **/
-bool PacketHandler::addDNSKEY(DNSPacket *p, DNSPacket *r, const SOAData& sd, bool doCDNSKEY=false)
+bool PacketHandler::addCDNSKEY(DNSPacket *p, DNSPacket *r, const SOAData& sd)
 {
   string publishCDNSKEY;
   d_dk.getFromMeta(p->qdomain, "PUBLISH_CDNSKEY", publishCDNSKEY);
-  if (doCDNSKEY && publishCDNSKEY != "1")
+  if (publishCDNSKEY != "1")
     return false;
 
   DNSResourceRecord rr;
   bool haveOne=false;
   DNSSECPrivateKey dpk;
 
-  DNSSECKeeper::keyset_t keyset = d_dk.getKeys(p->qdomain);
-  for(const auto& value: keyset) {
-    if (doCDNSKEY && !value.second.keyOrZone) {
-      // Don't send out CDNSKEY records for ZSKs
-      continue;
-    }
-    rr.qtype=doCDNSKEY ? QType::CDNSKEY : QType::DNSKEY;
+  DNSSECKeeper::keyset_t entryPoints = d_dk.getEntryPoints(p->qdomain);
+  for(const auto& value: entryPoints) {
+    rr.qtype=QType::CDNSKEY;
     rr.ttl=sd.default_ttl;
     rr.qname=p->qdomain;
     rr.content=value.first.getDNSKEY().getZoneRepresentation();
@@ -170,10 +163,44 @@ bool PacketHandler::addDNSKEY(DNSPacket *p, DNSPacket *r, const SOAData& sd, boo
   }
 
   if(::arg().mustDo("direct-dnskey")) {
-    if(doCDNSKEY)
-      B.lookup(QType(QType::CDNSKEY), p->qdomain, p, sd.domain_id);
-    else
-      B.lookup(QType(QType::DNSKEY), p->qdomain, p, sd.domain_id);
+    B.lookup(QType(QType::CDNSKEY), p->qdomain, p, sd.domain_id);
+
+    while(B.get(rr)) {
+      rr.ttl=sd.default_ttl;
+      r->addRecord(rr);
+      haveOne=true;
+    }
+  }
+  return haveOne;
+}
+
+/**
+ * This adds DNSKEY records to the answer packet. Returns true if one was added.
+ *
+ * @param p          Pointer to the DNSPacket containing the original question
+ * @param r          Pointer to the DNSPacket where the records should be inserted into
+ * @param sd         SOAData of the zone for which DNSKEY records sets should be added
+ * @return           bool that shows if any records were added
+**/
+bool PacketHandler::addDNSKEY(DNSPacket *p, DNSPacket *r, const SOAData& sd)
+{
+  DNSResourceRecord rr;
+  bool haveOne=false;
+  DNSSECPrivateKey dpk;
+
+  DNSSECKeeper::keyset_t keyset = d_dk.getKeys(p->qdomain);
+  for(const auto& value: keyset) {
+    rr.qtype=QType::DNSKEY;
+    rr.ttl=sd.default_ttl;
+    rr.qname=p->qdomain;
+    rr.content=value.first.getDNSKEY().getZoneRepresentation();
+    rr.auth=true;
+    r->addRecord(rr);
+    haveOne=true;
+  }
+
+  if(::arg().mustDo("direct-dnskey")) {
+    B.lookup(QType(QType::DNSKEY), p->qdomain, p, sd.domain_id);
 
     while(B.get(rr)) {
       rr.ttl=sd.default_ttl;
@@ -213,13 +240,9 @@ bool PacketHandler::addCDS(DNSPacket *p, DNSPacket *r, const SOAData& sd)
   bool haveOne=false;
   DNSSECPrivateKey dpk;
 
-  DNSSECKeeper::keyset_t keyset = d_dk.getKeys(p->qdomain);
+  DNSSECKeeper::keyset_t keyset = d_dk.getEntryPoints(p->qdomain);
 
   for(auto const &value : keyset) {
-    if (!value.second.keyOrZone) {
-      // Don't send out CDS records for ZSKs
-      continue;
-    }
     for(auto const &digestAlgo : digestAlgos){
       rr.content=makeDSFromDNSKey(p->qdomain, value.first.getDNSKEY(), std::stoi(digestAlgo)).getZoneRepresentation();
       r->addRecord(rr);
@@ -267,7 +290,7 @@ int PacketHandler::doChaosRequest(DNSPacket *p, DNSPacket *r, DNSName &target)
 
   if(p->qtype.getCode()==QType::TXT) {
     static const DNSName versionbind("version.bind."), versionpdns("version.pdns."), idserver("id.server.");
-    if (target==versionbind || target==versionbind) {
+    if (target==versionbind || target==versionpdns) {
       // modes: full, powerdns only, anonymous or custom
       const static string mode=::arg()["version-string"];
 
@@ -714,7 +737,7 @@ void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const DNSName& target, 
 
 void PacketHandler::addNSEC(DNSPacket *p, DNSPacket *r, const DNSName& target, const DNSName& wildcard, const DNSName& auth, int mode)
 {
-  DLOG(L<<"addNSEC() mode="<<mode<<" auth="<<auth<<" target="<<target<<" wildcard="<<wildcard<<endl);
+  DLOG(L<<"addNSEC() mode="<<mode<<" auth="<<auth<<" target="<<target<<" wildcard="<<(wildcard.empty() ? "<empty>" : wildcard.toString())<<endl);
 
   SOAData sd;
   if(!B.getSOAUncached(auth, sd)) {
@@ -765,13 +788,13 @@ How MySQLBackend would implement this:
    
 */     
 
-int PacketHandler::trySuperMaster(DNSPacket *p)
+int PacketHandler::trySuperMaster(DNSPacket *p, const DNSName& tsigkeyname)
 {
   if(p->d_tcp)
   {
     // do it right now if the client is TCP
     // rarely happens
-    return trySuperMasterSynchronous(p);
+    return trySuperMasterSynchronous(p, tsigkeyname);
   }
   else
   {
@@ -781,7 +804,7 @@ int PacketHandler::trySuperMaster(DNSPacket *p)
   }
 }
 
-int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
+int PacketHandler::trySuperMasterSynchronous(DNSPacket *p, const DNSName& tsigkeyname)
 {
   Resolver::res_t nsset;
   try {
@@ -809,6 +832,12 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
 
   string nameserver, account;
   DNSBackend *db;
+
+  if (!::arg().mustDo("allow-unsigned-supermaster") && tsigkeyname.empty()) {
+    L<<Logger::Error<<"Received unsigned NOTIFY for "<<p->qdomain<<" from potential supermaster "<<p->getRemote()<<". Refusing."<<endl;
+    return RCode::Refused;
+  }
+
   if(!B.superMasterBackend(p->getRemote(), p->qdomain, nsset, &nameserver, &account, &db)) {
     L<<Logger::Error<<"Unable to find backend willing to host "<<p->qdomain<<" for potential supermaster "<<p->getRemote()<<". Remote nameservers: "<<endl;
     for(const auto& rr: nsset) {
@@ -819,6 +848,11 @@ int PacketHandler::trySuperMasterSynchronous(DNSPacket *p)
   }
   try {
     db->createSlaveDomain(p->getRemote(), p->qdomain, nameserver, account);
+    if (tsigkeyname.empty() == false) {
+      vector<string> meta;
+      meta.push_back(tsigkeyname.toStringNoDot());
+      db->setDomainMetadata(p->qdomain, "AXFR-MASTER-TSIG", meta);
+    }
   }
   catch(PDNSException& ae) {
     L<<Logger::Error<<"Database error trying to create "<<p->qdomain<<" for potential supermaster "<<p->getRemote()<<": "<<ae.reason<<endl;
@@ -832,18 +866,25 @@ int PacketHandler::processNotify(DNSPacket *p)
 {
   /* now what? 
      was this notification from an approved address?
+     was this notification approved by TSIG?
      We determine our internal SOA id (via UeberBackend)
      We determine the SOA at our (known) master
      if master is higher -> do stuff
   */
+  vector<string> meta;
+
   if(!::arg().mustDo("slave")) {
     L<<Logger::Error<<"Received NOTIFY for "<<p->qdomain<<" from "<<p->getRemote()<<" but slave support is disabled in the configuration"<<endl;
     return RCode::NotImp;
   }
 
-  if(!s_allowNotifyFrom.match((ComboAddress *) &p->d_remote )) {
-    L<<Logger::Notice<<"Received NOTIFY for "<<p->qdomain<<" from "<<p->getRemote()<<" but remote is not in allow-notify-from"<<endl;
-    return RCode::Refused;
+  if(!s_allowNotifyFrom.match((ComboAddress *) &p->d_remote ) || p->d_havetsig) {
+    if (p->d_havetsig && p->getTSIGKeyname().empty() == false) {
+        L<<Logger::Notice<<"Received secure NOTIFY for "<<p->qdomain<<" from "<<p->getRemote()<<", allowed by TSIG key '"<<p->getTSIGKeyname()<<"'"<<endl;
+    } else {
+      L<<Logger::Error<<"Received NOTIFY for "<<p->qdomain<<" from "<<p->getRemote()<<" but remote is not permitted by TSIG or allow-notify-from"<<endl;
+      return RCode::Refused;
+    }
   }
 
   DNSBackend *db=0;
@@ -851,9 +892,24 @@ int PacketHandler::processNotify(DNSPacket *p)
   di.serial = 0;
   if(!B.getDomainInfo(p->qdomain, di) || !(db=di.backend)) {
     L<<Logger::Error<<"Received NOTIFY for "<<p->qdomain<<" from "<<p->getRemote()<<" for which we are not authoritative"<<endl;
-    return trySuperMaster(p);
+    return trySuperMaster(p, p->getTSIGKeyname());
   }
-    
+
+  meta.clear();
+  if (B.getDomainMetadata(p->qdomain,"AXFR-MASTER-TSIG",meta) && meta.size() > 0) {
+    if (!p->d_havetsig) {
+      if (::arg().mustDo("allow-unsigned-notify")) {
+        L<<Logger::Warning<<"Received unsigned NOTIFY for "<<p->qdomain<<" from "<<p->getRemote()<<": permitted because allow-unsigned-notify";
+      } else {
+        L<<Logger::Warning<<"Received unsigned NOTIFY for "<<p->qdomain<<" from "<<p->getRemote()<<": refused"<<endl;
+        return RCode::Refused;
+      }
+    } else if (meta[0] != p->getTSIGKeyname().toStringNoDot()) {
+      L<<Logger::Error<<"Received secure NOTIFY for "<<p->qdomain<<" from "<<p->getRemote()<<": expected TSIG key '"<<meta[0]<<", got '"<<p->getTSIGKeyname()<<"'"<<endl;
+      return RCode::Refused;
+    }
+  }
+
   if(::arg().contains("trusted-notification-proxy", p->getRemote())) {
     L<<Logger::Error<<"Received NOTIFY for "<<p->qdomain<<" from trusted-notification-proxy "<< p->getRemote()<<endl;
     if(di.masters.empty()) {
@@ -1024,11 +1080,11 @@ void PacketHandler::completeANYRecords(DNSPacket *p, DNSPacket*r, SOAData& sd, c
 
   if(!d_dk.isSecuredZone(sd.qname))
     return;
-    
+
   addNSECX(p, r, target, DNSName(), sd.qname, 5);
   if(sd.qname == p->qdomain) {
     addDNSKEY(p, r, sd);
-    addDNSKEY(p, r, sd, true);
+    addCDNSKEY(p, r, sd);
     addCDS(p, r, sd);
     addNSEC3PARAM(p, r, sd);
   }
@@ -1283,7 +1339,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
       }
       else if(p->qtype.getCode() == QType::CDNSKEY)
       {
-        if(addDNSKEY(p,r, sd, true))
+        if(addCDNSKEY(p,r, sd))
           goto sendit;
       }
       else if(p->qtype.getCode() == QType::CDS)

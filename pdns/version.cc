@@ -1,6 +1,6 @@
 /*
     PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2013  PowerDNS.COM BV
+    Copyright (C) 2002 - 2016  PowerDNS.COM BV
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2
@@ -25,12 +25,6 @@
 #endif
 #include "logger.hh"
 #include "version.hh"
-#ifdef HAVE_MBEDTLS2
-#include <mbedtls/version.h>
-#else
-#include <polarssl/version.h>
-#include "mbedtlscompat.hh"
-#endif
 
 static ProductType productType;
 
@@ -74,7 +68,7 @@ string productTypeApiType() {
 
 void showProductVersion()
 {
-  theL()<<Logger::Warning<<productName()<<" "<< VERSION << " (C) 2001-2015 "
+  theL()<<Logger::Warning<<productName()<<" "<< VERSION << " (C) 2001-2016 "
     "PowerDNS.COM BV" << endl;
   theL()<<Logger::Warning<<"Using "<<(sizeof(unsigned long)*8)<<"-bits mode. "
     "Built using " << compilerVersion()
@@ -93,12 +87,10 @@ void showBuildConfiguration()
 #ifdef HAVE_BOTAN110
     "botan1.10 " <<
 #endif
-#ifdef HAVE_CRYPTOPP
-    "cryptopp " <<
-#endif
 #ifdef HAVE_LIBSODIUM
     "sodium " <<
 #endif
+    "openssl " <<
 #ifdef HAVE_LIBDL
     "libdl " <<
 #endif
@@ -115,9 +107,6 @@ void showBuildConfiguration()
 #ifdef PDNS_MODULES
   // Auth only
   theL()<<Logger::Warning<<"Built-in modules: "<<PDNS_MODULES<<endl;
-#endif
-#ifndef MBEDTLS_SYSTEM
-  theL()<<Logger::Warning<<"Built-in mbed TLS: "<<MBEDTLS_VERSION_STRING<<endl;
 #endif
 #ifdef PDNS_CONFIG_ARGS
 #define double_escape(s) #s

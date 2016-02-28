@@ -64,9 +64,7 @@ AS_IF([test "x$enable_hardening" != "xno"], [
   AC_LD_RELRO
 ])
 
-AC_SEARCH_LIBS([socket], [socket])
-AC_SEARCH_LIBS([gethostent], [nsl])
-AC_SEARCH_LIBS([inet_aton], [resolv])
+PDNS_CHECK_NETWORK_LIBS
 
 LT_PREREQ([2.2.2])
 LT_INIT([disable-static dlopen])
@@ -106,10 +104,16 @@ AC_CHECK_HEADERS(
 	[have_mmap=no]
 )
 
-
-PDNS_CHECK_READLINE
-PDNS_CHECK_RAGEL
+PDNS_ENABLE_BOTAN
 PDNS_CHECK_LIBSODIUM
+AX_CHECK_OPENSSL([
+],[
+   AC_MSG_ERROR([OpenSSL not found])
+  ]
+)
+
+PDNS_CHECK_LIBEDIT
+PDNS_CHECK_RAGEL
 PDNS_CHECK_CLOCK_GETTIME
 
 BOOST_REQUIRE([1.35])
@@ -134,50 +138,9 @@ AS_IF([test "x$lt_cv_dlopen" = "xno"],
 
 AC_SUBST([LIBDL], [$lt_cv_dlopen_libs])
 
-THREADFLAGS=""
-
-case "$host_os" in
-solaris2.10)
-  LIBS="-lposix4 -lpthread $LIBS"
-  CXXFLAGS="-D_REENTRANT $CXXFLAGS"
-  have_solaris="yes"
-  ;;
-solaris2.8 | solaris2.9 )
-  AC_DEFINE(NEED_POSIX_TYPEDEF,,[If POSIX typedefs need to be defined])
-  AC_DEFINE(NEED_INET_NTOP_PROTO,,[If your OS is so broken that it needs an additional prototype])
-  LIBS="-lposix4 -lpthread $LIBS"
-  CXXFLAGS="-D_REENTRANT $CXXFLAGS"
-  have_solaris="yes"
-  ;;
-linux*)
-  THREADFLAGS="-pthread"
-  have_linux="yes"
-  ;;
-darwin*)
-  CXXFLAGS="-D__APPLE_USE_RFC_3542 -D_XOPEN_SOURCE $CXXFLAGS"
-  ;;
-freebsd*)
-  THREADFLAGS="-pthread"
-  have_freebsd="yes"
-  ;;
-*)
-  LDFLAGS="-pthread $LDFLAGS"
-  CXXFLAGS="-pthread $CXXFLAGS"
-  ;;
-esac
-
-AM_CONDITIONAL([HAVE_FREEBSD], [test "x$have_freebsd" = "xyes"])
-AM_CONDITIONAL([HAVE_LINUX], [test "x$have_linux" = "xyes"])
-AM_CONDITIONAL([HAVE_SOLARIS], [test "x$have_solaris" = "xyes"])
-
-AC_SUBST(THREADFLAGS)
-AC_SUBST([DYNLINKFLAGS], [-export-dynamic])
-
+PDNS_CHECK_OS
 PDNS_ENABLE_VERBOSE_LOGGING
-PDNS_WITH_SYSTEM_MBEDTLS
-PDNS_ENABLE_BOTAN
 PDNS_ENABLE_PKCS11
-PDNS_WITH_CRYPTOPP
 PDNS_ENABLE_GSS_TSIG
 
 AS_IF([test "x$static" != "xno"], [
@@ -292,16 +255,30 @@ PDNS_CHECK_SQLITE3
 AM_CONDITIONAL([SQLITE3], [test "x$needsqlite3" = "xyes"])
 
 for a in $modules; do
-  moduledirs="$moduledirs ${a}backend"
+  AC_MSG_CHECKING([whether we can build module "${a}"])
+  if [[ -d "$srcdir/modules/${a}backend" ]]; then
+    AC_MSG_RESULT([yes])
+    moduledirs="$moduledirs ${a}backend"
 
-  for b in `cat $srcdir/modules/${a}backend/OBJECTFILES`; do
-    moduleobjects="$moduleobjects ../modules/${a}backend/$b"
-  done
-  modulelibs="$modulelibs `cat $srcdir/modules/${a}backend/OBJECTLIBS`"
+    for b in `cat $srcdir/modules/${a}backend/OBJECTFILES`; do
+      moduleobjects="$moduleobjects ../modules/${a}backend/$b"
+    done
+    modulelibs="$modulelibs `cat $srcdir/modules/${a}backend/OBJECTLIBS`"
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([Do not know how to build module "$a", "$srcdir/modules/${a}backend" doesn't exist! Please review --with-modules parameter for supported values.])
+  fi
 done
 
 for a in $dynmodules; do
-  moduledirs="$moduledirs ${a}backend"
+  AC_MSG_CHECKING([whether we can build dynamic module "${a}"])
+  if [[ -d "$srcdir/modules/${a}backend" ]]; then
+    AC_MSG_RESULT([yes])
+    moduledirs="$moduledirs ${a}backend"
+  else
+    AC_MSG_RESULT([no])
+    AC_MSG_ERROR([Do not know how to build module "$a", "$srcdir/modules/${a}backend" doesn't exist! Please review --with-dynmodules parameter for supported values.])
+  fi
 done
 
 LDFLAGS="$RELRO_LDFLAGS $LDFLAGS"
@@ -324,7 +301,7 @@ AC_SUBST([AM_CPPFLAGS],
 )
 
 AC_SUBST([YAHTTP_CFLAGS], ['-I$(top_srcdir)/ext/yahttp'])
-AC_SUBST([YAHTTP_LIBS], ['-L$(top_builddir)/ext/yahttp/yahttp -lyahttp'])
+AC_SUBST([YAHTTP_LIBS], ['$(top_builddir)/ext/yahttp/yahttp/libyahttp.la'])
 
 CXXFLAGS="$SANITIZER_FLAGS $CXXFLAGS"
 
@@ -345,9 +322,6 @@ AC_CONFIG_FILES([
   ext/Makefile
   ext/yahttp/Makefile
   ext/yahttp/yahttp/Makefile
-  ext/mbedtls/Makefile
-  ext/mbedtls/library/Makefile
-  ext/rapidjson/Makefile
   ext/json11/Makefile
   modules/bindbackend/Makefile
   modules/geoipbackend/Makefile
@@ -386,6 +360,7 @@ AC_MSG_NOTICE([CFLAGS: $CFLAGS])
 AC_MSG_NOTICE([CPPFLAGS: $CPPFLAGS])
 AC_MSG_NOTICE([CXXFLAGS: $CXXFLAGS])
 AC_MSG_NOTICE([LDFLAGS: $LDFLAGS])
+AC_MSG_NOTICE([LIBS: $LIBS])
 AC_MSG_NOTICE([])
 AC_MSG_NOTICE([BOOST_CPPFLAGS: $BOOST_CPPFLAGS])
 AC_MSG_NOTICE([])
