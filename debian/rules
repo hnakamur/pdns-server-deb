@@ -4,6 +4,9 @@
 version := $(shell dpkg-parsechangelog -SVersion).$(shell dpkg-vendor --query Vendor)
 CXXFLAGS += -DPACKAGEVERSION='"$(version)"'
 
+# for atomic support on mips(el)
+LDFLAGS += -latomic
+
 # Backends
 backends := bind ldap pipe gmysql gpgsql gsqlite3 geoip lua mydns remote tinydns
 
