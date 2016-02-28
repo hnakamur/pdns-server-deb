@@ -107,76 +107,58 @@ bin_PROGRAMS = pdns_control$(EXEEXT) pdnsutil$(EXEEXT) \
 
 @HAVE_RECVMMSG_TRUE@@TOOLS_TRUE@am__append_7 = calidns
 EXTRA_PROGRAMS = calidns$(EXEEXT) dnsbulktest$(EXEEXT) \
-	dnsdemog$(EXEEXT) dnsdist$(EXEEXT) dnsgram$(EXEEXT) \
-	dnsreplay$(EXEEXT) dnsscan$(EXEEXT) dnsscope$(EXEEXT) \
-	dnstcpbench$(EXEEXT) dnswasher$(EXEEXT) dumresp$(EXEEXT) \
-	kvresp$(EXEEXT) ixplore$(EXEEXT) notify$(EXEEXT) \
-	nproxy$(EXEEXT) nsec3dig$(EXEEXT) pdns_recursor$(EXEEXT) \
-	rec_control$(EXEEXT) saxfr$(EXEEXT) sdig$(EXEEXT) \
+	dnsdemog$(EXEEXT) dnsgram$(EXEEXT) dnsreplay$(EXEEXT) \
+	dnsscan$(EXEEXT) dnsscope$(EXEEXT) dnstcpbench$(EXEEXT) \
+	dnswasher$(EXEEXT) dumresp$(EXEEXT) kvresp$(EXEEXT) \
+	ixplore$(EXEEXT) notify$(EXEEXT) nproxy$(EXEEXT) \
+	nsec3dig$(EXEEXT) saxfr$(EXEEXT) sdig$(EXEEXT) \
 	speedtest$(EXEEXT) testrunner$(EXEEXT) toysdig$(EXEEXT) \
 	tsig-tests$(EXEEXT) zone2ldap$(EXEEXT)
 @BOTAN110_TRUE@am__append_8 = botan110signers.cc botansigners.cc
 @BOTAN110_TRUE@am__append_9 = $(BOTAN110_LIBS)
-@CRYPTOPP_TRUE@am__append_10 = cryptoppsigners.cc
-@CRYPTOPP_TRUE@am__append_11 = $(CRYPTOPP_LIBS)
-@LIBSODIUM_TRUE@am__append_12 = sodiumsigners.cc
-@LIBSODIUM_TRUE@am__append_13 = $(LIBSODIUM_LIBS)
-@SQLITE3_TRUE@am__append_14 = ssqlite3.cc ssqlite3.hh
-@SQLITE3_TRUE@am__append_15 = $(SQLITE3_LIBS)
-@ORACLE_TRUE@am__append_16 = $(ORACLE_LIBS)
-@PKCS11_TRUE@am__append_17 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_18 = $(P11KIT1_LIBS)
-@LUA_TRUE@am__append_19 = $(LUA_LIBS)
-@GSS_TSIG_TRUE@am__append_20 = $(GSS_LIBS)
-@BOTAN110_TRUE@am__append_21 = botan110signers.cc botansigners.cc
-@BOTAN110_TRUE@am__append_22 = $(BOTAN110_LIBS)
-@CRYPTOPP_TRUE@am__append_23 = cryptoppsigners.cc
-@CRYPTOPP_TRUE@am__append_24 = $(CRYPTOPP_LIBS)
-@LIBSODIUM_TRUE@am__append_25 = sodiumsigners.cc
-@LIBSODIUM_TRUE@am__append_26 = $(LIBSODIUM_LIBS)
-@SQLITE3_TRUE@am__append_27 = ssqlite3.cc ssqlite3.hh
-@SQLITE3_TRUE@am__append_28 = $(SQLITE3_LIBS)
-@ORACLE_TRUE@am__append_29 = $(ORACLE_LIBS)
-@PKCS11_TRUE@am__append_30 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_31 = $(P11KIT1_LIBS)
-@GSS_TSIG_TRUE@am__append_32 = $(GSS_LIBS)
+@LIBSODIUM_TRUE@am__append_10 = sodiumsigners.cc
+@LIBSODIUM_TRUE@am__append_11 = $(LIBSODIUM_LIBS)
+@SQLITE3_TRUE@am__append_12 = ssqlite3.cc ssqlite3.hh
+@SQLITE3_TRUE@am__append_13 = $(SQLITE3_LIBS)
+@ORACLE_TRUE@am__append_14 = $(ORACLE_LIBS)
+@PKCS11_TRUE@am__append_15 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_16 = $(P11KIT1_LIBS)
+@LUA_TRUE@am__append_17 = $(LUA_LIBS)
+@GSS_TSIG_TRUE@am__append_18 = $(GSS_LIBS)
+@BOTAN110_TRUE@am__append_19 = botan110signers.cc botansigners.cc
+@BOTAN110_TRUE@am__append_20 = $(BOTAN110_LIBS)
+@LIBSODIUM_TRUE@am__append_21 = sodiumsigners.cc
+@LIBSODIUM_TRUE@am__append_22 = $(LIBSODIUM_LIBS)
+@SQLITE3_TRUE@am__append_23 = ssqlite3.cc ssqlite3.hh
+@SQLITE3_TRUE@am__append_24 = $(SQLITE3_LIBS)
+@ORACLE_TRUE@am__append_25 = $(ORACLE_LIBS)
+@PKCS11_TRUE@am__append_26 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_27 = $(P11KIT1_LIBS)
+@GSS_TSIG_TRUE@am__append_28 = $(GSS_LIBS)
 
 # pkglib_LTLIBRARIES = iputils.la
 # iputils_la_SOURCES = lua-iputils.cc
 # iputils_la_LDFLAGS= -module -avoid-version
-@LDAP_TRUE@am__append_33 = zone2ldap
-@PKCS11_TRUE@am__append_34 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_35 = $(P11KIT1_LIBS)
-@GSS_TSIG_TRUE@am__append_36 = $(GSS_LIBS)
-@PKCS11_TRUE@am__append_37 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_38 = $(P11KIT1_LIBS)
+@LDAP_TRUE@am__append_29 = zone2ldap
+@PKCS11_TRUE@am__append_30 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_31 = $(P11KIT1_LIBS)
+@GSS_TSIG_TRUE@am__append_32 = $(GSS_LIBS)
+@PKCS11_TRUE@am__append_33 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_34 = $(P11KIT1_LIBS)
+@GSS_TSIG_TRUE@am__append_35 = $(GSS_LIBS)
+@PKCS11_TRUE@am__append_36 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_37 = $(P11KIT1_LIBS)
+@GSS_TSIG_TRUE@am__append_38 = $(GSS_LIBS)
 @GSS_TSIG_TRUE@am__append_39 = $(GSS_LIBS)
-@PKCS11_TRUE@am__append_40 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_41 = $(P11KIT1_LIBS)
-@GSS_TSIG_TRUE@am__append_42 = $(GSS_LIBS)
-@GSS_TSIG_TRUE@am__append_43 = $(GSS_LIBS)
-@BOTAN110_TRUE@am__append_44 = botan110signers.cc botansigners.cc
-@BOTAN110_TRUE@am__append_45 = $(BOTAN110_LIBS)
-@PKCS11_TRUE@am__append_46 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_47 = $(P11KIT1_LIBS)
-@PKCS11_TRUE@am__append_48 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_49 = $(P11KIT1_LIBS)
-@GSS_TSIG_TRUE@am__append_50 = $(GSS_LIBS)
-@PKCS11_TRUE@am__append_51 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_52 = $(P11KIT1_LIBS)
-@PKCS11_TRUE@am__append_53 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_54 = $(P11KIT1_LIBS)
-@BOTAN110_TRUE@am__append_55 = botan110signers.cc botansigners.cc
-@BOTAN110_TRUE@am__append_56 = $(BOTAN110_LIBS)
-@MALLOC_TRACE_TRUE@am__append_57 = malloctrace.cc malloctrace.hh 
-@MALLOC_TRACE_TRUE@am__append_58 = -rdynamic
-@LUA_TRUE@am__append_59 = $(LUA_LIBS)
-@HAVE_FREEBSD_TRUE@am__append_60 = kqueuemplexer.cc
-@HAVE_LINUX_TRUE@am__append_61 = epollmplexer.cc
-@HAVE_SOLARIS_TRUE@am__append_62 = \
-@HAVE_SOLARIS_TRUE@	devpollmplexer.cc \
-@HAVE_SOLARIS_TRUE@	portsmplexer.cc
-
+@BOTAN110_TRUE@am__append_40 = botan110signers.cc botansigners.cc
+@BOTAN110_TRUE@am__append_41 = $(BOTAN110_LIBS)
+@PKCS11_TRUE@am__append_42 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_43 = $(P11KIT1_LIBS)
+@PKCS11_TRUE@am__append_44 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_45 = $(P11KIT1_LIBS)
+@GSS_TSIG_TRUE@am__append_46 = $(GSS_LIBS)
+@PKCS11_TRUE@am__append_47 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_48 = $(P11KIT1_LIBS)
 @UNIT_TESTS_TRUE@TESTS = testrunner$(EXEEXT)
 subdir = pdns
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -184,24 +166,26 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/build-aux/depcomp $(top_srcdir)/build-aux/ylwrap \
 	$(top_srcdir)/build-aux/test-driver
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
-	$(top_srcdir)/m4/ax_lib_readline.m4 $(top_srcdir)/m4/boost.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_openssl.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
+	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
 	$(top_srcdir)/m4/pdns_check_bison.m4 \
 	$(top_srcdir)/m4/pdns_check_cdb.m4 \
 	$(top_srcdir)/m4/pdns_check_clock_gettime.m4 \
 	$(top_srcdir)/m4/pdns_check_curl_program.m4 \
 	$(top_srcdir)/m4/pdns_check_flex.m4 \
 	$(top_srcdir)/m4/pdns_check_ldap.m4 \
+	$(top_srcdir)/m4/pdns_check_libedit.m4 \
 	$(top_srcdir)/m4/pdns_check_libsodium.m4 \
 	$(top_srcdir)/m4/pdns_check_linkchecker.m4 \
 	$(top_srcdir)/m4/pdns_check_mkdocs.m4 \
+	$(top_srcdir)/m4/pdns_check_network_libs.m4 \
 	$(top_srcdir)/m4/pdns_check_opendbx.m4 \
+	$(top_srcdir)/m4/pdns_check_os.m4 \
 	$(top_srcdir)/m4/pdns_check_pandoc.m4 \
 	$(top_srcdir)/m4/pdns_check_ragel.m4 \
-	$(top_srcdir)/m4/pdns_check_readline.m4 \
 	$(top_srcdir)/m4/pdns_check_sqlite3.m4 \
 	$(top_srcdir)/m4/pdns_d_fortify_source.m4 \
 	$(top_srcdir)/m4/pdns_enable_botan.m4 \
@@ -217,7 +201,6 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/pdns_param_ssp_buffer_size.m4 \
 	$(top_srcdir)/m4/pdns_pie.m4 $(top_srcdir)/m4/pdns_relro.m4 \
 	$(top_srcdir)/m4/pdns_stack_protector.m4 \
-	$(top_srcdir)/m4/pdns_with_cryptopp.m4 \
 	$(top_srcdir)/m4/pdns_with_geo.m4 \
 	$(top_srcdir)/m4/pdns_with_lua.m4 \
 	$(top_srcdir)/m4/pdns_with_luajit.m4 \
@@ -225,7 +208,6 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/pdns_with_oracle.m4 \
 	$(top_srcdir)/m4/pdns_with_postgresql.m4 \
 	$(top_srcdir)/m4/pdns_with_sqlite3.m4 \
-	$(top_srcdir)/m4/pdns_with_system_mbedtls.m4 \
 	$(top_srcdir)/m4/pdns_with_unixodbc.m4 \
 	$(top_srcdir)/m4/tm-gmtoff.m4 $(top_srcdir)/m4/warnings.m4 \
 	$(top_srcdir)/configure.ac
@@ -283,24 +265,9 @@ am_dnsdemog_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	unix_utility.$(OBJEXT)
 dnsdemog_OBJECTS = $(am_dnsdemog_OBJECTS)
 dnsdemog_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am__dirstamp = $(am__leading_dot)dirstamp
-am_dnsdist_OBJECTS = base32.$(OBJEXT) dns.$(OBJEXT) dnscrypt.$(OBJEXT) \
-	dnsparser.$(OBJEXT) ednssubnet.$(OBJEXT) dnsdist.$(OBJEXT) \
-	dnsdist-carbon.$(OBJEXT) dnsdist-console.$(OBJEXT) \
-	dnsdist-dnscrypt.$(OBJEXT) dnsdist-ecs.$(OBJEXT) \
-	dnsdist-lua.$(OBJEXT) dnsdist-lua2.$(OBJEXT) \
-	dnsdist-rings.$(OBJEXT) dnsdist-tcp.$(OBJEXT) \
-	dnsdist-web.$(OBJEXT) dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) \
-	dnswriter.$(OBJEXT) iputils.$(OBJEXT) misc.$(OBJEXT) \
-	qtype.$(OBJEXT) sodcrypto.$(OBJEXT) \
-	../ext/json11/json11.$(OBJEXT)
-dnsdist_OBJECTS = $(am_dnsdist_OBJECTS)
-dnsdist_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1)
-dnsdist_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+dnsdemog_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
-	$(CXXFLAGS) $(dnsdist_LDFLAGS) $(LDFLAGS) -o $@
+	$(CXXFLAGS) $(dnsdemog_LDFLAGS) $(LDFLAGS) -o $@
 am_dnsgram_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	dnsgram.$(OBJEXT) dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) \
 	dnsparser.$(OBJEXT) dnspcap.$(OBJEXT) dnsrecords.$(OBJEXT) \
@@ -310,6 +277,9 @@ am_dnsgram_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	unix_utility.$(OBJEXT)
 dnsgram_OBJECTS = $(am_dnsgram_OBJECTS)
 dnsgram_DEPENDENCIES = $(am__DEPENDENCIES_1)
+dnsgram_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(dnsgram_LDFLAGS) $(LDFLAGS) -o $@
 am_dnsreplay_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnsparser.$(OBJEXT) \
 	dnspcap.$(OBJEXT) dnsrecords.$(OBJEXT) dnsreplay.$(OBJEXT) \
@@ -331,6 +301,9 @@ am_dnsscan_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	unix_utility.$(OBJEXT)
 dnsscan_OBJECTS = $(am_dnsscan_OBJECTS)
 dnsscan_DEPENDENCIES = $(am__DEPENDENCIES_1)
+dnsscan_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(dnsscan_LDFLAGS) $(LDFLAGS) -o $@
 am_dnsscope_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) dns.$(OBJEXT) dnslabeltext.$(OBJEXT) \
 	dnsname.$(OBJEXT) dnsparser.$(OBJEXT) dnspcap.$(OBJEXT) \
@@ -369,11 +342,11 @@ am__ixplore_SOURCES_DIST = arguments.cc base32.cc base64.cc base64.hh \
 	dns.cc dns_random.cc dns_random.hh dnslabeltext.cc dnsname.cc \
 	dnsname.hh dnsparser.cc dnsparser.hh dnsrecords.cc \
 	dnssecinfra.cc dnswriter.cc dnswriter.hh gss_context.cc \
-	gss_context.hh logger.cc mbedtlscompat.hh misc.cc misc.hh \
-	nsecrecords.cc qtype.cc rcpgenerator.cc rcpgenerator.hh \
-	resolver.cc ixfr.cc ixfr.hh ixplore.cc sillyrecords.cc \
-	sstuff.hh statbag.cc unix_utility.cc zoneparser-tng.cc \
-	pkcs11signers.cc pkcs11signers.hh
+	gss_context.hh logger.cc misc.cc misc.hh nsecrecords.cc \
+	qtype.cc rcpgenerator.cc rcpgenerator.hh resolver.cc ixfr.cc \
+	ixfr.hh ixplore.cc sillyrecords.cc sstuff.hh statbag.cc \
+	unix_utility.cc zoneparser-tng.cc pkcs11signers.cc \
+	pkcs11signers.hh
 @PKCS11_TRUE@am__objects_1 = pkcs11signers.$(OBJEXT)
 am_ixplore_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) dns.$(OBJEXT) dns_random.$(OBJEXT) \
@@ -390,6 +363,9 @@ ixplore_OBJECTS = $(am_ixplore_OBJECTS)
 @GSS_TSIG_TRUE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
 ixplore_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_3)
+ixplore_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(ixplore_LDFLAGS) $(LDFLAGS) -o $@
 am_kvresp_OBJECTS = dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) \
 	kvresp.$(OBJEXT) logger.$(OBJEXT) misc.$(OBJEXT) \
 	statbag.$(OBJEXT) unix_utility.$(OBJEXT) qtype.$(OBJEXT)
@@ -423,10 +399,10 @@ nproxy_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 am__nsec3dig_SOURCES_DIST = base32.cc base64.cc base64.hh dnsname.cc \
 	dnsname.hh dnslabeltext.cc dnsparser.cc dnsparser.hh \
 	dnsrecords.cc dnssecinfra.cc dnswriter.cc dnswriter.hh \
-	gss_context.cc gss_context.hh logger.cc mbedtlscompat.hh \
-	misc.cc misc.hh nsec3dig.cc nsecrecords.cc qtype.cc \
-	rcpgenerator.cc rcpgenerator.hh sillyrecords.cc sstuff.hh \
-	statbag.cc unix_utility.cc pkcs11signers.cc pkcs11signers.hh
+	gss_context.cc gss_context.hh logger.cc misc.cc misc.hh \
+	nsec3dig.cc nsecrecords.cc qtype.cc rcpgenerator.cc \
+	rcpgenerator.hh sillyrecords.cc sstuff.hh statbag.cc \
+	unix_utility.cc pkcs11signers.cc pkcs11signers.hh
 am_nsec3dig_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	dnsname.$(OBJEXT) dnslabeltext.$(OBJEXT) dnsparser.$(OBJEXT) \
 	dnsrecords.$(OBJEXT) dnssecinfra.$(OBJEXT) dnswriter.$(OBJEXT) \
@@ -437,76 +413,15 @@ am_nsec3dig_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 nsec3dig_OBJECTS = $(am_nsec3dig_OBJECTS)
 nsec3dig_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_3)
+nsec3dig_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(nsec3dig_LDFLAGS) $(LDFLAGS) -o $@
 am_pdns_control_OBJECTS = arguments.$(OBJEXT) dynloader.$(OBJEXT) \
 	dynmessenger.$(OBJEXT) logger.$(OBJEXT) misc.$(OBJEXT) \
 	qtype.$(OBJEXT) statbag.$(OBJEXT) unix_utility.$(OBJEXT) \
 	dnsname.$(OBJEXT) dnslabeltext.$(OBJEXT)
 pdns_control_OBJECTS = $(am_pdns_control_OBJECTS)
 pdns_control_LDADD = $(LDADD)
-am__pdns_recursor_SOURCES_DIST = arguments.cc base32.cc base64.cc \
-	base64.hh cachecleaner.hh dns.cc dns_random.cc dnslabeltext.cc \
-	dnsname.cc dnsname.hh dnsparser.cc dnsrecords.cc dnsrecords.hh \
-	dnssecinfra.cc dnswriter.cc dnswriter.hh ednssubnet.cc \
-	ednssubnet.hh filterpo.cc filterpo.hh gss_context.cc \
-	gss_context.hh iputils.cc ixfr.cc ixfr.hh json.cc json.hh \
-	logger.cc lua-recursor4.cc lua-recursor4.hh lwres.cc lwres.hh \
-	mbedtlscompat.hh mbedtlssigners.cc misc.cc mtasker.hh \
-	nsecrecords.cc pdns_recursor.cc pubsuffix.cc qtype.cc \
-	randomhelper.cc rcpgenerator.cc rcpgenerator.hh rec-carbon.cc \
-	rec_channel.cc rec_channel.hh rec_channel_rec.cc \
-	rec-lua-conf.cc recpacketcache.cc recpacketcache.hh \
-	recursor_cache.cc recursor_cache.hh reczones.cc resolver.cc \
-	resolver.hh responsestats.cc rpzloader.cc rpzloader.hh \
-	secpoll-recursor.cc secpoll-recursor.hh selectmplexer.cc \
-	sillyrecords.cc sortlist.cc sortlist.hh statbag.cc syncres.cc \
-	syncres.hh unix_utility.cc validate.cc validate.hh \
-	validate-recursor.cc validate-recursor.hh version.cc \
-	version.hh webserver.cc webserver.hh ws-api.cc ws-api.hh \
-	ws-recursor.cc ws-recursor.hh zoneparser-tng.cc \
-	zoneparser-tng.hh pkcs11signers.cc pkcs11signers.hh \
-	botan110signers.cc botansigners.cc malloctrace.cc \
-	malloctrace.hh kqueuemplexer.cc epollmplexer.cc \
-	devpollmplexer.cc portsmplexer.cc
-@BOTAN110_TRUE@am__objects_2 = botan110signers.$(OBJEXT) \
-@BOTAN110_TRUE@	botansigners.$(OBJEXT)
-@MALLOC_TRACE_TRUE@am__objects_3 = malloctrace.$(OBJEXT)
-@HAVE_FREEBSD_TRUE@am__objects_4 = kqueuemplexer.$(OBJEXT)
-@HAVE_LINUX_TRUE@am__objects_5 = epollmplexer.$(OBJEXT)
-@HAVE_SOLARIS_TRUE@am__objects_6 = devpollmplexer.$(OBJEXT) \
-@HAVE_SOLARIS_TRUE@	portsmplexer.$(OBJEXT)
-am_pdns_recursor_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
-	base64.$(OBJEXT) dns.$(OBJEXT) dns_random.$(OBJEXT) \
-	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnsparser.$(OBJEXT) \
-	dnsrecords.$(OBJEXT) dnssecinfra.$(OBJEXT) dnswriter.$(OBJEXT) \
-	ednssubnet.$(OBJEXT) filterpo.$(OBJEXT) gss_context.$(OBJEXT) \
-	iputils.$(OBJEXT) ixfr.$(OBJEXT) json.$(OBJEXT) \
-	logger.$(OBJEXT) lua-recursor4.$(OBJEXT) lwres.$(OBJEXT) \
-	mbedtlssigners.$(OBJEXT) misc.$(OBJEXT) nsecrecords.$(OBJEXT) \
-	pdns_recursor.$(OBJEXT) pubsuffix.$(OBJEXT) qtype.$(OBJEXT) \
-	randomhelper.$(OBJEXT) rcpgenerator.$(OBJEXT) \
-	rec-carbon.$(OBJEXT) rec_channel.$(OBJEXT) \
-	rec_channel_rec.$(OBJEXT) rec-lua-conf.$(OBJEXT) \
-	recpacketcache.$(OBJEXT) recursor_cache.$(OBJEXT) \
-	reczones.$(OBJEXT) resolver.$(OBJEXT) responsestats.$(OBJEXT) \
-	rpzloader.$(OBJEXT) secpoll-recursor.$(OBJEXT) \
-	selectmplexer.$(OBJEXT) sillyrecords.$(OBJEXT) \
-	sortlist.$(OBJEXT) statbag.$(OBJEXT) syncres.$(OBJEXT) \
-	unix_utility.$(OBJEXT) validate.$(OBJEXT) \
-	validate-recursor.$(OBJEXT) version.$(OBJEXT) \
-	webserver.$(OBJEXT) ws-api.$(OBJEXT) ws-recursor.$(OBJEXT) \
-	zoneparser-tng.$(OBJEXT) $(am__objects_1) $(am__objects_2) \
-	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
-	$(am__objects_6)
-pdns_recursor_OBJECTS = $(am_pdns_recursor_OBJECTS)
-@BOTAN110_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
-@LUA_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
-pdns_recursor_DEPENDENCIES = $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
-	$(am__DEPENDENCIES_4) $(am__DEPENDENCIES_5)
-pdns_recursor_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX \
-	$(AM_LIBTOOLFLAGS) $(LIBTOOLFLAGS) --mode=link $(CXXLD) \
-	$(AM_CXXFLAGS) $(CXXFLAGS) $(pdns_recursor_LDFLAGS) $(LDFLAGS) \
-	-o $@
 am__pdns_server_SOURCES_DIST = arguments.cc arguments.hh \
 	auth-carbon.cc backends/gsql/gsqlbackend.cc \
 	backends/gsql/gsqlbackend.hh backends/gsql/ssql.hh base32.cc \
@@ -517,31 +432,33 @@ am__pdns_server_SOURCES_DIST = arguments.cc arguments.hh \
 	dns_random.cc dns_random.hh dnsbackend.cc dnsbackend.hh \
 	dnslabeltext.cc dnsname.cc dnsname.hh dnspacket.cc \
 	dnspacket.hh dnsparser.cc dnsproxy.cc dnsproxy.hh \
-	dnsrecords.cc dnssecinfra.cc dnssecinfra.hh dnsseckeeper.hh \
-	dnssecsigner.cc dnswriter.cc dynhandler.cc dynhandler.hh \
-	dynlistener.cc dynlistener.hh dynmessenger.hh ednssubnet.cc \
-	ednssubnet.hh gss_context.cc gss_context.hh iputils.cc \
-	iputils.hh json.cc json.hh lock.hh logger.cc logger.hh \
-	lua-auth.cc lua-auth.hh lua-pdns.cc lua-pdns.hh lua-iputils.cc \
-	mastercommunicator.cc mbedtlscompat.hh md5.hh misc.cc misc.hh \
+	dnsrecords.cc dnsrecords.hh dnssecinfra.cc dnssecinfra.hh \
+	dnsseckeeper.hh dnssecsigner.cc dnswriter.cc dynhandler.cc \
+	dynhandler.hh dynlistener.cc dynlistener.hh dynmessenger.hh \
+	ednssubnet.cc ednssubnet.hh gss_context.cc gss_context.hh \
+	iputils.cc iputils.hh json.cc json.hh lock.hh logger.cc \
+	logger.hh lua-auth.cc lua-auth.hh lua-pdns.cc lua-pdns.hh \
+	lua-iputils.cc mastercommunicator.cc md5.hh misc.cc misc.hh \
 	nameserver.cc nameserver.hh namespaces.hh nsecrecords.cc \
-	packetcache.cc packetcache.hh packethandler.cc \
-	packethandler.hh pdnsexception.hh mbedtlssigners.cc qtype.cc \
-	qtype.hh randomhelper.cc rcpgenerator.cc receiver.cc \
-	resolver.cc resolver.hh responsestats.cc responsestats.hh \
-	responsestats-auth.cc rfc2136handler.cc secpoll-auth.cc \
-	secpoll-auth.hh serialtweaker.cc sha.hh signingpipe.cc \
-	signingpipe.hh sillyrecords.cc slavecommunicator.cc statbag.cc \
-	statbag.hh tcpreceiver.cc tcpreceiver.hh tkey.cc \
-	ueberbackend.cc ueberbackend.hh unix_semaphore.cc \
-	unix_utility.cc utility.hh version.cc version.hh webserver.cc \
-	webserver.hh ws-api.cc ws-api.hh ws-auth.cc ws-auth.hh \
-	zoneparser-tng.cc botan110signers.cc botansigners.cc \
-	cryptoppsigners.cc sodiumsigners.cc ssqlite3.cc ssqlite3.hh \
-	pkcs11signers.cc pkcs11signers.hh
-@CRYPTOPP_TRUE@am__objects_7 = cryptoppsigners.$(OBJEXT)
-@LIBSODIUM_TRUE@am__objects_8 = sodiumsigners.$(OBJEXT)
-@SQLITE3_TRUE@am__objects_9 = ssqlite3.$(OBJEXT)
+	opensslsigners.cc opensslsigners.hh packetcache.cc \
+	packetcache.hh packethandler.cc packethandler.hh \
+	pdnsexception.hh qtype.cc qtype.hh randomhelper.cc \
+	rcpgenerator.cc receiver.cc resolver.cc resolver.hh \
+	responsestats.cc responsestats.hh responsestats-auth.cc \
+	rfc2136handler.cc secpoll-auth.cc secpoll-auth.hh \
+	serialtweaker.cc sha.hh signingpipe.cc signingpipe.hh \
+	sillyrecords.cc slavecommunicator.cc statbag.cc statbag.hh \
+	tcpreceiver.cc tcpreceiver.hh tkey.cc ueberbackend.cc \
+	ueberbackend.hh unix_semaphore.cc unix_utility.cc utility.hh \
+	version.cc version.hh webserver.cc webserver.hh ws-api.cc \
+	ws-api.hh ws-auth.cc ws-auth.hh zoneparser-tng.cc \
+	botan110signers.cc botansigners.cc sodiumsigners.cc \
+	ssqlite3.cc ssqlite3.hh pkcs11signers.cc pkcs11signers.hh
+am__dirstamp = $(am__leading_dot)dirstamp
+@BOTAN110_TRUE@am__objects_2 = botan110signers.$(OBJEXT) \
+@BOTAN110_TRUE@	botansigners.$(OBJEXT)
+@LIBSODIUM_TRUE@am__objects_3 = sodiumsigners.$(OBJEXT)
+@SQLITE3_TRUE@am__objects_4 = ssqlite3.$(OBJEXT)
 am_pdns_server_OBJECTS = arguments.$(OBJEXT) auth-carbon.$(OBJEXT) \
 	backends/gsql/gsqlbackend.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
@@ -557,31 +474,30 @@ am_pdns_server_OBJECTS = arguments.$(OBJEXT) auth-carbon.$(OBJEXT) \
 	lua-pdns.$(OBJEXT) lua-iputils.$(OBJEXT) \
 	mastercommunicator.$(OBJEXT) misc.$(OBJEXT) \
 	nameserver.$(OBJEXT) nsecrecords.$(OBJEXT) \
-	packetcache.$(OBJEXT) packethandler.$(OBJEXT) \
-	mbedtlssigners.$(OBJEXT) qtype.$(OBJEXT) \
-	randomhelper.$(OBJEXT) rcpgenerator.$(OBJEXT) \
-	receiver.$(OBJEXT) resolver.$(OBJEXT) responsestats.$(OBJEXT) \
-	responsestats-auth.$(OBJEXT) rfc2136handler.$(OBJEXT) \
-	secpoll-auth.$(OBJEXT) serialtweaker.$(OBJEXT) \
-	signingpipe.$(OBJEXT) sillyrecords.$(OBJEXT) \
-	slavecommunicator.$(OBJEXT) statbag.$(OBJEXT) \
-	tcpreceiver.$(OBJEXT) tkey.$(OBJEXT) ueberbackend.$(OBJEXT) \
-	unix_semaphore.$(OBJEXT) unix_utility.$(OBJEXT) \
-	version.$(OBJEXT) webserver.$(OBJEXT) ws-api.$(OBJEXT) \
-	ws-auth.$(OBJEXT) zoneparser-tng.$(OBJEXT) $(am__objects_2) \
-	$(am__objects_7) $(am__objects_8) $(am__objects_9) \
+	opensslsigners.$(OBJEXT) packetcache.$(OBJEXT) \
+	packethandler.$(OBJEXT) qtype.$(OBJEXT) randomhelper.$(OBJEXT) \
+	rcpgenerator.$(OBJEXT) receiver.$(OBJEXT) resolver.$(OBJEXT) \
+	responsestats.$(OBJEXT) responsestats-auth.$(OBJEXT) \
+	rfc2136handler.$(OBJEXT) secpoll-auth.$(OBJEXT) \
+	serialtweaker.$(OBJEXT) signingpipe.$(OBJEXT) \
+	sillyrecords.$(OBJEXT) slavecommunicator.$(OBJEXT) \
+	statbag.$(OBJEXT) tcpreceiver.$(OBJEXT) tkey.$(OBJEXT) \
+	ueberbackend.$(OBJEXT) unix_semaphore.$(OBJEXT) \
+	unix_utility.$(OBJEXT) version.$(OBJEXT) webserver.$(OBJEXT) \
+	ws-api.$(OBJEXT) ws-auth.$(OBJEXT) zoneparser-tng.$(OBJEXT) \
+	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
 	$(am__objects_1)
 pdns_server_OBJECTS = $(am_pdns_server_OBJECTS)
-@CRYPTOPP_TRUE@am__DEPENDENCIES_6 = $(am__DEPENDENCIES_1)
-@LIBSODIUM_TRUE@am__DEPENDENCIES_7 = $(am__DEPENDENCIES_1)
-@SQLITE3_TRUE@am__DEPENDENCIES_8 = $(am__DEPENDENCIES_1)
-@ORACLE_TRUE@am__DEPENDENCIES_9 = $(am__DEPENDENCIES_1)
+@BOTAN110_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
+@LIBSODIUM_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
+@SQLITE3_TRUE@am__DEPENDENCIES_6 = $(am__DEPENDENCIES_1)
+@ORACLE_TRUE@am__DEPENDENCIES_7 = $(am__DEPENDENCIES_1)
+@LUA_TRUE@am__DEPENDENCIES_8 = $(am__DEPENDENCIES_1)
 pdns_server_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_4) \
-	$(am__DEPENDENCIES_6) $(am__DEPENDENCIES_7) \
-	$(am__DEPENDENCIES_8) $(am__DEPENDENCIES_9) \
-	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_5) \
-	$(am__DEPENDENCIES_3)
+	$(JSON11_LIBS) $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_4) \
+	$(am__DEPENDENCIES_5) $(am__DEPENDENCIES_6) \
+	$(am__DEPENDENCIES_7) $(am__DEPENDENCIES_2) \
+	$(am__DEPENDENCIES_8) $(am__DEPENDENCIES_3)
 pdns_server_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(pdns_server_LDFLAGS) $(LDFLAGS) -o $@
@@ -593,14 +509,13 @@ am__pdnsutil_SOURCES_DIST = arguments.cc backends/gsql/gsqlbackend.cc \
 	dns_random.cc dnsrecords.cc dnssecinfra.cc dnssecinfra.hh \
 	dnssecsigner.cc dnswriter.cc dnswriter.hh dynlistener.cc \
 	ednssubnet.cc gss_context.cc gss_context.hh iputils.cc \
-	iputils.hh json.cc logger.cc mbedtlscompat.hh misc.cc misc.hh \
-	nsecrecords.cc packetcache.cc pdnsutil.cc mbedtlssigners.cc \
+	iputils.hh json.cc logger.cc misc.cc misc.hh nsecrecords.cc \
+	opensslsigners.cc opensslsigners.hh packetcache.cc pdnsutil.cc \
 	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
 	serialtweaker.cc signingpipe.cc sillyrecords.cc sstuff.hh \
 	statbag.cc ueberbackend.cc unix_utility.cc zoneparser-tng.cc \
-	botan110signers.cc botansigners.cc cryptoppsigners.cc \
-	sodiumsigners.cc ssqlite3.cc ssqlite3.hh pkcs11signers.cc \
-	pkcs11signers.hh
+	botan110signers.cc botansigners.cc sodiumsigners.cc \
+	ssqlite3.cc ssqlite3.hh pkcs11signers.cc pkcs11signers.hh
 am_pdnsutil_OBJECTS = arguments.$(OBJEXT) \
 	backends/gsql/gsqlbackend.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
@@ -611,38 +526,31 @@ am_pdnsutil_OBJECTS = arguments.$(OBJEXT) \
 	dnswriter.$(OBJEXT) dynlistener.$(OBJEXT) ednssubnet.$(OBJEXT) \
 	gss_context.$(OBJEXT) iputils.$(OBJEXT) json.$(OBJEXT) \
 	logger.$(OBJEXT) misc.$(OBJEXT) nsecrecords.$(OBJEXT) \
-	packetcache.$(OBJEXT) pdnsutil.$(OBJEXT) \
-	mbedtlssigners.$(OBJEXT) qtype.$(OBJEXT) \
-	randomhelper.$(OBJEXT) rcpgenerator.$(OBJEXT) \
-	serialtweaker.$(OBJEXT) signingpipe.$(OBJEXT) \
-	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
+	opensslsigners.$(OBJEXT) packetcache.$(OBJEXT) \
+	pdnsutil.$(OBJEXT) qtype.$(OBJEXT) randomhelper.$(OBJEXT) \
+	rcpgenerator.$(OBJEXT) serialtweaker.$(OBJEXT) \
+	signingpipe.$(OBJEXT) sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
 	ueberbackend.$(OBJEXT) unix_utility.$(OBJEXT) \
-	zoneparser-tng.$(OBJEXT) $(am__objects_2) $(am__objects_7) \
-	$(am__objects_8) $(am__objects_9) $(am__objects_1)
+	zoneparser-tng.$(OBJEXT) $(am__objects_2) $(am__objects_3) \
+	$(am__objects_4) $(am__objects_1)
 pdnsutil_OBJECTS = $(am_pdnsutil_OBJECTS)
-pdnsutil_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
+pdnsutil_DEPENDENCIES = $(am__DEPENDENCIES_1) $(JSON11_LIBS) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_4) $(am__DEPENDENCIES_6) \
-	$(am__DEPENDENCIES_7) $(am__DEPENDENCIES_8) \
-	$(am__DEPENDENCIES_9) $(am__DEPENDENCIES_2) \
+	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_4) \
+	$(am__DEPENDENCIES_5) $(am__DEPENDENCIES_6) \
+	$(am__DEPENDENCIES_7) $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_3)
 pdnsutil_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(pdnsutil_LDFLAGS) $(LDFLAGS) -o $@
-am_rec_control_OBJECTS = arguments.$(OBJEXT) dnsname.$(OBJEXT) \
-	dnslabeltext.$(OBJEXT) logger.$(OBJEXT) misc.$(OBJEXT) \
-	qtype.$(OBJEXT) rec_channel.$(OBJEXT) rec_control.$(OBJEXT) \
-	statbag.$(OBJEXT) unix_utility.$(OBJEXT)
-rec_control_OBJECTS = $(am_rec_control_OBJECTS)
-rec_control_LDADD = $(LDADD)
 am__saxfr_SOURCES_DIST = base32.cc base64.cc base64.hh dns_random.cc \
 	dns_random.hh dnslabeltext.cc dnsname.cc dnsname.hh \
 	dnsparser.cc dnsparser.hh dnsrecords.cc dnssecinfra.cc \
 	dnswriter.cc dnswriter.hh gss_context.cc gss_context.hh \
-	logger.cc mbedtlscompat.hh misc.cc misc.hh nsecrecords.cc \
-	qtype.cc rcpgenerator.cc rcpgenerator.hh saxfr.cc \
-	sillyrecords.cc sstuff.hh statbag.cc unix_utility.cc \
-	pkcs11signers.cc pkcs11signers.hh
+	logger.cc misc.cc misc.hh nsecrecords.cc qtype.cc \
+	rcpgenerator.cc rcpgenerator.hh saxfr.cc sillyrecords.cc \
+	sstuff.hh statbag.cc unix_utility.cc pkcs11signers.cc \
+	pkcs11signers.hh
 am_saxfr_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	dns_random.$(OBJEXT) dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) \
 	dnsparser.$(OBJEXT) dnsrecords.$(OBJEXT) dnssecinfra.$(OBJEXT) \
@@ -653,6 +561,9 @@ am_saxfr_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 saxfr_OBJECTS = $(am_saxfr_OBJECTS)
 saxfr_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_3)
+saxfr_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(saxfr_LDFLAGS) $(LDFLAGS) -o $@
 am_sdig_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) dns.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnsparser.$(OBJEXT) \
 	dnsrecords.$(OBJEXT) dnswriter.$(OBJEXT) ednssubnet.$(OBJEXT) \
@@ -662,6 +573,9 @@ am_sdig_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) dns.$(OBJEXT) \
 	unix_utility.$(OBJEXT)
 sdig_OBJECTS = $(am_sdig_OBJECTS)
 sdig_DEPENDENCIES = $(am__DEPENDENCIES_1)
+sdig_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(sdig_LDFLAGS) $(LDFLAGS) -o $@
 am_speedtest_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnsparser.$(OBJEXT) \
 	dnsrecords.$(OBJEXT) dnswriter.$(OBJEXT) logger.$(OBJEXT) \
@@ -670,21 +584,25 @@ am_speedtest_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	speedtest.$(OBJEXT) statbag.$(OBJEXT) unix_utility.$(OBJEXT)
 speedtest_OBJECTS = $(am_speedtest_OBJECTS)
 speedtest_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
+speedtest_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(speedtest_LDFLAGS) $(LDFLAGS) -o $@
 am__testrunner_SOURCES_DIST = arguments.cc base32.cc base64.cc \
 	bindlexer.l bindparser.yy dns.cc dns_random.cc dnsbackend.cc \
 	dnslabeltext.cc dnsname.cc dnsname.hh dnspacket.cc \
-	dnsparser.cc dnsrecords.cc dnssecinfra.cc dnswriter.cc \
-	ednssubnet.cc gss_context.cc gss_context.hh iputils.cc \
-	logger.cc misc.cc nameserver.cc nsecrecords.cc packetcache.cc \
-	qtype.cc rcpgenerator.cc responsestats.cc \
-	responsestats-auth.cc sillyrecords.cc statbag.cc \
-	test-arguments_cc.cc test-base32_cc.cc test-base64_cc.cc \
-	test-bindparser_cc.cc test-delaypipe_hh.cc \
-	test-distributor_hh.cc test-dns_random_hh.cc \
-	test-dnsname_cc.cc test-dnsrecords_cc.cc test-iputils_hh.cc \
-	test-md5_hh.cc test-misc_hh.cc test-nameserver_cc.cc \
-	test-nmtree.cc test-packetcache_cc.cc test-rcpgenerator_cc.cc \
-	test-sha_hh.cc test-sholder_hh.cc test-statbag_cc.cc \
+	dnsparser.hh dnsparser.cc dnsrecords.cc dnssecinfra.cc \
+	dnswriter.cc ednssubnet.cc gss_context.cc gss_context.hh \
+	iputils.cc logger.cc misc.cc nameserver.cc nsecrecords.cc \
+	packetcache.cc qtype.cc rcpgenerator.cc recpacketcache.cc \
+	recpacketcache.hh responsestats.cc responsestats-auth.cc \
+	sillyrecords.cc statbag.cc test-arguments_cc.cc \
+	test-base32_cc.cc test-base64_cc.cc test-bindparser_cc.cc \
+	test-delaypipe_hh.cc test-distributor_hh.cc \
+	test-dns_random_hh.cc test-dnsname_cc.cc test-dnsparser_hh.cc \
+	test-dnsrecords_cc.cc test-iputils_hh.cc test-md5_hh.cc \
+	test-misc_hh.cc test-nameserver_cc.cc test-nmtree.cc \
+	test-packetcache_cc.cc test-rcpgenerator_cc.cc \
+	test-recpacketcache_cc.cc test-sha_hh.cc test-statbag_cc.cc \
 	test-zoneparser_tng_cc.cc testrunner.cc ueberbackend.cc \
 	unix_utility.cc zoneparser-tng.cc zoneparser-tng.hh \
 	pkcs11signers.cc pkcs11signers.hh
@@ -697,17 +615,18 @@ am_testrunner_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	iputils.$(OBJEXT) logger.$(OBJEXT) misc.$(OBJEXT) \
 	nameserver.$(OBJEXT) nsecrecords.$(OBJEXT) \
 	packetcache.$(OBJEXT) qtype.$(OBJEXT) rcpgenerator.$(OBJEXT) \
-	responsestats.$(OBJEXT) responsestats-auth.$(OBJEXT) \
-	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
-	test-arguments_cc.$(OBJEXT) test-base32_cc.$(OBJEXT) \
-	test-base64_cc.$(OBJEXT) test-bindparser_cc.$(OBJEXT) \
-	test-delaypipe_hh.$(OBJEXT) test-distributor_hh.$(OBJEXT) \
-	test-dns_random_hh.$(OBJEXT) test-dnsname_cc.$(OBJEXT) \
+	recpacketcache.$(OBJEXT) responsestats.$(OBJEXT) \
+	responsestats-auth.$(OBJEXT) sillyrecords.$(OBJEXT) \
+	statbag.$(OBJEXT) test-arguments_cc.$(OBJEXT) \
+	test-base32_cc.$(OBJEXT) test-base64_cc.$(OBJEXT) \
+	test-bindparser_cc.$(OBJEXT) test-delaypipe_hh.$(OBJEXT) \
+	test-distributor_hh.$(OBJEXT) test-dns_random_hh.$(OBJEXT) \
+	test-dnsname_cc.$(OBJEXT) test-dnsparser_hh.$(OBJEXT) \
 	test-dnsrecords_cc.$(OBJEXT) test-iputils_hh.$(OBJEXT) \
 	test-md5_hh.$(OBJEXT) test-misc_hh.$(OBJEXT) \
 	test-nameserver_cc.$(OBJEXT) test-nmtree.$(OBJEXT) \
 	test-packetcache_cc.$(OBJEXT) test-rcpgenerator_cc.$(OBJEXT) \
-	test-sha_hh.$(OBJEXT) test-sholder_hh.$(OBJEXT) \
+	test-recpacketcache_cc.$(OBJEXT) test-sha_hh.$(OBJEXT) \
 	test-statbag_cc.$(OBJEXT) test-zoneparser_tng_cc.$(OBJEXT) \
 	testrunner.$(OBJEXT) ueberbackend.$(OBJEXT) \
 	unix_utility.$(OBJEXT) zoneparser-tng.$(OBJEXT) \
@@ -722,34 +641,38 @@ testrunner_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 am__toysdig_SOURCES_DIST = base32.cc base64.cc base64.hh dns_random.cc \
 	dnsname.cc dnsname.hh dnslabeltext.cc dnsparser.cc \
 	dnsparser.hh dnsrecords.cc dnssecinfra.cc dnswriter.cc \
-	dnswriter.hh ednssubnet.cc ednssubnet.hh gss_context.cc \
-	gss_context.hh logger.cc mbedtlscompat.hh mbedtlssigners.cc \
-	misc.cc misc.hh nsecrecords.cc qtype.cc randomhelper.cc \
-	rcpgenerator.cc rcpgenerator.hh sillyrecords.cc sstuff.hh \
-	statbag.cc toysdig.cc unix_utility.cc validate.cc validate.hh \
-	botan110signers.cc botansigners.cc pkcs11signers.cc \
-	pkcs11signers.hh
+	dnswriter.hh ednssubnet.cc ednssubnet.hh filterpo.hh \
+	gss_context.cc gss_context.hh logger.cc misc.cc misc.hh \
+	nsecrecords.cc opensslsigners.cc opensslsigners.hh qtype.cc \
+	randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
+	rec-lua-conf.hh recursor_cache.hh sholder.hh sillyrecords.cc \
+	sortlist.hh sstuff.hh statbag.cc toysdig.cc unix_utility.cc \
+	validate.cc validate.hh botan110signers.cc botansigners.cc \
+	pkcs11signers.cc pkcs11signers.hh
 am_toysdig_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	dns_random.$(OBJEXT) dnsname.$(OBJEXT) dnslabeltext.$(OBJEXT) \
 	dnsparser.$(OBJEXT) dnsrecords.$(OBJEXT) dnssecinfra.$(OBJEXT) \
 	dnswriter.$(OBJEXT) ednssubnet.$(OBJEXT) gss_context.$(OBJEXT) \
-	logger.$(OBJEXT) mbedtlssigners.$(OBJEXT) misc.$(OBJEXT) \
-	nsecrecords.$(OBJEXT) qtype.$(OBJEXT) randomhelper.$(OBJEXT) \
-	rcpgenerator.$(OBJEXT) sillyrecords.$(OBJEXT) \
-	statbag.$(OBJEXT) toysdig.$(OBJEXT) unix_utility.$(OBJEXT) \
-	validate.$(OBJEXT) $(am__objects_2) $(am__objects_1)
+	logger.$(OBJEXT) misc.$(OBJEXT) nsecrecords.$(OBJEXT) \
+	opensslsigners.$(OBJEXT) qtype.$(OBJEXT) \
+	randomhelper.$(OBJEXT) rcpgenerator.$(OBJEXT) \
+	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) toysdig.$(OBJEXT) \
+	unix_utility.$(OBJEXT) validate.$(OBJEXT) $(am__objects_2) \
+	$(am__objects_1)
 toysdig_OBJECTS = $(am_toysdig_OBJECTS)
 toysdig_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_3) \
 	$(am__DEPENDENCIES_4) $(am__DEPENDENCIES_2)
+toysdig_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(toysdig_LDFLAGS) $(LDFLAGS) -o $@
 am__tsig_tests_SOURCES_DIST = arguments.cc base32.cc base64.cc \
 	base64.hh dns.cc dns_random.cc dns_random.hh dnslabeltext.cc \
 	dnsname.cc dnsname.hh dnsparser.cc dnsparser.hh dnsrecords.cc \
 	dnssecinfra.cc dnswriter.cc dnswriter.hh gss_context.cc \
-	gss_context.hh logger.cc mbedtlscompat.hh misc.cc misc.hh \
-	nsecrecords.cc qtype.cc randomhelper.cc rcpgenerator.cc \
-	rcpgenerator.hh resolver.cc sillyrecords.cc sstuff.hh \
-	statbag.cc tsig-tests.cc unix_utility.cc pkcs11signers.cc \
-	pkcs11signers.hh
+	gss_context.hh logger.cc misc.cc misc.hh nsecrecords.cc \
+	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
+	resolver.cc sillyrecords.cc sstuff.hh statbag.cc tsig-tests.cc \
+	unix_utility.cc pkcs11signers.cc pkcs11signers.hh
 am_tsig_tests_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) dns.$(OBJEXT) dns_random.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnsparser.$(OBJEXT) \
@@ -762,6 +685,9 @@ am_tsig_tests_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 tsig_tests_OBJECTS = $(am_tsig_tests_OBJECTS)
 tsig_tests_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_3)
+tsig_tests_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(tsig_tests_LDFLAGS) $(LDFLAGS) -o $@
 am_zone2json_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnsparser.$(OBJEXT) \
@@ -771,7 +697,10 @@ am_zone2json_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	statbag.$(OBJEXT) unix_utility.$(OBJEXT) zone2json.$(OBJEXT) \
 	zoneparser-tng.$(OBJEXT)
 zone2json_OBJECTS = $(am_zone2json_OBJECTS)
-zone2json_DEPENDENCIES = $(am__DEPENDENCIES_1)
+zone2json_DEPENDENCIES = $(am__DEPENDENCIES_1) $(JSON11_LIBS)
+zone2json_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(zone2json_LDFLAGS) $(LDFLAGS) -o $@
 am_zone2ldap_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
 	dns_random.$(OBJEXT) dnsname.$(OBJEXT) dnslabeltext.$(OBJEXT) \
@@ -782,6 +711,9 @@ am_zone2ldap_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	zoneparser-tng.$(OBJEXT)
 zone2ldap_OBJECTS = $(am_zone2ldap_OBJECTS)
 zone2ldap_DEPENDENCIES = $(am__DEPENDENCIES_1)
+zone2ldap_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(zone2ldap_LDFLAGS) $(LDFLAGS) -o $@
 am_zone2sql_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
 	dns.$(OBJEXT) dns_random.$(OBJEXT) dnsname.$(OBJEXT) \
@@ -792,7 +724,10 @@ am_zone2sql_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	statbag.$(OBJEXT) unix_utility.$(OBJEXT) zone2sql.$(OBJEXT) \
 	zoneparser-tng.$(OBJEXT)
 zone2sql_OBJECTS = $(am_zone2sql_OBJECTS)
-zone2sql_DEPENDENCIES = $(am__DEPENDENCIES_1)
+zone2sql_DEPENDENCIES = $(am__DEPENDENCIES_1) $(JSON11_LIBS)
+zone2sql_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(zone2sql_LDFLAGS) $(LDFLAGS) -o $@
 SCRIPTS = $(noinst_SCRIPTS)
 AM_V_P = $(am__v_P_@AM_V@)
 am__v_P_ = $(am__v_P_@AM_DEFAULT_V@)
@@ -864,27 +799,24 @@ am__v_YACC_ = $(am__v_YACC_@AM_DEFAULT_V@)
 am__v_YACC_0 = @echo "  YACC    " $@;
 am__v_YACC_1 = 
 SOURCES = $(calidns_SOURCES) $(dnsbulktest_SOURCES) \
-	$(dnsdemog_SOURCES) $(dnsdist_SOURCES) $(dnsgram_SOURCES) \
-	$(dnsreplay_SOURCES) $(dnsscan_SOURCES) $(dnsscope_SOURCES) \
-	$(dnstcpbench_SOURCES) $(dnswasher_SOURCES) $(dumresp_SOURCES) \
-	$(ixplore_SOURCES) $(kvresp_SOURCES) $(notify_SOURCES) \
-	$(nproxy_SOURCES) $(nsec3dig_SOURCES) $(pdns_control_SOURCES) \
-	$(pdns_recursor_SOURCES) $(pdns_server_SOURCES) \
-	$(pdnsutil_SOURCES) $(rec_control_SOURCES) $(saxfr_SOURCES) \
+	$(dnsdemog_SOURCES) $(dnsgram_SOURCES) $(dnsreplay_SOURCES) \
+	$(dnsscan_SOURCES) $(dnsscope_SOURCES) $(dnstcpbench_SOURCES) \
+	$(dnswasher_SOURCES) $(dumresp_SOURCES) $(ixplore_SOURCES) \
+	$(kvresp_SOURCES) $(notify_SOURCES) $(nproxy_SOURCES) \
+	$(nsec3dig_SOURCES) $(pdns_control_SOURCES) \
+	$(pdns_server_SOURCES) $(pdnsutil_SOURCES) $(saxfr_SOURCES) \
 	$(sdig_SOURCES) $(speedtest_SOURCES) $(testrunner_SOURCES) \
 	$(toysdig_SOURCES) $(tsig_tests_SOURCES) $(zone2json_SOURCES) \
 	$(zone2ldap_SOURCES) $(zone2sql_SOURCES)
 DIST_SOURCES = $(calidns_SOURCES) $(dnsbulktest_SOURCES) \
-	$(dnsdemog_SOURCES) $(dnsdist_SOURCES) $(dnsgram_SOURCES) \
-	$(dnsreplay_SOURCES) $(dnsscan_SOURCES) $(dnsscope_SOURCES) \
-	$(dnstcpbench_SOURCES) $(dnswasher_SOURCES) $(dumresp_SOURCES) \
+	$(dnsdemog_SOURCES) $(dnsgram_SOURCES) $(dnsreplay_SOURCES) \
+	$(dnsscan_SOURCES) $(dnsscope_SOURCES) $(dnstcpbench_SOURCES) \
+	$(dnswasher_SOURCES) $(dumresp_SOURCES) \
 	$(am__ixplore_SOURCES_DIST) $(kvresp_SOURCES) \
 	$(notify_SOURCES) $(nproxy_SOURCES) \
 	$(am__nsec3dig_SOURCES_DIST) $(pdns_control_SOURCES) \
-	$(am__pdns_recursor_SOURCES_DIST) \
 	$(am__pdns_server_SOURCES_DIST) $(am__pdnsutil_SOURCES_DIST) \
-	$(rec_control_SOURCES) $(am__saxfr_SOURCES_DIST) \
-	$(sdig_SOURCES) $(speedtest_SOURCES) \
+	$(am__saxfr_SOURCES_DIST) $(sdig_SOURCES) $(speedtest_SOURCES) \
 	$(am__testrunner_SOURCES_DIST) $(am__toysdig_SOURCES_DIST) \
 	$(am__tsig_tests_SOURCES_DIST) $(zone2json_SOURCES) \
 	$(zone2ldap_SOURCES) $(zone2sql_SOURCES)
@@ -1121,9 +1053,9 @@ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_CPPFLAGS = @AM_CPPFLAGS@ -I$(top_srcdir)/ext/json11 \
-	-I$(top_srcdir)/ext/rapidjson/include $(YAHTTP_CFLAGS) \
-	$(MBEDTLS_CFLAGS) $(am__append_1) $(am__append_2) \
-	$(am__append_3) $(am__append_4) $(am__append_5)
+	$(YAHTTP_CFLAGS) $(LIBEDIT_CFLAGS) $(am__append_1) \
+	$(am__append_2) $(am__append_3) $(am__append_4) \
+	$(am__append_5)
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
 AR = @AR@
 AUTOCONF = @AUTOCONF@
@@ -1148,8 +1080,6 @@ CDB_LIBS = @CDB_LIBS@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
-CRYPTOPP_CFLAGS = @CRYPTOPP_CFLAGS@
-CRYPTOPP_LIBS = @CRYPTOPP_LIBS@
 CURL = @CURL@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
@@ -1188,6 +1118,8 @@ LEX = @LEX@
 LEXLIB = @LEXLIB@
 LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
 LIBDL = @LIBDL@
+LIBEDIT_CFLAGS = @LIBEDIT_CFLAGS@
+LIBEDIT_LIBS = @LIBEDIT_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBSODIUM_CFLAGS = @LIBSODIUM_CFLAGS@
@@ -1203,9 +1135,6 @@ LUA_CFLAGS = @LUA_CFLAGS@
 LUA_LIBS = @LUA_LIBS@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
-MBEDTLS_CFLAGS = @MBEDTLS_CFLAGS@
-MBEDTLS_LIBS = @MBEDTLS_LIBS@
-MBEDTLS_SUBDIR = @MBEDTLS_SUBDIR@
 MKDIR_P = @MKDIR_P@
 MKDOCS = @MKDOCS@
 MYSQL_CFLAGS = @MYSQL_CFLAGS@
@@ -1217,6 +1146,9 @@ OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
 OPENDBX_CFLAGS = @OPENDBX_CFLAGS@
 OPENDBX_LIBS = @OPENDBX_LIBS@
+OPENSSL_INCLUDES = @OPENSSL_INCLUDES@
+OPENSSL_LDFLAGS = @OPENSSL_LDFLAGS@
+OPENSSL_LIBS = @OPENSSL_LIBS@
 ORACLE_CFLAGS = @ORACLE_CFLAGS@
 ORACLE_LIBS = @ORACLE_LIBS@
 OTOOL = @OTOOL@
@@ -1244,7 +1176,6 @@ PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PROGRAM_LDFLAGS = @PROGRAM_LDFLAGS@
 RAGEL = @RAGEL@
 RANLIB = @RANLIB@
-READLINE_LIBS = @READLINE_LIBS@
 RELRO_LDFLAGS = @RELRO_LDFLAGS@
 REMOTEBACKEND_ZEROMQ = @REMOTEBACKEND_ZEROMQ@
 RT_LIBS = @RT_LIBS@
@@ -1325,6 +1256,7 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
+JSON11_LIBS = $(top_builddir)/ext/json11/libjson11.la
 AM_CXXFLAGS = \
 	-DSYSCONFDIR=\"$(sysconfdir)\" \
 	-DPKGLIBDIR=\"$(pkglibdir)\" \
@@ -1346,12 +1278,11 @@ EXTRA_DIST = \
 	bindparser.h \
 	named.conf.parsertest \
 	pdns.conf-dist \
-	dnsdistdist/html \
 	delaypipe.hh delaypipe.cc
 
 BUILT_SOURCES = \
 	bind-dnssec.schema.sqlite3.sql.h \
-	bindparser.h htmlfiles.h 
+	bindparser.h
 
 CLEANFILES = \
 	*.gcda \
@@ -1372,18 +1303,19 @@ pdns_server_SOURCES = arguments.cc arguments.hh auth-carbon.cc \
 	distributor.hh dns.cc dns.hh dns_random.cc dns_random.hh \
 	dnsbackend.cc dnsbackend.hh dnslabeltext.cc dnsname.cc \
 	dnsname.hh dnspacket.cc dnspacket.hh dnsparser.cc dnsproxy.cc \
-	dnsproxy.hh dnsrecords.cc dnssecinfra.cc dnssecinfra.hh \
-	dnsseckeeper.hh dnssecsigner.cc dnswriter.cc dynhandler.cc \
-	dynhandler.hh dynlistener.cc dynlistener.hh dynmessenger.hh \
-	ednssubnet.cc ednssubnet.hh gss_context.cc gss_context.hh \
-	iputils.cc iputils.hh json.cc json.hh lock.hh logger.cc \
-	logger.hh lua-auth.cc lua-auth.hh lua-pdns.cc lua-pdns.hh \
-	lua-iputils.cc mastercommunicator.cc mbedtlscompat.hh md5.hh \
+	dnsproxy.hh dnsrecords.cc dnsrecords.hh dnssecinfra.cc \
+	dnssecinfra.hh dnsseckeeper.hh dnssecsigner.cc dnswriter.cc \
+	dynhandler.cc dynhandler.hh dynlistener.cc dynlistener.hh \
+	dynmessenger.hh ednssubnet.cc ednssubnet.hh gss_context.cc \
+	gss_context.hh iputils.cc iputils.hh json.cc json.hh lock.hh \
+	logger.cc logger.hh lua-auth.cc lua-auth.hh lua-pdns.cc \
+	lua-pdns.hh lua-iputils.cc mastercommunicator.cc md5.hh \
 	misc.cc misc.hh nameserver.cc nameserver.hh namespaces.hh \
-	nsecrecords.cc packetcache.cc packetcache.hh packethandler.cc \
-	packethandler.hh pdnsexception.hh mbedtlssigners.cc qtype.cc \
-	qtype.hh randomhelper.cc rcpgenerator.cc receiver.cc \
-	resolver.cc resolver.hh responsestats.cc responsestats.hh \
+	nsecrecords.cc opensslsigners.cc opensslsigners.hh \
+	packetcache.cc packetcache.hh packethandler.cc \
+	packethandler.hh pdnsexception.hh qtype.cc qtype.hh \
+	randomhelper.cc rcpgenerator.cc receiver.cc resolver.cc \
+	resolver.hh responsestats.cc responsestats.hh \
 	responsestats-auth.cc rfc2136handler.cc secpoll-auth.cc \
 	secpoll-auth.hh serialtweaker.cc sha.hh signingpipe.cc \
 	signingpipe.hh sillyrecords.cc slavecommunicator.cc statbag.cc \
@@ -1392,16 +1324,16 @@ pdns_server_SOURCES = arguments.cc arguments.hh auth-carbon.cc \
 	unix_utility.cc utility.hh version.cc version.hh webserver.cc \
 	webserver.hh ws-api.cc ws-api.hh ws-auth.cc ws-auth.hh \
 	zoneparser-tng.cc $(am__append_8) $(am__append_10) \
-	$(am__append_12) $(am__append_14) $(am__append_17)
+	$(am__append_12) $(am__append_15)
 pdns_server_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(DYNLINKFLAGS) 
+	$(DYNLINKFLAGS) \
+	$(OPENSSL_LDFLAGS)
 
 pdns_server_LDADD = @moduleobjects@ @modulelibs@ $(LIBDL) \
-	$(MBEDTLS_LIBS) $(YAHTTP_LIBS) $(am__append_9) \
-	$(am__append_11) $(am__append_13) $(am__append_15) \
-	$(am__append_16) $(am__append_18) $(am__append_19) \
-	$(am__append_20)
+	$(YAHTTP_LIBS) $(JSON11_LIBS) $(OPENSSL_LIBS) $(am__append_9) \
+	$(am__append_11) $(am__append_13) $(am__append_14) \
+	$(am__append_16) $(am__append_17) $(am__append_18)
 pdnsutil_SOURCES = arguments.cc backends/gsql/gsqlbackend.cc \
 	backends/gsql/gsqlbackend.hh backends/gsql/ssql.hh base32.cc \
 	base64.cc base64.hh bindlexer.l bindparser.yy cachecleaner.hh \
@@ -1410,22 +1342,24 @@ pdnsutil_SOURCES = arguments.cc backends/gsql/gsqlbackend.cc \
 	dns_random.cc dnsrecords.cc dnssecinfra.cc dnssecinfra.hh \
 	dnssecsigner.cc dnswriter.cc dnswriter.hh dynlistener.cc \
 	ednssubnet.cc gss_context.cc gss_context.hh iputils.cc \
-	iputils.hh json.cc logger.cc mbedtlscompat.hh misc.cc misc.hh \
-	nsecrecords.cc packetcache.cc pdnsutil.cc mbedtlssigners.cc \
+	iputils.hh json.cc logger.cc misc.cc misc.hh nsecrecords.cc \
+	opensslsigners.cc opensslsigners.hh packetcache.cc pdnsutil.cc \
 	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
 	serialtweaker.cc signingpipe.cc sillyrecords.cc sstuff.hh \
 	statbag.cc ueberbackend.cc unix_utility.cc zoneparser-tng.cc \
-	$(am__append_21) $(am__append_23) $(am__append_25) \
-	$(am__append_27) $(am__append_30)
+	$(am__append_19) $(am__append_21) $(am__append_23) \
+	$(am__append_26)
 pdnsutil_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(DYNLINKFLAGS) \
-	$(BOOST_PROGRAM_OPTIONS_LDFLAGS) 
+	$(BOOST_PROGRAM_OPTIONS_LDFLAGS) \
+	$(OPENSSL_LDFLAGS)
 
-pdnsutil_LDADD = @moduleobjects@ @modulelibs@ $(LIBDL) $(MBEDTLS_LIBS) \
-	$(BOOST_PROGRAM_OPTIONS_LIBS) $(YAHTTP_LIBS) $(am__append_22) \
-	$(am__append_24) $(am__append_26) $(am__append_28) \
-	$(am__append_29) $(am__append_31) $(am__append_32)
+pdnsutil_LDADD = @moduleobjects@ @modulelibs@ $(YAHTTP_LIBS) \
+	$(JSON11_LIBS) $(LIBDL) $(BOOST_PROGRAM_OPTIONS_LIBS) \
+	$(OPENSSL_LIBS) $(am__append_20) $(am__append_22) \
+	$(am__append_24) $(am__append_25) $(am__append_27) \
+	$(am__append_28)
 zone2sql_SOURCES = \
 	arguments.cc \
 	base32.cc \
@@ -1453,7 +1387,8 @@ zone2sql_SOURCES = \
 	zone2sql.cc \
 	zoneparser-tng.cc
 
-zone2sql_LDADD = $(MBEDTLS_LIBS)
+zone2sql_LDADD = $(OPENSSL_LIBS) $(JSON11_LIBS)
+zone2sql_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
 zone2json_SOURCES = \
 	arguments.cc \
 	base32.cc \
@@ -1478,7 +1413,8 @@ zone2json_SOURCES = \
 	zone2json.cc \
 	zoneparser-tng.cc
 
-zone2json_LDADD = $(MBEDTLS_LIBS) -L$(top_srcdir)/ext/json11 -ljson11
+zone2json_LDADD = $(OPENSSL_LIBS) $(JSON11_LIBS)
+zone2json_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
 zone2ldap_SOURCES = \
 	arguments.cc \
 	base32.cc \
@@ -1504,7 +1440,8 @@ zone2ldap_SOURCES = \
 	zone2ldap.cc \
 	zoneparser-tng.cc
 
-zone2ldap_LDADD = $(MBEDTLS_LIBS)
+zone2ldap_LDADD = $(OPENSSL_LIBS)
+zone2ldap_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
 sdig_SOURCES = \
 	base32.cc \
 	base64.cc base64.hh \
@@ -1516,7 +1453,6 @@ sdig_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	ednssubnet.cc \
 	logger.cc \
-	mbedtlscompat.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1527,7 +1463,8 @@ sdig_SOURCES = \
 	statbag.cc \
 	unix_utility.cc
 
-sdig_LDADD = $(MBEDTLS_LIBS)
+sdig_LDADD = $(OPENSSL_LIBS)
+sdig_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
 calidns_SOURCES = \
 	base32.cc \
 	base64.cc base64.hh \
@@ -1539,7 +1476,6 @@ calidns_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	iputils.cc \
 	logger.cc \
-	mbedtlscompat.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1549,8 +1485,8 @@ calidns_SOURCES = \
 	statbag.cc \
 	unix_utility.cc
 
-calidns_LDADD = $(MBEDTLS_LIBS)
-calidns_LDFLAGS = $(THREADFLAGS) 
+calidns_LDADD = $(OPENSSL_LIBS)
+calidns_LDFLAGS = $(AM_LDFLAGS) $(THREADFLAGS) $(OPENSSL_LDFLAGS)
 dumresp_SOURCES = \
 	dnslabeltext.cc \
 	dnsname.cc dnsname.hh \
@@ -1574,21 +1510,21 @@ saxfr_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	dns_random.hh dnslabeltext.cc dnsname.cc dnsname.hh \
 	dnsparser.cc dnsparser.hh dnsrecords.cc dnssecinfra.cc \
 	dnswriter.cc dnswriter.hh gss_context.cc gss_context.hh \
-	logger.cc mbedtlscompat.hh misc.cc misc.hh nsecrecords.cc \
-	qtype.cc rcpgenerator.cc rcpgenerator.hh saxfr.cc \
-	sillyrecords.cc sstuff.hh statbag.cc unix_utility.cc \
-	$(am__append_34)
-saxfr_LDADD = $(MBEDTLS_LIBS) $(am__append_35) $(am__append_36)
+	logger.cc misc.cc misc.hh nsecrecords.cc qtype.cc \
+	rcpgenerator.cc rcpgenerator.hh saxfr.cc sillyrecords.cc \
+	sstuff.hh statbag.cc unix_utility.cc $(am__append_30)
+saxfr_LDADD = $(OPENSSL_LIBS) $(am__append_31) $(am__append_32)
+saxfr_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
 ixplore_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	dns_random.cc dns_random.hh dnslabeltext.cc dnsname.cc \
 	dnsname.hh dnsparser.cc dnsparser.hh dnsrecords.cc \
 	dnssecinfra.cc dnswriter.cc dnswriter.hh gss_context.cc \
-	gss_context.hh logger.cc mbedtlscompat.hh misc.cc misc.hh \
-	nsecrecords.cc qtype.cc rcpgenerator.cc rcpgenerator.hh \
-	resolver.cc ixfr.cc ixfr.hh ixplore.cc sillyrecords.cc \
-	sstuff.hh statbag.cc unix_utility.cc zoneparser-tng.cc \
-	$(am__append_37)
-ixplore_LDADD = $(MBEDTLS_LIBS) $(am__append_38) $(am__append_39)
+	gss_context.hh logger.cc misc.cc misc.hh nsecrecords.cc \
+	qtype.cc rcpgenerator.cc rcpgenerator.hh resolver.cc ixfr.cc \
+	ixfr.hh ixplore.cc sillyrecords.cc sstuff.hh statbag.cc \
+	unix_utility.cc zoneparser-tng.cc $(am__append_33)
+ixplore_LDADD = $(OPENSSL_LIBS) $(am__append_34) $(am__append_35)
+ixplore_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
 dnstcpbench_SOURCES = \
 	base32.cc \
 	base64.cc base64.hh \
@@ -1599,7 +1535,6 @@ dnstcpbench_SOURCES = \
 	dnstcpbench.cc \
 	dnswriter.cc dnswriter.hh \
 	logger.cc \
-	mbedtlscompat.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1611,81 +1546,47 @@ dnstcpbench_SOURCES = \
 
 dnstcpbench_LDFLAGS = \
 	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 dnstcpbench_LDADD = \
-	$(MBEDTLS_LIBS) \
+	$(OPENSSL_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
-
-dnsdist_SOURCES = \
-	base32.cc \
-	base64.hh \
-	dns.cc \
-	dnscrypt.cc dnscrypt.hh \
-	dnsparser.hh dnsparser.cc \
-	ednssubnet.cc ednssubnet.hh \
-	dnsdist.cc \
-	dnsdist-carbon.cc \
-	dnsdist-console.cc \
-	dnsdist-dnscrypt.cc \
-	dnsdist-ecs.cc dnsdist-ecs.hh \
-	dnsdist-lua.cc \
-	dnsdist-lua2.cc \
-	dnsdist-rings.cc \
-	dnsdist-tcp.cc \
-	dnsdist-web.cc \
-	dnslabeltext.cc \
-	dnsname.cc dnsname.hh \
-	dnswriter.cc \
-	dolog.hh \
-	iputils.cc \
-	htmlfiles.h \
-	mbedtlscompat.hh \
-	misc.cc misc.hh \
-	qtype.cc \
-	sholder.hh \
-	sodcrypto.cc sodcrypto.hh \
-	sstuff.hh \
-	../ext/json11/json11.cpp
-
-dnsdist_LDFLAGS = \
-	$(AM_LDFLAGS) 
-
-dnsdist_LDADD = \
-	$(LUA_LIBS) \
-	$(READLINE_LIBS) \
-	$(RT_LIBS) \
-	$(YAHTTP_LIBS) \
-	$(LIBSODIUM_LIBS)
 
 nsec3dig_SOURCES = base32.cc base64.cc base64.hh dnsname.cc dnsname.hh \
 	dnslabeltext.cc dnsparser.cc dnsparser.hh dnsrecords.cc \
 	dnssecinfra.cc dnswriter.cc dnswriter.hh gss_context.cc \
-	gss_context.hh logger.cc mbedtlscompat.hh misc.cc misc.hh \
-	nsec3dig.cc nsecrecords.cc qtype.cc rcpgenerator.cc \
-	rcpgenerator.hh sillyrecords.cc sstuff.hh statbag.cc \
-	unix_utility.cc $(am__append_40)
-nsec3dig_LDADD = $(MBEDTLS_LIBS) $(am__append_41) $(am__append_42)
+	gss_context.hh logger.cc misc.cc misc.hh nsec3dig.cc \
+	nsecrecords.cc qtype.cc rcpgenerator.cc rcpgenerator.hh \
+	sillyrecords.cc sstuff.hh statbag.cc unix_utility.cc \
+	$(am__append_36)
+nsec3dig_LDADD = $(OPENSSL_LIBS) $(am__append_37) $(am__append_38)
+nsec3dig_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
 toysdig_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	dnsname.cc dnsname.hh dnslabeltext.cc dnsparser.cc \
 	dnsparser.hh dnsrecords.cc dnssecinfra.cc dnswriter.cc \
-	dnswriter.hh ednssubnet.cc ednssubnet.hh gss_context.cc \
-	gss_context.hh logger.cc mbedtlscompat.hh mbedtlssigners.cc \
-	misc.cc misc.hh nsecrecords.cc qtype.cc randomhelper.cc \
-	rcpgenerator.cc rcpgenerator.hh sillyrecords.cc sstuff.hh \
-	statbag.cc toysdig.cc unix_utility.cc validate.cc validate.hh \
-	$(am__append_44) $(am__append_46)
-toysdig_LDADD = $(MBEDTLS_LIBS) $(am__append_43) $(am__append_45) \
-	$(am__append_47)
+	dnswriter.hh ednssubnet.cc ednssubnet.hh filterpo.hh \
+	gss_context.cc gss_context.hh logger.cc misc.cc misc.hh \
+	nsecrecords.cc opensslsigners.cc opensslsigners.hh qtype.cc \
+	randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
+	rec-lua-conf.hh recursor_cache.hh sholder.hh sillyrecords.cc \
+	sortlist.hh sstuff.hh statbag.cc toysdig.cc unix_utility.cc \
+	validate.cc validate.hh $(am__append_40) $(am__append_42)
+toysdig_LDFLAGS = $(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS)
+
+toysdig_LDADD = $(OPENSSL_LIBS) $(am__append_39) $(am__append_41) \
+	$(am__append_43)
 tsig_tests_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	dns_random.cc dns_random.hh dnslabeltext.cc dnsname.cc \
 	dnsname.hh dnsparser.cc dnsparser.hh dnsrecords.cc \
 	dnssecinfra.cc dnswriter.cc dnswriter.hh gss_context.cc \
-	gss_context.hh logger.cc mbedtlscompat.hh misc.cc misc.hh \
-	nsecrecords.cc qtype.cc randomhelper.cc rcpgenerator.cc \
-	rcpgenerator.hh resolver.cc sillyrecords.cc sstuff.hh \
-	statbag.cc tsig-tests.cc unix_utility.cc $(am__append_48)
-tsig_tests_LDADD = $(MBEDTLS_LIBS) $(am__append_49) $(am__append_50)
+	gss_context.hh logger.cc misc.cc misc.hh nsecrecords.cc \
+	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
+	resolver.cc sillyrecords.cc sstuff.hh statbag.cc tsig-tests.cc \
+	unix_utility.cc $(am__append_44)
+tsig_tests_LDADD = $(OPENSSL_LIBS) $(am__append_45) $(am__append_46)
+tsig_tests_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
 speedtest_SOURCES = \
 	base32.cc \
 	base64.cc base64.hh \
@@ -1695,7 +1596,6 @@ speedtest_SOURCES = \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
 	logger.cc \
-	mbedtlscompat.hh \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1705,7 +1605,8 @@ speedtest_SOURCES = \
 	statbag.cc \
 	unix_utility.cc
 
-speedtest_LDADD = $(MBEDTLS_LIBS) \
+speedtest_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+speedtest_LDADD = $(OPENSSL_LIBS) \
 	$(RT_LIBS)
 
 dnswasher_SOURCES = \
@@ -1741,10 +1642,11 @@ dnsbulktest_SOURCES = \
 
 dnsbulktest_LDFLAGS = \
 	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 dnsbulktest_LDADD = \
-	$(MBEDTLS_LIBS) \
+	$(OPENSSL_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 dnsscan_SOURCES = \
@@ -1759,7 +1661,6 @@ dnsscan_SOURCES = \
 	dnsscan.cc \
 	dnswriter.cc dnswriter.hh \
 	logger.cc \
-	mbedtlscompat.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1769,7 +1670,11 @@ dnsscan_SOURCES = \
 	unix_utility.cc \
 	utility.hh
 
-dnsscan_LDADD = $(MBEDTLS_LIBS)
+dnsscan_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS)
+
+dnsscan_LDADD = $(OPENSSL_LIBS)
 dnsreplay_SOURCES = \
 	anadns.hh \
 	base32.cc \
@@ -1782,7 +1687,6 @@ dnsreplay_SOURCES = \
 	dnsreplay.cc \
 	dnswriter.cc dnswriter.hh \
 	logger.cc \
-	mbedtlscompat.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1794,10 +1698,11 @@ dnsreplay_SOURCES = \
 
 dnsreplay_LDFLAGS = \
 	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 dnsreplay_LDADD = \
-	$(MBEDTLS_LIBS) \
+	$(OPENSSL_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 nproxy_SOURCES = \
@@ -1808,25 +1713,30 @@ nproxy_SOURCES = \
 	dnsparser.cc dnsparser.hh \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
+	filterpo.hh \
 	logger.cc \
-	mbedtlscompat.hh \
+	lwres.hh \
 	misc.cc \
 	mplexer.hh \
+	mtasker.hh \
 	nproxy.cc \
 	nsecrecords.cc \
 	qtype.cc \
 	rcpgenerator.cc rcpgenerator.hh \
+	recursor_cache.hh \
 	selectmplexer.cc \
 	sillyrecords.cc \
 	statbag.cc \
+	syncres.hh \
 	unix_utility.cc
 
 nproxy_LDFLAGS = \
 	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 nproxy_LDADD = \
-	$(MBEDTLS_LIBS) \
+	$(OPENSSL_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 notify_SOURCES = \
@@ -1839,24 +1749,29 @@ notify_SOURCES = \
 	dnsparser.cc dnsparser.hh \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
+	filterpo.hh \
 	logger.cc \
-	mbedtlscompat.hh \
+	lwres.hh \
 	misc.cc \
+	mtasker.hh \
 	notify.cc \
 	nsecrecords.cc \
 	qtype.cc \
 	rcpgenerator.cc rcpgenerator.hh \
+	recursor_cache.hh \
 	selectmplexer.cc \
 	sillyrecords.cc \
 	statbag.cc \
+	syncres.hh \
 	unix_utility.cc
 
 notify_LDFLAGS = \
 	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 notify_LDADD = \
-	$(MBEDTLS_LIBS) \
+	$(OPENSSL_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 dnsscope_SOURCES = \
@@ -1872,7 +1787,6 @@ dnsscope_SOURCES = \
 	dnsscope.cc \
 	dnswriter.cc dnswriter.hh \
 	logger.cc \
-	mbedtlscompat.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1884,10 +1798,11 @@ dnsscope_SOURCES = \
 
 dnsscope_LDFLAGS = \
 	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 dnsscope_LDADD = \
-	$(MBEDTLS_LIBS) \
+	$(OPENSSL_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 dnsgram_SOURCES = \
@@ -1901,7 +1816,6 @@ dnsgram_SOURCES = \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
 	logger.cc \
-	mbedtlscompat.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1911,7 +1825,13 @@ dnsgram_SOURCES = \
 	unix_utility.cc \
 	utility.hh
 
-dnsgram_LDADD = $(MBEDTLS_LIBS)
+dnsgram_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS)
+
+dnsgram_LDADD = \
+	$(OPENSSL_LIBS)
+
 dnsdemog_SOURCES = \
 	base32.cc \
 	base64.cc base64.hh \
@@ -1923,7 +1843,6 @@ dnsdemog_SOURCES = \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
 	logger.cc \
-	mbedtlscompat.hh \
 	misc.cc \
 	nsecrecords.cc \
 	qtype.cc \
@@ -1933,69 +1852,39 @@ dnsdemog_SOURCES = \
 	unix_utility.cc \
 	utility.hh
 
-dnsdemog_LDADD = $(MBEDTLS_LIBS)
-rec_control_SOURCES = \
-	arguments.cc arguments.hh \
-	dnsname.hh dnsname.cc \
-	dnslabeltext.cc \
-	logger.cc \
-	misc.cc \
-	qtype.cc \
-	rec_channel.cc rec_channel.hh \
-	rec_control.cc \
-	statbag.cc \
-	unix_utility.cc
+dnsdemog_LDFLAGS = \
+	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS)
+
+dnsdemog_LDADD = \
+	$(OPENSSL_LIBS)
 
 testrunner_SOURCES = arguments.cc base32.cc base64.cc bindlexer.l \
 	bindparser.yy dns.cc dns_random.cc dnsbackend.cc \
 	dnslabeltext.cc dnsname.cc dnsname.hh dnspacket.cc \
-	dnsparser.cc dnsrecords.cc dnssecinfra.cc dnswriter.cc \
-	ednssubnet.cc gss_context.cc gss_context.hh iputils.cc \
-	logger.cc misc.cc nameserver.cc nsecrecords.cc packetcache.cc \
-	qtype.cc rcpgenerator.cc responsestats.cc \
-	responsestats-auth.cc sillyrecords.cc statbag.cc \
-	test-arguments_cc.cc test-base32_cc.cc test-base64_cc.cc \
-	test-bindparser_cc.cc test-delaypipe_hh.cc \
-	test-distributor_hh.cc test-dns_random_hh.cc \
-	test-dnsname_cc.cc test-dnsrecords_cc.cc test-iputils_hh.cc \
-	test-md5_hh.cc test-misc_hh.cc test-nameserver_cc.cc \
-	test-nmtree.cc test-packetcache_cc.cc test-rcpgenerator_cc.cc \
-	test-sha_hh.cc test-sholder_hh.cc test-statbag_cc.cc \
+	dnsparser.hh dnsparser.cc dnsrecords.cc dnssecinfra.cc \
+	dnswriter.cc ednssubnet.cc gss_context.cc gss_context.hh \
+	iputils.cc logger.cc misc.cc nameserver.cc nsecrecords.cc \
+	packetcache.cc qtype.cc rcpgenerator.cc recpacketcache.cc \
+	recpacketcache.hh responsestats.cc responsestats-auth.cc \
+	sillyrecords.cc statbag.cc test-arguments_cc.cc \
+	test-base32_cc.cc test-base64_cc.cc test-bindparser_cc.cc \
+	test-delaypipe_hh.cc test-distributor_hh.cc \
+	test-dns_random_hh.cc test-dnsname_cc.cc test-dnsparser_hh.cc \
+	test-dnsrecords_cc.cc test-iputils_hh.cc test-md5_hh.cc \
+	test-misc_hh.cc test-nameserver_cc.cc test-nmtree.cc \
+	test-packetcache_cc.cc test-rcpgenerator_cc.cc \
+	test-recpacketcache_cc.cc test-sha_hh.cc test-statbag_cc.cc \
 	test-zoneparser_tng_cc.cc testrunner.cc ueberbackend.cc \
 	unix_utility.cc zoneparser-tng.cc zoneparser-tng.hh \
-	$(am__append_51)
+	$(am__append_47)
 testrunner_LDFLAGS = \
 	$(AM_LDFLAGS) \
+	$(OPENSSL_LDFLAGS) \
 	$(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS) 
 
-testrunner_LDADD = $(MBEDTLS_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIBS) \
-	$(RT_LIBS) $(LIBDL) $(am__append_52)
-pdns_recursor_SOURCES = arguments.cc base32.cc base64.cc base64.hh \
-	cachecleaner.hh dns.cc dns_random.cc dnslabeltext.cc \
-	dnsname.cc dnsname.hh dnsparser.cc dnsrecords.cc dnsrecords.hh \
-	dnssecinfra.cc dnswriter.cc dnswriter.hh ednssubnet.cc \
-	ednssubnet.hh filterpo.cc filterpo.hh gss_context.cc \
-	gss_context.hh iputils.cc ixfr.cc ixfr.hh json.cc json.hh \
-	logger.cc lua-recursor4.cc lua-recursor4.hh lwres.cc lwres.hh \
-	mbedtlscompat.hh mbedtlssigners.cc misc.cc mtasker.hh \
-	nsecrecords.cc pdns_recursor.cc pubsuffix.cc qtype.cc \
-	randomhelper.cc rcpgenerator.cc rcpgenerator.hh rec-carbon.cc \
-	rec_channel.cc rec_channel.hh rec_channel_rec.cc \
-	rec-lua-conf.cc recpacketcache.cc recpacketcache.hh \
-	recursor_cache.cc recursor_cache.hh reczones.cc resolver.cc \
-	resolver.hh responsestats.cc rpzloader.cc rpzloader.hh \
-	secpoll-recursor.cc secpoll-recursor.hh selectmplexer.cc \
-	sillyrecords.cc sortlist.cc sortlist.hh statbag.cc syncres.cc \
-	syncres.hh unix_utility.cc validate.cc validate.hh \
-	validate-recursor.cc validate-recursor.hh version.cc \
-	version.hh webserver.cc webserver.hh ws-api.cc ws-api.hh \
-	ws-recursor.cc ws-recursor.hh zoneparser-tng.cc \
-	zoneparser-tng.hh $(am__append_53) $(am__append_55) \
-	$(am__append_57) $(am__append_60) $(am__append_61) \
-	$(am__append_62)
-pdns_recursor_LDADD = $(MBEDTLS_LIBS) $(YAHTTP_LIBS) $(am__append_54) \
-	$(am__append_56) $(am__append_59)
-pdns_recursor_LDFLAGS = $(AM_LDFLAGS) $(am__append_58)
+testrunner_LDADD = $(OPENSSL_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIBS) \
+	$(RT_LIBS) $(LIBDL) $(am__append_48)
 pdns_control_SOURCES = \
 	arguments.cc \
 	dynloader.cc \
@@ -2016,7 +1905,7 @@ all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
-.SUFFIXES: .c .cc .cpp .h .hh .l .lo .log .o .obj .test .test$(EXEEXT) .trs .yy
+.SUFFIXES: .c .cc .h .hh .l .lo .log .o .obj .test .test$(EXEEXT) .trs .yy
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
 	@for dep in $?; do \
 	  case '$(am__configure_deps)' in \
@@ -2158,23 +2047,11 @@ dnsbulktest$(EXEEXT): $(dnsbulktest_OBJECTS) $(dnsbulktest_DEPENDENCIES) $(EXTRA
 
 dnsdemog$(EXEEXT): $(dnsdemog_OBJECTS) $(dnsdemog_DEPENDENCIES) $(EXTRA_dnsdemog_DEPENDENCIES) 
 	@rm -f dnsdemog$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(dnsdemog_OBJECTS) $(dnsdemog_LDADD) $(LIBS)
-../ext/json11/$(am__dirstamp):
-	@$(MKDIR_P) ../ext/json11
-	@: > ../ext/json11/$(am__dirstamp)
-../ext/json11/$(DEPDIR)/$(am__dirstamp):
-	@$(MKDIR_P) ../ext/json11/$(DEPDIR)
-	@: > ../ext/json11/$(DEPDIR)/$(am__dirstamp)
-../ext/json11/json11.$(OBJEXT): ../ext/json11/$(am__dirstamp) \
-	../ext/json11/$(DEPDIR)/$(am__dirstamp)
-
-dnsdist$(EXEEXT): $(dnsdist_OBJECTS) $(dnsdist_DEPENDENCIES) $(EXTRA_dnsdist_DEPENDENCIES) 
-	@rm -f dnsdist$(EXEEXT)
-	$(AM_V_CXXLD)$(dnsdist_LINK) $(dnsdist_OBJECTS) $(dnsdist_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(dnsdemog_LINK) $(dnsdemog_OBJECTS) $(dnsdemog_LDADD) $(LIBS)
 
 dnsgram$(EXEEXT): $(dnsgram_OBJECTS) $(dnsgram_DEPENDENCIES) $(EXTRA_dnsgram_DEPENDENCIES) 
 	@rm -f dnsgram$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(dnsgram_OBJECTS) $(dnsgram_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(dnsgram_LINK) $(dnsgram_OBJECTS) $(dnsgram_LDADD) $(LIBS)
 
 dnsreplay$(EXEEXT): $(dnsreplay_OBJECTS) $(dnsreplay_DEPENDENCIES) $(EXTRA_dnsreplay_DEPENDENCIES) 
 	@rm -f dnsreplay$(EXEEXT)
@@ -2182,7 +2059,7 @@ dnsreplay$(EXEEXT): $(dnsreplay_OBJECTS) $(dnsreplay_DEPENDENCIES) $(EXTRA_dnsre
 
 dnsscan$(EXEEXT): $(dnsscan_OBJECTS) $(dnsscan_DEPENDENCIES) $(EXTRA_dnsscan_DEPENDENCIES) 
 	@rm -f dnsscan$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(dnsscan_OBJECTS) $(dnsscan_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(dnsscan_LINK) $(dnsscan_OBJECTS) $(dnsscan_LDADD) $(LIBS)
 
 dnsscope$(EXEEXT): $(dnsscope_OBJECTS) $(dnsscope_DEPENDENCIES) $(EXTRA_dnsscope_DEPENDENCIES) 
 	@rm -f dnsscope$(EXEEXT)
@@ -2202,7 +2079,7 @@ dumresp$(EXEEXT): $(dumresp_OBJECTS) $(dumresp_DEPENDENCIES) $(EXTRA_dumresp_DEP
 
 ixplore$(EXEEXT): $(ixplore_OBJECTS) $(ixplore_DEPENDENCIES) $(EXTRA_ixplore_DEPENDENCIES) 
 	@rm -f ixplore$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(ixplore_OBJECTS) $(ixplore_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(ixplore_LINK) $(ixplore_OBJECTS) $(ixplore_LDADD) $(LIBS)
 
 kvresp$(EXEEXT): $(kvresp_OBJECTS) $(kvresp_DEPENDENCIES) $(EXTRA_kvresp_DEPENDENCIES) 
 	@rm -f kvresp$(EXEEXT)
@@ -2218,15 +2095,11 @@ nproxy$(EXEEXT): $(nproxy_OBJECTS) $(nproxy_DEPENDENCIES) $(EXTRA_nproxy_DEPENDE
 
 nsec3dig$(EXEEXT): $(nsec3dig_OBJECTS) $(nsec3dig_DEPENDENCIES) $(EXTRA_nsec3dig_DEPENDENCIES) 
 	@rm -f nsec3dig$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(nsec3dig_OBJECTS) $(nsec3dig_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(nsec3dig_LINK) $(nsec3dig_OBJECTS) $(nsec3dig_LDADD) $(LIBS)
 
 pdns_control$(EXEEXT): $(pdns_control_OBJECTS) $(pdns_control_DEPENDENCIES) $(EXTRA_pdns_control_DEPENDENCIES) 
 	@rm -f pdns_control$(EXEEXT)
 	$(AM_V_CXXLD)$(CXXLINK) $(pdns_control_OBJECTS) $(pdns_control_LDADD) $(LIBS)
-
-pdns_recursor$(EXEEXT): $(pdns_recursor_OBJECTS) $(pdns_recursor_DEPENDENCIES) $(EXTRA_pdns_recursor_DEPENDENCIES) 
-	@rm -f pdns_recursor$(EXEEXT)
-	$(AM_V_CXXLD)$(pdns_recursor_LINK) $(pdns_recursor_OBJECTS) $(pdns_recursor_LDADD) $(LIBS)
 backends/gsql/$(am__dirstamp):
 	@$(MKDIR_P) backends/gsql
 	@: > backends/gsql/$(am__dirstamp)
@@ -2247,21 +2120,17 @@ pdnsutil$(EXEEXT): $(pdnsutil_OBJECTS) $(pdnsutil_DEPENDENCIES) $(EXTRA_pdnsutil
 	@rm -f pdnsutil$(EXEEXT)
 	$(AM_V_CXXLD)$(pdnsutil_LINK) $(pdnsutil_OBJECTS) $(pdnsutil_LDADD) $(LIBS)
 
-rec_control$(EXEEXT): $(rec_control_OBJECTS) $(rec_control_DEPENDENCIES) $(EXTRA_rec_control_DEPENDENCIES) 
-	@rm -f rec_control$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(rec_control_OBJECTS) $(rec_control_LDADD) $(LIBS)
-
 saxfr$(EXEEXT): $(saxfr_OBJECTS) $(saxfr_DEPENDENCIES) $(EXTRA_saxfr_DEPENDENCIES) 
 	@rm -f saxfr$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(saxfr_OBJECTS) $(saxfr_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(saxfr_LINK) $(saxfr_OBJECTS) $(saxfr_LDADD) $(LIBS)
 
 sdig$(EXEEXT): $(sdig_OBJECTS) $(sdig_DEPENDENCIES) $(EXTRA_sdig_DEPENDENCIES) 
 	@rm -f sdig$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(sdig_OBJECTS) $(sdig_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(sdig_LINK) $(sdig_OBJECTS) $(sdig_LDADD) $(LIBS)
 
 speedtest$(EXEEXT): $(speedtest_OBJECTS) $(speedtest_DEPENDENCIES) $(EXTRA_speedtest_DEPENDENCIES) 
 	@rm -f speedtest$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(speedtest_OBJECTS) $(speedtest_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(speedtest_LINK) $(speedtest_OBJECTS) $(speedtest_LDADD) $(LIBS)
 
 testrunner$(EXEEXT): $(testrunner_OBJECTS) $(testrunner_DEPENDENCIES) $(EXTRA_testrunner_DEPENDENCIES) 
 	@rm -f testrunner$(EXEEXT)
@@ -2269,33 +2138,31 @@ testrunner$(EXEEXT): $(testrunner_OBJECTS) $(testrunner_DEPENDENCIES) $(EXTRA_te
 
 toysdig$(EXEEXT): $(toysdig_OBJECTS) $(toysdig_DEPENDENCIES) $(EXTRA_toysdig_DEPENDENCIES) 
 	@rm -f toysdig$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(toysdig_OBJECTS) $(toysdig_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(toysdig_LINK) $(toysdig_OBJECTS) $(toysdig_LDADD) $(LIBS)
 
 tsig-tests$(EXEEXT): $(tsig_tests_OBJECTS) $(tsig_tests_DEPENDENCIES) $(EXTRA_tsig_tests_DEPENDENCIES) 
 	@rm -f tsig-tests$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(tsig_tests_OBJECTS) $(tsig_tests_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(tsig_tests_LINK) $(tsig_tests_OBJECTS) $(tsig_tests_LDADD) $(LIBS)
 
 zone2json$(EXEEXT): $(zone2json_OBJECTS) $(zone2json_DEPENDENCIES) $(EXTRA_zone2json_DEPENDENCIES) 
 	@rm -f zone2json$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(zone2json_OBJECTS) $(zone2json_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(zone2json_LINK) $(zone2json_OBJECTS) $(zone2json_LDADD) $(LIBS)
 
 zone2ldap$(EXEEXT): $(zone2ldap_OBJECTS) $(zone2ldap_DEPENDENCIES) $(EXTRA_zone2ldap_DEPENDENCIES) 
 	@rm -f zone2ldap$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(zone2ldap_OBJECTS) $(zone2ldap_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(zone2ldap_LINK) $(zone2ldap_OBJECTS) $(zone2ldap_LDADD) $(LIBS)
 
 zone2sql$(EXEEXT): $(zone2sql_OBJECTS) $(zone2sql_DEPENDENCIES) $(EXTRA_zone2sql_DEPENDENCIES) 
 	@rm -f zone2sql$(EXEEXT)
-	$(AM_V_CXXLD)$(CXXLINK) $(zone2sql_OBJECTS) $(zone2sql_LDADD) $(LIBS)
+	$(AM_V_CXXLD)$(zone2sql_LINK) $(zone2sql_OBJECTS) $(zone2sql_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
-	-rm -f ../ext/json11/*.$(OBJEXT)
 	-rm -f backends/gsql/*.$(OBJEXT)
 
 distclean-compile:
 	-rm -f *.tab.c
 
-@AMDEP_TRUE@@am__include@ @am__quote@../ext/json11/$(DEPDIR)/json11.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/arguments.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/auth-carbon.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/base32.Po@am__quote@
@@ -2307,25 +2174,12 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/calidns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/common_startup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/communicator.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/cryptoppsigners.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbdnsseckeeper.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/devpollmplexer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dns_random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsbackend.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsbulktest.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnscrypt.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdemog.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist-carbon.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist-console.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist-dnscrypt.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist-ecs.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist-lua.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist-lua2.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist-rings.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist-tcp.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist-web.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsdist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsgram.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnslabeltext.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsname.Po@am__quote@
@@ -2348,70 +2202,49 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynloader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynmessenger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ednssubnet.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/epollmplexer.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/filterpo.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gss_context.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iputils.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ixfr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ixplore.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/json.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kqueuemplexer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/kvresp.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/logger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lua-auth.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lua-iputils.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lua-pdns.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lua-recursor4.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/lwres.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/malloctrace.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mastercommunicator.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/mbedtlssigners.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/misc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nameserver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/notify.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nproxy.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nsec3dig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/nsecrecords.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/opensslsigners.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/packetcache.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/packethandler.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pdns_recursor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pdnsutil.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pkcs11signers.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/portsmplexer.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/pubsuffix.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qtype.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/randomhelper.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rcpgenerator.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rec-carbon.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rec-lua-conf.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rec_channel.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rec_channel_rec.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rec_control.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/receiver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/recpacketcache.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/recursor_cache.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/reczones.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/resolver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/responsestats-auth.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/responsestats.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rfc2136handler.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/rpzloader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/saxfr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sdig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/secpoll-auth.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/secpoll-recursor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/selectmplexer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/serialtweaker.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/signingpipe.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sillyrecords.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/slavecommunicator.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sodcrypto.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sodiumsigners.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/sortlist.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/speedtest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ssqlite3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/statbag.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/syncres.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcpreceiver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-arguments_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-base32_cc.Po@am__quote@
@@ -2421,6 +2254,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-distributor_hh.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-dns_random_hh.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-dnsname_cc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-dnsparser_hh.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-dnsrecords_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-iputils_hh.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-md5_hh.Po@am__quote@
@@ -2429,8 +2263,8 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-nmtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-packetcache_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-rcpgenerator_cc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-recpacketcache_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-sha_hh.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-sholder_hh.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-statbag_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-zoneparser_tng_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testrunner.Po@am__quote@
@@ -2440,13 +2274,11 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ueberbackend.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unix_semaphore.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unix_utility.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/validate-recursor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/validate.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/version.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/webserver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ws-api.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ws-auth.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ws-recursor.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/zone2json.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/zone2ldap.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/zone2sql.Po@am__quote@
@@ -2494,30 +2326,6 @@ distclean-compile:
 @am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
 
 .cc.lo:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
-@am__fastdepCXX_TRUE@	$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(LTCXXCOMPILE) -c -o $@ $<
-
-.cpp.o:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.o$$||'`;\
-@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
-@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ $<
-
-.cpp.obj:
-@am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.obj$$||'`;\
-@am__fastdepCXX_TRUE@	$(CXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ `$(CYGPATH_W) '$<'` &&\
-@am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Po
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	$(AM_V_CXX)source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
-@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
-@am__fastdepCXX_FALSE@	$(AM_V_CXX@am__nodep@)$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
-
-.cpp.lo:
 @am__fastdepCXX_TRUE@	$(AM_V_CXX)depbase=`echo $@ | sed 's|[^/]*$$|$(DEPDIR)/&|;s|\.lo$$||'`;\
 @am__fastdepCXX_TRUE@	$(LTCXXCOMPILE) -MT $@ -MD -MP -MF $$depbase.Tpo -c -o $@ $< &&\
 @am__fastdepCXX_TRUE@	$(am__mv) $$depbase.Tpo $$depbase.Plo
@@ -2844,8 +2652,6 @@ clean-generic:
 distclean-generic:
 	-test -z "$(CONFIG_CLEAN_FILES)" || rm -f $(CONFIG_CLEAN_FILES)
 	-test . = "$(srcdir)" || test -z "$(CONFIG_CLEAN_VPATH_FILES)" || rm -f $(CONFIG_CLEAN_VPATH_FILES)
-	-rm -f ../ext/json11/$(DEPDIR)/$(am__dirstamp)
-	-rm -f ../ext/json11/$(am__dirstamp)
 	-rm -f backends/gsql/$(DEPDIR)/$(am__dirstamp)
 	-rm -f backends/gsql/$(am__dirstamp)
 
@@ -2862,7 +2668,7 @@ clean-am: clean-binPROGRAMS clean-generic clean-libtool \
 	clean-sbinPROGRAMS mostlyclean-am
 
 distclean: distclean-am
-	-rm -rf ../ext/json11/$(DEPDIR) ./$(DEPDIR) backends/gsql/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) backends/gsql/$(DEPDIR)
 	-rm -f Makefile
 distclean-am: clean-am distclean-compile distclean-generic \
 	distclean-tags
@@ -2909,7 +2715,7 @@ install-ps-am:
 installcheck-am:
 
 maintainer-clean: maintainer-clean-am
-	-rm -rf ../ext/json11/$(DEPDIR) ./$(DEPDIR) backends/gsql/$(DEPDIR)
+	-rm -rf ./$(DEPDIR) backends/gsql/$(DEPDIR)
 	-rm -f Makefile
 maintainer-clean-am: distclean-am maintainer-clean-generic
 
@@ -2955,9 +2761,6 @@ uninstall-am: uninstall-binPROGRAMS uninstall-sbinPROGRAMS \
 dnslabeltext.cc: dnslabeltext.rl
 	$(AM_V_GEN)$(RAGEL) $< -o dnslabeltext.cc
 
-htmlfiles.h: $(srcdir)/dnsdistdist/html/*
-	$(srcdir)/dnsdistdist/incfiles $(srcdir)/dnsdistdist > $@
-
 bind-dnssec.schema.sqlite3.sql.h: bind-dnssec.schema.sqlite3.sql
 	( echo 'static char sqlCreate[] __attribute__((unused))=' ; sed 's/$$/"/g' $< | sed 's/^/"/g'  ; echo ';' ) > $@
 
@@ -2969,6 +2772,14 @@ $(srcdir)/effective_tld_names.dat:
 
 pubsuffix.cc: $(srcdir)/effective_tld_names.dat
 	$(AM_V_GEN)./mkpubsuffixcc
+
+pdns_recursor rec_control:
+	@echo "Please build the recursor from the recursordist/ dir"
+	@exit 1
+
+dnsdist:
+	@echo "Please build dnsdist from the dnsdistdist/ dir"
+	@exit 1
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

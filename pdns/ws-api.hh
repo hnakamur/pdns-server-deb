@@ -23,9 +23,6 @@
 #define PDNS_WSAPI_HH
 
 #include <map>
-#include "rapidjson/document.h"
-#include "rapidjson/stringbuffer.h"
-#include "rapidjson/writer.h"
 #include "webserver.hh"
 
 void apiServer(HttpRequest* req, HttpResponse* resp);
@@ -37,7 +34,8 @@ void apiServerStatistics(HttpRequest* req, HttpResponse* resp);
 // helpers
 DNSName apiZoneIdToName(const string& id);
 string apiZoneNameToId(const DNSName& name);
-void apiCheckNameAllowedCharacters(const string& label);
+void apiCheckNameAllowedCharacters(const string& name);
+void apiCheckQNameAllowedCharacters(const string& name);
 DNSName apiNameToDNSName(const string& name);
 
 // To be provided by product code.

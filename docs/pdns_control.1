@@ -60,6 +60,10 @@ Show the content of the cache.
 .TP
 .B current\-config
 Show the currently running configuration.
+The output has the same format as \f[C]pdns_server\ \-\-config\f[].
+You\[aq]ll notice that all the are uncommented.
+This is because PowerDNS simply has values, and the default isn\[aq]t
+known at runtime.
 .RS
 .RE
 .TP
@@ -81,16 +85,16 @@ Show a list of zones, optionally filter on the type of zones to show.
 .RE
 .TP
 .B notify \f[I]DOMAIN\f[]
-Adds \f[I]DOMAIN\f[] to the notification list, causing PDNS to send out
-notifications to the nameservers of a domain.
+Adds \f[I]DOMAIN\f[] to the notification list, causing PowerDNS to send
+out notifications to the nameservers of a domain.
 Can be used if a slave missed previous notifications or is generally
 hard of hearing.
 .RS
 .RE
 .TP
-.B notify\-host \f[I]DOMAIN\f[] \f[I]HOST\f[]
-Same as above but with operator specified IP address as destination, to
-be used if you know better than PowerDNS.
+.B notify\-host \f[I]DOMAIN\f[] \f[I]ADDRESS\f[]
+Same as above but with operator specified IP \f[I]ADDRESS\f[] as
+destination, to be used if you know better than PowerDNS.
 .RS
 .RE
 .TP
@@ -103,7 +107,7 @@ Will return \[aq]PONG\[aq] when it is.
 .RE
 .TP
 .B purge [\f[I]RECORD\f[]]
-Purge entries from the packet cache.
+Purge entries from the cache.
 If \f[I]RECORD\f[] ends with a dollar ($) all entries that end with that
 name are removed.
 If no record is specified the entire cache is purged.
@@ -111,7 +115,7 @@ If no record is specified the entire cache is purged.
 .RE
 .TP
 .B qtypes
-Get a count of queries per qtype.
+Get a count of queries per qtype on standard out.
 .RS
 .RE
 .TP
@@ -127,12 +131,13 @@ or, in the case of the Bind backend, in named.conf.
 .RE
 .TP
 .B reload
-Instruct the server to reload all its zones.
+Instruct the server to reload all its zones, this will not add new
+zones.
 .RS
 .RE
 .TP
 .B remotes
-Get the top number of remote addresses.
+Get the top number of remote addresses (clients).
 .RS
 .RE
 .TP
@@ -166,6 +171,9 @@ This only works if the server is running in guardian mode.
 .TP
 .B token\-login \f[I]MODULE\f[] \f[I]SLOT\f[] \f[I]PIN\f[]
 Log on to a PKCS#11 slot.
+You only need to login once per slot, even if you have multiple keys on
+single slot.
+Only available if PowerDNS was compiled with PKCS#11 support.
 .RS
 .RE
 .TP

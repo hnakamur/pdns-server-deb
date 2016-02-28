@@ -76,7 +76,6 @@ void TCPNameserver::go()
     s_P=new PacketHandler;
   }
   catch(PDNSException &ae) {
-    L<<Logger::Error<<Logger::NTLog<<"TCP server is unable to launch backends - will try again when questions come in"<<endl;
     L<<Logger::Error<<"TCP server is unable to launch backends - will try again when questions come in: "<<ae.reason<<endl;
   }
   pthread_create(&d_tid, 0, launcher, static_cast<void *>(this));
@@ -364,13 +363,6 @@ void *TCPNameserver::doConnection(void *data)
 
       sendPacket(reply, fd);
     }
-  }
-  catch(DBException &e) {
-    Lock l(&s_plock);
-    delete s_P;
-    s_P = 0;
-
-    L<<Logger::Error<<"TCP Connection Thread unable to answer a question because of a backend error, cycling"<<endl;
   }
   catch(PDNSException &ae) {
     Lock l(&s_plock);
@@ -665,6 +657,10 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
   dk.getFromMeta(q->qdomain, "PUBLISH_CDNSKEY", publishCDNSKEY);
   dk.getFromMeta(q->qdomain, "PUBLISH_CDS", publishCDS);
   vector<DNSResourceRecord> cds, cdnskey;
+  DNSSECKeeper::keyset_t entryPoints = dk.getEntryPoints(q->qdomain);
+  set<uint32_t> entryPointIds;
+  for (auto const& value : entryPoints)
+    entryPointIds.insert(value.second.id);
 
   for(const DNSSECKeeper::keyset_t::value_type& value :  keys) {
     rr.qtype = QType(QType::DNSKEY);
@@ -677,7 +673,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
     csp.submit(rr);
 
     // generate CDS and CDNSKEY records
-    if(value.second.keyOrZone){
+    if(entryPointIds.count(value.second.id) > 0){
       if(publishCDNSKEY == "1") {
         rr.qtype=QType(QType::CDNSKEY);
         rr.content = value.first.getDNSKEY().getZoneRepresentation();
@@ -1243,7 +1239,7 @@ void TCPNameserver::thread()
             L<<Logger::Error<<"TCP question accept error: "<<strerror(errno)<<endl;
             
             if(errno==EMFILE) {
-              L<<Logger::Error<<Logger::NTLog<<"TCP handler out of filedescriptors, exiting, won't recover from this"<<endl;
+              L<<Logger::Error<<"TCP handler out of filedescriptors, exiting, won't recover from this"<<endl;
               exit(1);
             }
           }
@@ -1254,7 +1250,7 @@ void TCPNameserver::thread()
             int room;
             d_connectionroom_sem->getValue( &room);
             if(room<1)
-              L<<Logger::Warning<<Logger::NTLog<<"Limit of simultaneous TCP connections reached - raise max-tcp-connections"<<endl;
+              L<<Logger::Warning<<"Limit of simultaneous TCP connections reached - raise max-tcp-connections"<<endl;
 
             if(pthread_create(&tid, 0, &doConnection, reinterpret_cast<void*>(fd))) {
               L<<Logger::Error<<"Error creating thread: "<<stringerror()<<endl;

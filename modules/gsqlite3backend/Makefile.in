@@ -83,24 +83,26 @@ subdir = modules/gsqlite3backend
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(top_srcdir)/build-aux/depcomp $(dist_doc_DATA)
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
-	$(top_srcdir)/m4/ax_lib_readline.m4 $(top_srcdir)/m4/boost.m4 \
-	$(top_srcdir)/m4/libtool.m4 $(top_srcdir)/m4/ltoptions.m4 \
-	$(top_srcdir)/m4/ltsugar.m4 $(top_srcdir)/m4/ltversion.m4 \
-	$(top_srcdir)/m4/lt~obsolete.m4 \
+am__aclocal_m4_deps = $(top_srcdir)/m4/ax_check_openssl.m4 \
+	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
+	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
+	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
+	$(top_srcdir)/m4/ltversion.m4 $(top_srcdir)/m4/lt~obsolete.m4 \
 	$(top_srcdir)/m4/pdns_check_bison.m4 \
 	$(top_srcdir)/m4/pdns_check_cdb.m4 \
 	$(top_srcdir)/m4/pdns_check_clock_gettime.m4 \
 	$(top_srcdir)/m4/pdns_check_curl_program.m4 \
 	$(top_srcdir)/m4/pdns_check_flex.m4 \
 	$(top_srcdir)/m4/pdns_check_ldap.m4 \
+	$(top_srcdir)/m4/pdns_check_libedit.m4 \
 	$(top_srcdir)/m4/pdns_check_libsodium.m4 \
 	$(top_srcdir)/m4/pdns_check_linkchecker.m4 \
 	$(top_srcdir)/m4/pdns_check_mkdocs.m4 \
+	$(top_srcdir)/m4/pdns_check_network_libs.m4 \
 	$(top_srcdir)/m4/pdns_check_opendbx.m4 \
+	$(top_srcdir)/m4/pdns_check_os.m4 \
 	$(top_srcdir)/m4/pdns_check_pandoc.m4 \
 	$(top_srcdir)/m4/pdns_check_ragel.m4 \
-	$(top_srcdir)/m4/pdns_check_readline.m4 \
 	$(top_srcdir)/m4/pdns_check_sqlite3.m4 \
 	$(top_srcdir)/m4/pdns_d_fortify_source.m4 \
 	$(top_srcdir)/m4/pdns_enable_botan.m4 \
@@ -116,7 +118,6 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/pdns_param_ssp_buffer_size.m4 \
 	$(top_srcdir)/m4/pdns_pie.m4 $(top_srcdir)/m4/pdns_relro.m4 \
 	$(top_srcdir)/m4/pdns_stack_protector.m4 \
-	$(top_srcdir)/m4/pdns_with_cryptopp.m4 \
 	$(top_srcdir)/m4/pdns_with_geo.m4 \
 	$(top_srcdir)/m4/pdns_with_lua.m4 \
 	$(top_srcdir)/m4/pdns_with_luajit.m4 \
@@ -124,7 +125,6 @@ am__aclocal_m4_deps = $(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/pdns_with_oracle.m4 \
 	$(top_srcdir)/m4/pdns_with_postgresql.m4 \
 	$(top_srcdir)/m4/pdns_with_sqlite3.m4 \
-	$(top_srcdir)/m4/pdns_with_system_mbedtls.m4 \
 	$(top_srcdir)/m4/pdns_with_unixodbc.m4 \
 	$(top_srcdir)/m4/tm-gmtoff.m4 $(top_srcdir)/m4/warnings.m4 \
 	$(top_srcdir)/configure.ac
@@ -281,8 +281,6 @@ CDB_LIBS = @CDB_LIBS@
 CFLAGS = @CFLAGS@
 CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
-CRYPTOPP_CFLAGS = @CRYPTOPP_CFLAGS@
-CRYPTOPP_LIBS = @CRYPTOPP_LIBS@
 CURL = @CURL@
 CXX = @CXX@
 CXXCPP = @CXXCPP@
@@ -321,6 +319,8 @@ LEX = @LEX@
 LEXLIB = @LEXLIB@
 LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
 LIBDL = @LIBDL@
+LIBEDIT_CFLAGS = @LIBEDIT_CFLAGS@
+LIBEDIT_LIBS = @LIBEDIT_LIBS@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
 LIBSODIUM_CFLAGS = @LIBSODIUM_CFLAGS@
@@ -336,9 +336,6 @@ LUA_CFLAGS = @LUA_CFLAGS@
 LUA_LIBS = @LUA_LIBS@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
-MBEDTLS_CFLAGS = @MBEDTLS_CFLAGS@
-MBEDTLS_LIBS = @MBEDTLS_LIBS@
-MBEDTLS_SUBDIR = @MBEDTLS_SUBDIR@
 MKDIR_P = @MKDIR_P@
 MKDOCS = @MKDOCS@
 MYSQL_CFLAGS = @MYSQL_CFLAGS@
@@ -350,6 +347,9 @@ OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
 OPENDBX_CFLAGS = @OPENDBX_CFLAGS@
 OPENDBX_LIBS = @OPENDBX_LIBS@
+OPENSSL_INCLUDES = @OPENSSL_INCLUDES@
+OPENSSL_LDFLAGS = @OPENSSL_LDFLAGS@
+OPENSSL_LIBS = @OPENSSL_LIBS@
 ORACLE_CFLAGS = @ORACLE_CFLAGS@
 ORACLE_LIBS = @ORACLE_LIBS@
 OTOOL = @OTOOL@
@@ -377,7 +377,6 @@ PKG_CONFIG_PATH = @PKG_CONFIG_PATH@
 PROGRAM_LDFLAGS = @PROGRAM_LDFLAGS@
 RAGEL = @RAGEL@
 RANLIB = @RANLIB@
-READLINE_LIBS = @READLINE_LIBS@
 RELRO_LDFLAGS = @RELRO_LDFLAGS@
 REMOTEBACKEND_ZEROMQ = @REMOTEBACKEND_ZEROMQ@
 RT_LIBS = @RT_LIBS@

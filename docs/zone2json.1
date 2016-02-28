@@ -1,0 +1,58 @@
+.TH "ZONE2JSON" "1" "January 2016" "" ""
+.SH NAME
+.PP
+\f[B]zone2json\f[] \- convert BIND zones to JSON
+.SH SYNOPSIS
+.PP
+\f[B]zone2json\f[]
+{\f[B]\-\-named\-conf=\f[]\f[I]PATH\f[],\f[B]\-\-zone\-file=\f[]\f[I]PATH\f[]
+[\f[B]\-\-zone\-name=\f[]\f[I]NAME\f[]]} [\f[I]OPTIONS\f[]]
+.SH DESCRIPTION
+.PP
+\f[B]zone2json\f[] parses Bind named.conf files and zonefiles and
+outputs JSON on standard out, which can then be fed to the PowerDNS API.
+.PP
+\f[B]zone2json\f[] understands the Bind master file extension
+\f[C]$GENERATE\f[] and will also honour \f[C]$ORIGIN\f[] and
+\f[C]$TTL\f[].
+.SH OPTIONS
+.SS INPUT OPTIONS
+.TP
+.B \-\-named\-conf=\f[I]PATH\f[]
+Read \f[I]PATH\f[] to get the bind configuration
+.RS
+.RE
+.TP
+.B \-\-zone=\f[I]PATH\f[]
+Parse only the zone file at \f[I]PATH\f[] Conflicts with
+\f[B]\-\-named\-conf\f[] parameter.
+.RS
+.RE
+.TP
+.B \-\-zone\-name=\f[I]NAME\f[]
+When parsing a single zone without $ORIGIN statement, set \f[I]ZONE\f[]
+as the zone name.
+.RS
+.RE
+.SS OTHER OPTIONS
+.TP
+.B \-\-help
+List all options
+.RS
+.RE
+.TP
+.B \-\-on\-error\-resume\-next
+Ignore missing zone files during parsing.
+Dangerous.
+.RS
+.RE
+.TP
+.B \-\-verbose
+Be verbose during conversion.
+.RS
+.RE
+.SH SEE ALSO
+.PP
+pdns_server(1)
+.SH AUTHORS
+PowerDNS.

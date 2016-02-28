@@ -158,6 +158,8 @@ uint16_t Resolver::sendResolve(const ComboAddress& remote, const ComboAddress& l
     } else {
       // try to make socket
       sock = makeQuerySocket(local, true);
+      if (sock < 0)
+        throw ResolverException("Unable to create socket to "+remote.toStringWithPort()+": "+stringerror());
       setNonBlocking( sock );
       locals[lstr] = sock;
     }
@@ -182,10 +184,10 @@ uint16_t Resolver::sendResolve(const ComboAddress& remote, const DNSName &domain
 static int parseResult(MOADNSParser& mdp, const DNSName& origQname, uint16_t origQtype, uint16_t id, Resolver::res_t* result)
 {
   result->clear();
-  
-  if(mdp.d_header.rcode) 
+
+  if(mdp.d_header.rcode)
     return mdp.d_header.rcode;
-      
+
   if(origQname.countLabels()) {  // not AXFR
     if(mdp.d_header.id != id) 
       throw ResolverException("Remote nameserver replied with wrong id");
@@ -194,28 +196,17 @@ static int parseResult(MOADNSParser& mdp, const DNSName& origQname, uint16_t ori
     if(mdp.d_qname != origQname)
       throw ResolverException(string("resolver: received an answer to another question (")+mdp.d_qname.toString()+"!="+ origQname.toString()+".)");
   }
-    
+
   vector<DNSResourceRecord> ret;
   DNSResourceRecord rr;
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i!=mdp.d_answers.end(); ++i) {
     rr.qname = i->first.d_name;
     rr.qtype = i->first.d_type;
     rr.ttl = i->first.d_ttl;
-    rr.content = i->first.d_content->getZoneRepresentation();
-    switch(rr.qtype.getCode()) {
-      case QType::SRV:
-      case QType::MX:
-        if (rr.content.size() >= 2 && *(rr.content.rbegin()+1) == ' ')
-          break;
-      case QType::CNAME:
-      case QType::DNAME:
-      case QType::NS:
-        if(!rr.content.empty())
-          boost::erase_tail(rr.content, 1);
-    }
+    rr.content = i->first.d_content->getZoneRepresentation(true);
     result->push_back(rr);
   }
-  
+
   return 0;
 }
 
@@ -364,12 +355,10 @@ void Resolver::getSoaSerial(const string &ipport, const DNSName &domain, uint32_
 }
 
 AXFRRetriever::AXFRRetriever(const ComboAddress& remote,
-        const DNSName& domain,
-        const DNSName& tsigkeyname,
-        const DNSName& tsigalgorithm, 
-        const string& tsigsecret,
-        const ComboAddress* laddr)
-: d_tsigkeyname(tsigkeyname), d_tsigsecret(tsigsecret), d_tsigPos(0), d_nonSignedMessages(0)
+                             const DNSName& domain,
+                             const TSIGTriplet& tt, 
+                             const ComboAddress* laddr)
+  : d_tt(tt), d_tsigPos(0), d_nonSignedMessages(0)
 {
   ComboAddress local;
   if (laddr != NULL) {
@@ -385,6 +374,8 @@ AXFRRetriever::AXFRRetriever(const ComboAddress& remote,
   d_sock = -1;
   try {
     d_sock = makeQuerySocket(local, false); // make a TCP socket
+    if (d_sock < 0)
+      throw ResolverException("Error creating socket for AXFR request to "+d_remote.toStringWithPort());
     d_buf = shared_array<char>(new char[65536]);
     d_remote = remote; // mostly for error reporting
     this->connect();
@@ -394,16 +385,16 @@ AXFRRetriever::AXFRRetriever(const ComboAddress& remote,
     DNSPacketWriter pw(packet, domain, QType::AXFR);
     pw.getHeader()->id = dns_random(0xffff);
   
-    if(!tsigkeyname.empty()) {
-      if (tsigalgorithm == DNSName("hmac-md5"))
-        d_trc.d_algoName = tsigalgorithm + DNSName("sig-alg.reg.int");
+    if(!tt.name.empty()) {
+      if (tt.algo == DNSName("hmac-md5"))
+        d_trc.d_algoName = tt.algo + DNSName("sig-alg.reg.int");
       else
-        d_trc.d_algoName = tsigalgorithm;
+        d_trc.d_algoName = tt.algo;
       d_trc.d_time = time(0);
       d_trc.d_fudge = 300;
       d_trc.d_origID=ntohs(pw.getHeader()->id);
       d_trc.d_eRcode=0;
-      addTSIG(pw, &d_trc, tsigkeyname, tsigsecret, "", false);
+      addTSIG(pw, &d_trc, tt.name, tt.secret, "", false);
     }
   
     uint16_t replen=htons(packet.size());
@@ -430,6 +421,7 @@ AXFRRetriever::AXFRRetriever(const ComboAddress& remote,
   catch(...) {
     if(d_sock >= 0)
       close(d_sock);
+    d_sock = -1;
     throw;
   }
 }
@@ -471,7 +463,7 @@ int AXFRRetriever::getChunk(Resolver::res_t &res, vector<DNSRecord>* records) //
     if (answer.first.d_type == QType::SOA)
       d_soacount++;
  
-  if(!d_tsigkeyname.empty()) { // TSIG verify message
+  if(!d_tt.name.empty()) { // TSIG verify message
     // If we have multiple messages, we need to concatenate them together. We also need to make sure we know the location of 
     // the TSIG record so we can remove it in makeTSIGMessageFromTSIGPacket
     d_signData.append(d_buf.get(), len);
@@ -501,13 +493,13 @@ int AXFRRetriever::getChunk(Resolver::res_t &res, vector<DNSRecord>* records) //
 
     if (checkTSIG) {
       if (theirMac.empty())
-        throw ResolverException("No TSIG on AXFR response from "+d_remote.toStringWithPort()+" , should be signed with TSIG key '"+d_tsigkeyname.toString()+"'");
+        throw ResolverException("No TSIG on AXFR response from "+d_remote.toStringWithPort()+" , should be signed with TSIG key '"+d_tt.name.toString()+"'");
 
       string message;
       if (!d_prevMac.empty()) {
-        message = makeTSIGMessageFromTSIGPacket(d_signData, d_tsigPos, d_tsigkeyname, d_trc, d_prevMac, true, d_signData.size()-len);
+        message = makeTSIGMessageFromTSIGPacket(d_signData, d_tsigPos, d_tt.name, d_trc, d_prevMac, true, d_signData.size()-len);
       } else {
-        message = makeTSIGMessageFromTSIGPacket(d_signData, d_tsigPos, d_tsigkeyname, d_trc, d_trc.d_mac, false);
+        message = makeTSIGMessageFromTSIGPacket(d_signData, d_tsigPos, d_tt.name, d_trc, d_trc.d_mac, false);
       }
 
       TSIGHashEnum algo;
@@ -516,16 +508,16 @@ int AXFRRetriever::getChunk(Resolver::res_t &res, vector<DNSRecord>* records) //
       }
 
       if (algo == TSIG_GSS) {
-        GssContext gssctx(d_tsigkeyname);
-        if (!gss_verify_signature(d_tsigkeyname, message, theirMac)) {
-          throw ResolverException("Signature failed to validate on AXFR response from "+d_remote.toStringWithPort()+" signed with TSIG key '"+d_tsigkeyname.toString()+"'");
+        GssContext gssctx(d_tt.name);
+        if (!gss_verify_signature(d_tt.name, message, theirMac)) {
+          throw ResolverException("Signature failed to validate on AXFR response from "+d_remote.toStringWithPort()+" signed with TSIG key '"+d_tt.name.toString()+"'");
         }
       } else {
-        string ourMac=calculateHMAC(d_tsigsecret, message, algo);
+        string ourMac=calculateHMAC(d_tt.secret, message, algo);
 
         // ourMac[0]++; // sabotage == for testing :-)
         if(ourMac != theirMac) {
-          throw ResolverException("Signature failed to validate on AXFR response from "+d_remote.toStringWithPort()+" signed with TSIG key '"+d_tsigkeyname.toString()+"'");
+          throw ResolverException("Signature failed to validate on AXFR response from "+d_remote.toStringWithPort()+" signed with TSIG key '"+d_tt.name.toString()+"'");
         }
       }
 

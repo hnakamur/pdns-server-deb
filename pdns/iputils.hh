@@ -1,6 +1,6 @@
 /*
     PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2014  PowerDNS.COM BV
+    Copyright (C) 2002 - 2016  PowerDNS.COM BV
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2
@@ -59,6 +59,26 @@
 #define le64toh(x) OSSwapLittleToHostInt64(x)
 #endif
 
+// for illumos
+#ifdef BE_64
+
+#define htobe16(x) BE_16(x)
+#define htole16(x) LE_16(x)
+#define be16toh(x) BE_IN16(x)
+#define le16toh(x) LE_IN16(x)
+
+#define htobe32(x) BE_32(x)
+#define htole32(x) LE_32(x)
+#define be32toh(x) BE_IN32(x)
+#define le32toh(x) LE_IN32(x)
+
+#define htobe64(x) BE_64(x)
+#define htole64(x) LE_64(x)
+#define be64toh(x) BE_IN64(x)
+#define le64toh(x) LE_IN64(x)
+
+#endif
+
 union ComboAddress {
   struct sockaddr_in sin4;
   struct sockaddr_in6 sin6;
@@ -75,6 +95,9 @@ union ComboAddress {
 
   bool operator<(const ComboAddress& rhs) const
   {
+    if(sin4.sin_family == 0) {
+      return false;
+    } 
     if(boost::tie(sin4.sin_family, sin4.sin_port) < boost::tie(rhs.sin4.sin_family, rhs.sin4.sin_port))
       return true;
     if(boost::tie(sin4.sin_family, sin4.sin_port) > boost::tie(rhs.sin4.sin_family, rhs.sin4.sin_port))
@@ -88,16 +111,26 @@ union ComboAddress {
 
   bool operator>(const ComboAddress& rhs) const
   {
-    if(boost::tie(sin4.sin_family, sin4.sin_port) > boost::tie(rhs.sin4.sin_family, rhs.sin4.sin_port))
-      return true;
-    if(boost::tie(sin4.sin_family, sin4.sin_port) < boost::tie(rhs.sin4.sin_family, rhs.sin4.sin_port))
-      return false;
-    
-    if(sin4.sin_family == AF_INET)
-      return sin4.sin_addr.s_addr > rhs.sin4.sin_addr.s_addr;
-    else
-      return memcmp(&sin6.sin6_addr.s6_addr, &rhs.sin6.sin6_addr.s6_addr, 16) > 0;
+    return rhs.operator<(*this);
   }
+
+  struct addressOnlyHash
+  {
+    uint32_t operator()(const ComboAddress& ca) const 
+    { 
+      const unsigned char* start;
+      int len;
+      if(ca.sin4.sin_family == AF_INET) {
+        start =(const unsigned char*)&ca.sin4.sin_addr.s_addr;
+        len=4;
+      }
+      else {
+        start =(const unsigned char*)&ca.sin6.sin6_addr.s6_addr;
+        len=16;
+      }
+      return burtle(start, len, 0);
+    }
+  };
 
   struct addressOnlyLessThan: public std::binary_function<ComboAddress, ComboAddress, bool>
   {
@@ -211,9 +244,10 @@ union ComboAddress {
   string toString() const
   {
     char host[1024];
-    getnameinfo((struct sockaddr*) this, getSocklen(), host, sizeof(host),0, 0, NI_NUMERICHOST);
-      
-    return host;
+    if(sin4.sin_family && !getnameinfo((struct sockaddr*) this, getSocklen(), host, sizeof(host),0, 0, NI_NUMERICHOST))
+      return host;
+    else
+      return "invalid";
   }
 
   string toStringWithPort() const
@@ -254,6 +288,7 @@ public:
   Netmask()
   {
 	d_network.sin4.sin_family=0; // disable this doing anything useful
+	d_network.sin4.sin_port = 0; // this guarantees d_network compares identical
 	d_mask=0;
 	d_bits=0;
   }
@@ -657,7 +692,7 @@ public:
       }
       if (node) {
         for(auto it = _nodes.begin(); it != _nodes.end(); it++)
-           if (node->node4.get() == *it) _nodes.erase(it);
+           if (node->node6.get() == *it) _nodes.erase(it);
         node->node6.reset();
       }
     }
@@ -811,6 +846,8 @@ bool HarvestDestinationAddress(struct msghdr* msgh, ComboAddress* destination);
 bool HarvestTimestamp(struct msghdr* msgh, struct timeval* tv);
 void fillMSGHdr(struct msghdr* msgh, struct iovec* iov, char* cbuf, size_t cbufsize, char* data, size_t datalen, ComboAddress* addr);
 int sendfromto(int sock, const char* data, int len, int flags, const ComboAddress& from, const ComboAddress& to);
+ssize_t sendMsgWithTimeout(int fd, const char* buffer, size_t len, int timeout, ComboAddress& dest, const ComboAddress& local, unsigned int localItf);
+
 #endif
 
 extern template class NetmaskTree<bool>;
