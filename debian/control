@@ -31,7 +31,6 @@ Build-Depends: autoconf,
                libssl-dev,
                libtool,
                libyaml-cpp-dev (>= 0.5),
-               libzmq-dev,
                pkg-config,
                po-debconf,
                ragel
