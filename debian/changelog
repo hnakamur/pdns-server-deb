@@ -1,3 +1,19 @@
+pdns (4.0.0~alpha2-4) unstable; urgency=medium
+
+  * Ensure server and backends are always updated together,
+    otherwise strange errors occur at runtime/startup.
+  * Update Vcs-* URLs to point to secure location.
+  * Remove pdns-recursor from Suggests, typical installations will not
+    have both.
+  * Remove Matthijs Möhlmann from Uploaders for now.
+  * Remove unused lintian overrides.
+  * Fix lintian warnings:
+    * Override possible-gpl-code-linked-with-openssl, we have a license
+      exception.
+    * Remove unused file paragraphs from debian/copyright.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Thu, 24 Mar 2016 20:29:31 +0000
+
 pdns (4.0.0~alpha2-3) unstable; urgency=medium
 
   * Drop unused libzmq-dev build-dependency (Closes: #818223)
