@@ -46,8 +46,7 @@ Depends: adduser,
          ${misc:Depends},
          ${shlibs:Depends}
 Replaces: pdns
-Suggests: pdns-backend,
-          pdns-recursor
+Suggests: pdns-backend
 Description: extremely powerful and versatile nameserver
  PowerDNS is a versatile nameserver which supports a large number
  of different backends ranging from simple zonefiles to relational
