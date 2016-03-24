@@ -43,14 +43,6 @@ Files: ext/yahttp/*
 Copyright: 2014 Aki Tuomi
 License: Expat
 
-Files: ext/rapidjson/*
-Copyright: 2011 Milo Yip
-License: Expat
-
-Files: ext/mbedtls/*
-Copyright: 2006-2015, ARM Limited
-License: GPL-2+
-
 Files: ext/json11/*
 Copyright: 2013 Dropbox, Inc.
 License: Expat
