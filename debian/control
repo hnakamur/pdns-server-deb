@@ -86,7 +86,7 @@ Description: Tools for DNS debugging by PowerDNS
 
 Package: pdns-backend-pipe
 Architecture: any
-Depends: pdns-server (>= ${source:Version}),
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
@@ -102,7 +102,7 @@ Description: pipe/coprocess backend for PowerDNS
 
 Package: pdns-backend-ldap
 Architecture: any
-Depends: pdns-server (>= ${source:Version}),
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
@@ -116,7 +116,7 @@ Description: LDAP backend for PowerDNS
 
 Package: pdns-backend-geoip
 Architecture: any
-Depends: pdns-server (>= ${source:Version}),
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
@@ -135,7 +135,7 @@ Package: pdns-backend-mysql
 Architecture: any
 Depends: dbconfig-common,
          dbconfig-mysql,
-         pdns-server (>= ${source:Version}),
+         pdns-server (= ${binary:Version}),
          ucf (>= 0.28),
          ${misc:Depends},
          ${shlibs:Depends}
@@ -154,7 +154,7 @@ Package: pdns-backend-pgsql
 Architecture: any
 Depends: dbconfig-common,
          dbconfig-pgsql,
-         pdns-server (>= ${source:Version}),
+         pdns-server (= ${binary:Version}),
          ucf (>= 0.28),
          ${misc:Depends},
          ${shlibs:Depends}
@@ -173,7 +173,7 @@ Package: pdns-backend-sqlite3
 Architecture: any
 Depends: dbconfig-common,
          dbconfig-sqlite3,
-         pdns-server (>= ${source:Version}),
+         pdns-server (= ${binary:Version}),
          ucf (>= 0.28),
          ${misc:Depends},
          ${shlibs:Depends}
@@ -188,7 +188,7 @@ Description: sqlite 3 backend for PowerDNS
 
 Package: pdns-backend-lua
 Architecture: any
-Depends: pdns-server (>= ${source:Version}),
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
@@ -202,7 +202,7 @@ Description: Lua backend for PowerDNS
 
 Package: pdns-backend-remote
 Architecture: any
-Depends: pdns-server (>= ${source:Version}),
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
@@ -217,7 +217,7 @@ Description: remote backend for PowerDNS
 
 Package: pdns-backend-mydns
 Architecture: any
-Depends: pdns-server (>= ${source:Version}),
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
@@ -231,7 +231,7 @@ Description: MyDNS compatibility backend for PowerDNS
 
 Package: pdns-backend-tinydns
 Architecture: any
-Depends: pdns-server (>= ${source:Version}),
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
