@@ -1,3 +1,10 @@
+pdns (3.4.1-4+deb8u5) jessie-security; urgency=high
+
+  * Non-maintainer upload.
+  * No-change rebuild against botan1.10.
+
+ -- Markus Koschany <apo@debian.org>  Tue, 10 May 2016 18:27:05 +0200
+
 pdns (3.4.1-4+deb8u4) jessie; urgency=medium
 
   * Fix upgrades with default configuration.
