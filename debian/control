@@ -1,7 +1,7 @@
 Source: pdns
 Section: net
 Priority: extra
-Standards-Version: 3.9.7
+Standards-Version: 3.9.8
 Maintainer: Debian PowerDNS Maintainers <pkg-pdns-maintainers@lists.alioth.debian.org>
 Uploaders: Marc Haber <mh+debian-packages@zugschlus.de>,
            Christian Hofstaedtler <zeha@debian.org>
