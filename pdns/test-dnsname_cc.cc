@@ -176,7 +176,10 @@ BOOST_AUTO_TEST_CASE(test_trim) {
 }
 
 BOOST_AUTO_TEST_CASE(test_toolong) {
+
   BOOST_CHECK_THROW(DNSName w("1234567890123456789012345678901234567890123456789012345678901234567890.com."), std::range_error);
+
+  BOOST_CHECK_THROW(DNSName w("12345678901234567890.12345678901234567890123456.789012345678901.234567890.12345678901234567890.12345678901234567890123456.789012345678901.234567890.12345678901234567890.12345678901234567890123456.789012345678901.234567890.234567890.789012345678901.234567890.234567890.789012345678901.234567890.234567890.com."), std::range_error);
 }
 
 BOOST_AUTO_TEST_CASE(test_dnsstrings) {
@@ -253,6 +256,15 @@ BOOST_AUTO_TEST_CASE(test_PacketParse) {
   DNSPacketWriter dpw1(packet, DNSName("."), QType::AAAA);
   DNSName p((char*)&packet[0], packet.size(), 12, false);
   BOOST_CHECK_EQUAL(p, root);
+  unsigned char* buffer=&packet[0];
+  /* set invalid label len:
+     - packet.size() == 17 (sizeof(dnsheader) + 1 + 2 + 2)
+     - label len < packet.size() but
+     - offset is 12, label len of 15 should be rejected
+     because offset + 15 >= packet.size()
+  */
+  buffer[sizeof(dnsheader)] = 15;
+  BOOST_CHECK_THROW(DNSName((char*)&packet[0], packet.size(), 12, false), std::range_error);
 }
 
 

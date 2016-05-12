@@ -40,6 +40,17 @@ Show summary of options.
 .RS
 .RE
 .TP
+.B \-\-ecs\-mask \f[I]VAL\f[]
+When EDNS forwarding an IP address, mask out first octet with this value
+.RS
+.RE
+.TP
+.B \-\-ecs\-stamp \f[I]FLAG\f[]
+Add original IP address as EDNS Client Subnet Option when forwarding to
+reference server
+.RS
+.RE
+.TP
 .B \-\-packet\-limit \f[I]NUM\f[]
 Stop after replaying \f[I]NUM\f[] packets.
 Default for \f[I]NUM\f[] is 0, which means no limit.

@@ -1,13 +1,13 @@
 AC_PREREQ([2.61])
 
-AC_INIT([pdns], m4_esyscmd_s(build-aux/gen-version))
+AC_INIT([pdns], m4_esyscmd([build-aux/gen-version]))
 
 AC_CONFIG_SRCDIR([pdns/receiver.cc])
 AC_CONFIG_MACRO_DIR([m4])
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_AUX_DIR([build-aux])
 
-AC_SUBST([pdns_configure_args],["$ac_configure_args"])
+AC_SUBST([pdns_configure_args], ["$ac_configure_args"])
 AC_DEFINE_UNQUOTED([PDNS_CONFIG_ARGS],
   ["$pdns_configure_args"],
   [pdns configure arguments]
@@ -39,18 +39,18 @@ AC_DEFINE([_GNU_SOURCE], [1],
 )
 
 # Warn when pkg.m4 is missing
-m4_pattern_forbid([^_?PKG_[A-Z_]+$],[*** pkg.m4 missing, please install pkg-config])
+m4_pattern_forbid([^_?PKG_[A-Z_]+$], [*** pkg.m4 missing, please install pkg-config])
 
 PDNS_WITH_LUAJIT
 AS_IF([test "x$with_luajit" = "xno"], [
   PDNS_WITH_LUA
 ])
 
-AX_CXX_COMPILE_STDCXX_11()
+AX_CXX_COMPILE_STDCXX_11
 
 AC_MSG_CHECKING([whether we will enable compiler security checks])
 AC_ARG_ENABLE([hardening],
-  [AS_HELP_STRING([--disable-hardening],[disable compiler security checks @<:@default=no@:>@])],
+  [AS_HELP_STRING([--disable-hardening], [disable compiler security checks @<:@default=no@:>@])],
   [enable_hardening=$enableval],
   [enable_hardening=yes]
 )
@@ -80,20 +80,6 @@ eval full_libdir="\"$libdir\""
 # detect pkg-config explicitly
 PKG_PROG_PKG_CONFIG
 
-# check if we want a static build
-AC_MSG_CHECKING([whether we will be building static binaries])
-
-AC_ARG_ENABLE([static-binaries],
-  [AS_HELP_STRING([--enable-static-binaries],[build static binaries @<:@default=no@:>@])],
-  [static=$enableval],
-  [static=no],
-)
-AC_MSG_RESULT([$static])
-
-AS_IF([test "x$static" != "xno"], [
-  PKG_CONFIG="$PKG_CONFIG --static"
-])
-
 AC_CHECK_HEADERS(
 	[sys/mman.h],
 	[AC_CHECK_FUNC(
@@ -112,7 +98,6 @@ AX_CHECK_OPENSSL([
   ]
 )
 
-PDNS_CHECK_LIBEDIT
 PDNS_CHECK_RAGEL
 PDNS_CHECK_CLOCK_GETTIME
 
@@ -143,58 +128,55 @@ PDNS_ENABLE_VERBOSE_LOGGING
 PDNS_ENABLE_PKCS11
 PDNS_ENABLE_GSS_TSIG
 
-AS_IF([test "x$static" != "xno"], [
-  LDFLAGS="-all-static $LDFLAGS"
-])
-
 modules="bind gmysql random"
 AC_ARG_WITH([modules],
-  [AS_HELP_STRING([--with-modules],[which backends to compile with @<:@default=bind gmysql random@:>@])],
+  [AS_HELP_STRING([--with-modules], [which backends to compile with @<:@default=bind gmysql random@:>@])],
   [modules="$withval"]
 )
 
 dynmodules="pipe"
 AC_ARG_WITH([dynmodules],
-  [AS_HELP_STRING([--with-dynmodules],[which backends to build for dynamic loading @<:@default=pipe@:>@])],
+  [AS_HELP_STRING([--with-dynmodules], [which backends to build for dynamic loading @<:@default=pipe@:>@])],
   [dynmodules="$withval"]
 )
 
-AC_SUBST(socketdir)
+AC_SUBST([socketdir])
 socketdir="/var/run"
 AC_ARG_WITH([socketdir],
-  [AS_HELP_STRING([--with-socketdir],[where the controlsocket lives @<:@default=/var/run@:>@])],
+  [AS_HELP_STRING([--with-socketdir], [where the controlsocket lives @<:@default=/var/run@:>@])],
   [socketdir="$withval"]
 )
 
-AC_SUBST(moduledirs)
-AC_SUBST(moduleobjects)
-AC_SUBST(modulelibs)
-AC_DEFINE_UNQUOTED([PDNS_MODULES],"$modules", [Built-in modules])
+AC_SUBST([moduledirs])
+AC_SUBST([moduleobjects])
+AC_SUBST([modulelibs])
+AC_DEFINE_UNQUOTED([PDNS_MODULES], "$modules", [Built-in modules])
 
 AC_MSG_CHECKING([whether we will be building the server])
 AC_ARG_ENABLE([pdns-server],
-  [AS_HELP_STRING([--enable-pdns_server],[if we should build the server @<:@default=yes@:>@])],
+  [AS_HELP_STRING([--enable-pdns_server], [if we should build the server @<:@default=yes@:>@])],
   [enable_pdns_server=$enableval],
   [enable_pdns_server=yes]
 )
 AC_MSG_RESULT([$enable_pdns_server])
-AM_CONDITIONAL([WITH_PDNS_SERVER],[test "x$enable_pdns_server" != "xno"])
+AM_CONDITIONAL([WITH_PDNS_SERVER], [test "x$enable_pdns_server" != "xno"])
 
 AC_ARG_ENABLE([gcc-skip-locking],
-  [AS_HELP_STRING([--enable-gcc-skip-locking],[if we should forcefully skip gcc locking @<:@default=no@:>@])],
-  [AC_DEFINE(GCC_SKIP_LOCKING,[],[Skip gcc locking])],
+  [AS_HELP_STRING([--enable-gcc-skip-locking], [if we should forcefully skip gcc locking @<:@default=no@:>@])],
+  [AC_DEFINE(GCC_SKIP_LOCKING,[], [Skip gcc locking])],
 )
 
 AC_MSG_CHECKING([whether we will be building and installing the extra tools])
 AC_ARG_ENABLE([tools],
-  [AS_HELP_STRING([--enable-tools],[if we should build and install the tools @<:@default=no@:>@])],
+  [AS_HELP_STRING([--enable-tools], [if we should build and install the tools @<:@default=no@:>@])],
   [enable_tools=$enableval],
   [enable_tools=no]
 )
 
 AC_MSG_RESULT([$enable_tools])
-AM_CONDITIONAL([TOOLS],[test "x$enable_tools" != "xno"])
+AM_CONDITIONAL([TOOLS], [test "x$enable_tools" != "xno"])
 
+PDNS_WITH_PROTOBUF
 
 for a in $modules $dynmodules; do
   case "$a" in
@@ -225,7 +207,6 @@ for a in $modules $dynmodules; do
       AS_IF([test "x$enable_unit_tests" = "xyes"],
         [PDNS_CHECK_CURL_PROGRAM]
       )
-
       have_remotebackend=yes
       ;;
     tinydns)
@@ -247,9 +228,9 @@ done
 
 PDNS_ENABLE_REMOTEBACKEND_ZEROMQ
 
-AM_CONDITIONAL([ORACLE],[test "x$needoracle" = "xyes"])
+AM_CONDITIONAL([ORACLE], [test "x$needoracle" = "xyes"])
 
-AM_CONDITIONAL([LDAP],[test "x$needldap" = "xyes"])
+AM_CONDITIONAL([LDAP], [test "x$needldap" = "xyes"])
 
 PDNS_CHECK_SQLITE3
 AM_CONDITIONAL([SQLITE3], [test "x$needsqlite3" = "xyes"])
@@ -266,7 +247,7 @@ for a in $modules; do
     modulelibs="$modulelibs `cat $srcdir/modules/${a}backend/OBJECTLIBS`"
   else
     AC_MSG_RESULT([no])
-    AC_MSG_ERROR([Do not know how to build module "$a", "$srcdir/modules/${a}backend" doesn't exist! Please review --with-modules parameter for supported values.])
+    AC_MSG_ERROR([Do not know how to build module "$a", "$srcdir/modules/${a}backend" does not exist! Please review --with-modules parameter for supported values.])
   fi
 done
 
@@ -277,17 +258,18 @@ for a in $dynmodules; do
     moduledirs="$moduledirs ${a}backend"
   else
     AC_MSG_RESULT([no])
-    AC_MSG_ERROR([Do not know how to build module "$a", "$srcdir/modules/${a}backend" doesn't exist! Please review --with-dynmodules parameter for supported values.])
+    AC_MSG_ERROR([Do not know how to build module "$a", "$srcdir/modules/${a}backend" does not exist! Please review --with-dynmodules parameter for supported values.])
   fi
 done
 
+AX_AVAILABLE_SYSTEMD
+AM_CONDITIONAL([HAVE_SYSTEMD], [ test x"$systemd" = "xy" ])
+
 LDFLAGS="$RELRO_LDFLAGS $LDFLAGS"
 
-AS_IF([test "x$static" != "xyes"], [
-  CFLAGS="$PIE_CFLAGS $CFLAGS"
-  CXXFLAGS="$PIE_CFLAGS $CXXFLAGS"
-  PROGRAM_LDFLAGS="$PIE_LDFLAGS $PROGRAM_LDFLAGS"
-])
+CFLAGS="$PIE_CFLAGS $CFLAGS"
+CXXFLAGS="$PIE_CFLAGS $CXXFLAGS"
+PROGRAM_LDFLAGS="$PIE_LDFLAGS $PROGRAM_LDFLAGS"
 AC_SUBST([PROGRAM_LDFLAGS])
 
 PDNS_ENABLE_COVERAGE
@@ -305,7 +287,7 @@ AC_SUBST([YAHTTP_LIBS], ['$(top_builddir)/ext/yahttp/yahttp/libyahttp.la'])
 
 CXXFLAGS="$SANITIZER_FLAGS $CXXFLAGS"
 
-AC_ARG_VAR(PACKAGEVERSION,[The version used in secpoll queries])
+AC_ARG_VAR(PACKAGEVERSION, [The version used in secpoll queries])
 AS_IF([test "x$PACKAGEVERSION" != "x"],
   [AC_DEFINE_UNQUOTED([PACKAGEVERSION], "$PACKAGEVERSION", [Set to the package version used for secpoll])]
 )
@@ -372,7 +354,7 @@ AS_IF([test "x$LUAPC" != "x"],
   [AC_MSG_NOTICE([Lua support: $LUAPC])],
   [AC_MSG_NOTICE([Lua support: no])]
 )
-AS_IF(test "x$enable_experimental_gss_tsig" == "xyes"],
+AS_IF([test "x$enable_experimental_gss_tsig" == "xyes"],
   [AC_MSG_NOTICE([GSS-TSIG support: yes])]
 )
 AC_MSG_NOTICE([])

@@ -36,35 +36,39 @@ namespace {
 
 }
 
-
 bool getEDNSSubnetOptsFromString(const string& options, EDNSSubnetOpts* eso)
 {
+  return getEDNSSubnetOptsFromString(options.c_str(), options.length(), eso);
+}
+bool getEDNSSubnetOptsFromString(const char* options, unsigned int len, EDNSSubnetOpts* eso)
+{
   //cerr<<"options.size:"<<options.size()<<endl;
-  if(options.size() <= 4)
-    return false;  
   EDNSSubnetOptsWire esow;
-  memcpy(&esow, options.c_str(), sizeof(esow));
+  static_assert (sizeof(esow) == 4, "sizeof(EDNSSubnetOptsWire) must be 4 bytes");
+  if(len <= sizeof(esow))
+    return false;
+  memcpy(&esow, options, sizeof(esow));
   esow.family = ntohs(esow.family);
   //cerr<<"Family when parsing from string: "<<esow.family<<endl;
   ComboAddress address;
   unsigned int octetsin = ((esow.sourceMask - 1)>> 3)+1;
   //cerr<<"octetsin:"<<octetsin<<endl;
   if(esow.family == 1) {
-    if(options.size() != 4+octetsin)
+    if(len != sizeof(esow)+octetsin)
       return false;
-    if(octetsin > 4)
+    if(octetsin > sizeof(address.sin4.sin_addr.s_addr))
       return false;
     memset(&address, 0, sizeof(address));
     address.sin4.sin_family = AF_INET;
-    memcpy(&address.sin4.sin_addr.s_addr, options.c_str()+4, octetsin);
+    memcpy(&address.sin4.sin_addr.s_addr, options+sizeof(esow), octetsin);
   } else if(esow.family == 2) {
-    if(options.size() != 4+octetsin)
+    if(len != sizeof(esow)+octetsin)
       return false;
-    if(octetsin > 16)
+    if(octetsin > sizeof(address.sin6.sin6_addr.s6_addr))
       return false;
     memset(&address, 0, sizeof(address));
     address.sin4.sin_family = AF_INET6;
-    memcpy(&address.sin6.sin6_addr.s6_addr, options.c_str()+4, octetsin);
+    memcpy(&address.sin6.sin6_addr.s6_addr, options+sizeof(esow), octetsin);
   }
   else
     return false;
@@ -79,7 +83,7 @@ string makeEDNSSubnetOptsString(const EDNSSubnetOpts& eso)
   string ret;
   EDNSSubnetOptsWire esow;
   uint16_t family = htons(eso.source.getNetwork().sin4.sin_family == AF_INET ? 1 : 2);
-  memcpy(&esow.family, &family, 2);
+  esow.family = family;
   esow.sourceMask = eso.source.getBits();
   esow.scopeMask = eso.scope.getBits();
   ret.assign((const char*)&esow, sizeof(esow));

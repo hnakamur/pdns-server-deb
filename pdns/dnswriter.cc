@@ -91,7 +91,7 @@ void DNSPacketWriter::startRecord(const DNSName& name, uint16_t qtype, uint32_t 
   d_sor=d_content.size() + d_stuff; // start of real record
 }
 
-void DNSPacketWriter::addOpt(int udpsize, int extRCode, int Z, const vector<pair<uint16_t,string> >& options)
+void DNSPacketWriter::addOpt(uint16_t udpsize, int extRCode, int Z, const vector<pair<uint16_t,string> >& options)
 {
   uint32_t ttl=0;
 
@@ -101,6 +101,7 @@ void DNSPacketWriter::addOpt(int udpsize, int extRCode, int Z, const vector<pair
   stuff.version=0;
   stuff.Z=htons(Z);
 
+  static_assert(sizeof(EDNS0Record) == sizeof(ttl), "sizeof(EDNS0Record) must match sizeof(ttl)");
   memcpy(&ttl, &stuff, sizeof(stuff));
 
   ttl=ntohl(ttl); // will be reversed later on
@@ -118,10 +119,10 @@ void DNSPacketWriter::xfr48BitInt(uint64_t val)
   unsigned char bytes[6];
   uint16_t theLeft = htons((val >> 32)&0xffffU);
   uint32_t theRight = htonl(val & 0xffffffffU);
-  memcpy(bytes, (void*)&theLeft, 2);
-  memcpy(bytes+2, (void*)&theRight, 4);
+  memcpy(bytes, (void*)&theLeft, sizeof(theLeft));
+  memcpy(bytes+2, (void*)&theRight, sizeof(theRight));
 
-  d_record.insert(d_record.end(), bytes, bytes + 6);
+  d_record.insert(d_record.end(), bytes, bytes + sizeof(bytes));
 }
 
 
@@ -146,14 +147,19 @@ void DNSPacketWriter::xfr8BitInt(uint8_t val)
 
 
 /* input:
+ if lenField is true
   "" -> 0
   "blah" -> 4blah
   "blah" "blah" -> output 4blah4blah
   "verylongstringlongerthan256....characters" \xffverylongstring\x23characters (autosplit)
   "blah\"blah" -> 9blah"blah
   "blah\97" -> 5blahb
+
+ if lenField is false
+  "blah" -> blah
+  "blah\"blah" -> blah"blah
   */
-void DNSPacketWriter::xfrText(const string& text, bool)
+void DNSPacketWriter::xfrText(const string& text, bool, bool lenField)
 {
   if(text.empty()) {
     d_record.push_back(0);
@@ -161,9 +167,21 @@ void DNSPacketWriter::xfrText(const string& text, bool)
   }
   vector<string> segments = segmentDNSText(text);
   for(const string& str :  segments) {
-    d_record.push_back(str.length());
+    if(lenField)
+      d_record.push_back(str.length());
     d_record.insert(d_record.end(), str.c_str(), str.c_str() + str.length());
   }
+}
+
+void DNSPacketWriter::xfrUnquotedText(const string& text, bool lenField)
+{
+  if(text.empty()) {
+    d_record.push_back(0);
+    return;
+  }
+  if(lenField)
+    d_record.push_back(text.length());
+  d_record.insert(d_record.end(), text.c_str(), text.c_str() + text.length());
 }
 
 /* FIXME400: check that this beats a map */

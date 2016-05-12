@@ -220,12 +220,13 @@ public:
 
     this->resolve_name(&addresses, name);
     
-    b->lookup(QType(QType::ANY),name);
-    DNSResourceRecord rr;
-    while(b->get(rr))
-      if(rr.qtype.getCode() == QType::A || rr.qtype.getCode()==QType::AAAA)
-        addresses.push_back(rr.content);   // SOL if you have a CNAME for an NS
-
+    if(b) {
+        b->lookup(QType(QType::ANY),name);
+        DNSResourceRecord rr;
+        while(b->get(rr))
+          if(rr.qtype.getCode() == QType::A || rr.qtype.getCode()==QType::AAAA)
+            addresses.push_back(rr.content);   // SOL if you have a CNAME for an NS
+    }
     return addresses;
   }
 
@@ -235,12 +236,13 @@ public:
 
     this->resolve_name(&addresses, name);
 
-    b->lookup(QType(QType::ANY),name);
-    DNSResourceRecord rr;
-    while(b->get(rr))
-      if(rr.qtype.getCode() == QType::A || rr.qtype.getCode()==QType::AAAA)
-         addresses.push_back(rr.content);   // SOL if you have a CNAME for an NS
-
+    if(b) {
+        b->lookup(QType(QType::ANY),name);
+        DNSResourceRecord rr;
+        while(b->get(rr))
+          if(rr.qtype.getCode() == QType::A || rr.qtype.getCode()==QType::AAAA)
+             addresses.push_back(rr.content);   // SOL if you have a CNAME for an NS
+    }
     return addresses;
   }
 
@@ -258,8 +260,10 @@ private:
       if(!getaddrinfo(name.toString().c_str(), 0, &hints, &res)) {
         struct addrinfo* address = res;
         do {
-          memcpy(&remote, address->ai_addr, address->ai_addrlen);
-          addresses->push_back(remote.toString());
+          if (address->ai_addrlen <= sizeof(remote)) {
+            memcpy(&remote, address->ai_addr, address->ai_addrlen);
+            addresses->push_back(remote.toString());
+          }
         } while((address = address->ai_next));
         freeaddrinfo(res);
       }

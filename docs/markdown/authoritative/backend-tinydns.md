@@ -1,5 +1,4 @@
 # TinyDNS Backend
-**Warning**: The TinyDNS Backend is available since PowerDNS Authoritative Server 3.1. This backend is marked as experimental!
 
 * Native: Yes
 * Master: Yes
@@ -19,26 +18,31 @@ These are the configuration file parameters that are available for the TinyDNS b
 ### `tinydns-dbfile`
 * String
 * Default: data.cdb
+
 Specifies the name of the data file to use.
 
 ### `tinydns-tai-adjust`
 * Integer
 * Default: 11
+
 This adjusts the [TAI](http://www.tai64.com/) value if timestamps are used. These seconds will be added to the start point (1970) and will allow you to adjust for leap seconds. The current default is 11. The last update was on [june 30th 2012](http://hpiers.obspm.fr/iers/bul/bulc/bulletinc.dat).
 
 ### `tinydns-notify-on-startup`
 * Boolean
 * Default: no
+
 Tell the TinyDNSBackend to notify all the slave nameservers on startup. This might cause broadcast storms.
 
 ### `tinydns-ignore-bogus-records`
 * Boolean
 * Default: no
+
 The `tinydns-data` program can create data.cdb files that have bad/corrupt RDATA. PowerDNS will crash when it tries to read that bad/corrupt data. This option (change to yes), allows you to ignore that bad RDATA to make PowerDNS operate when bad data is in your CDB file. Be aware that the records are then ignored, where tinydns would still send out the bogus data. The option is primarily useful in master mode, as that reads all the packets in the zone to find all the SOA records.
 
 ### `tinydns-locations`
 * Boolean
-* Default: no
+* Default: yes
+
 Enable or Disable location support in the backend. Changing the value to 'no' will make the backend ignore the locations. This then returns all records. When the setting is changed to 'no' an AXFR will also return all the records. With the setting on 'yes' an AXFR will only return records without a location.
 
 ## Location and Timestamp support
@@ -55,5 +59,12 @@ The TinyDNSBackend also keeps a list of all the zones. This is needed to detect 
 This backend might solve some issues you have with the current tinydns noted on [Jonathan de Boyne Pollard's](http://homepage.ntlworld.com/jonathan.deboynepollard/author.html) [djbdns known problems page](http://homepage.ntlworld.com/jonathan.deboynepollard/FGA/djbdns-problems.html).
 
 The `data.cdb` file format support all types of records. They are sometimes difficult to create because you need to specify the actual content of the rdata. [Tinydns.org](http://tinydns.org/) provides a number of links to tools/cgi-scripts that allow you to create records. [Anders Brownworth](http://anders.com/) also provides a number of useful record building scripts on his [djbdnsRecordBuilder](http://anders.com/projects/sysadmin/djbdnsRecordBuilder/).
+
+PowerDNS and TinyDNS handle wildcards differently. Looking up foo.www.example.com with the below records on TinyDNS will return 198.51.100.1, PowerDNS will return NXDOMAIN. According to [RFC 4592](https://tools.ietf.org/html/rfc4592) \*.example.com should only match subdomains in under example.com, not \*.\*.example.com. This compatibility issue is [noted on the axfer-get page for the djbdns suite](https://cr.yp.to/djbdns/axfr-get.html).
+
+```
+*.example.com     A 198.51.100.1
+www.example.com   A 198.51.100.1
+```
 
 Compiling the TinyDNS backend requires you to have [tinycdb](http://www.corpit.ru/mjt/tinycdb.html) version 0.77.

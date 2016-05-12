@@ -203,7 +203,7 @@ pdnsutil show-zone example.net
 ```
 
 And communicate this securely to your registrar/parent zone. Now wait until the
-new DS is published in the parent zone and at least the TLL for the DS records
+new DS is published in the parent zone and at least the TTL for the DS records
 has passed. The rollover is now in the "DS Change" state and can continue to the
 "DNSKEY Removal" stage by actually deleting the old KSK.
 
@@ -281,7 +281,7 @@ This updates the CDS records to reflect only the new key.
 
 Wait for the parent to pick up on the CDS change. Once the upstream DS records
 show only the DS records for the new KSK, you may disable sending out the CDS
-responses: `pdnsutil unset-pushish-cds example.com`.
+responses: `pdnsutil unset-publish-cds example.com`.
 
 Done!
 

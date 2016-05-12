@@ -55,12 +55,6 @@ AtomicCounter PacketHandler::s_count;
 NetmaskGroup PacketHandler::s_allowNotifyFrom;
 extern string s_programname;
 
-enum root_referral {
-    NO_ROOT_REFERRAL,
-    LEAN_ROOT_REFERRAL,
-    FULL_ROOT_REFERRAL
-};
-
 PacketHandler::PacketHandler():B(s_programname), d_dk(&B)
 {
   ++s_count;
@@ -68,9 +62,6 @@ PacketHandler::PacketHandler():B(s_programname), d_dk(&B)
   d_doRecursion= ::arg().mustDo("recursor");
   d_logDNSDetails= ::arg().mustDo("log-dns-details");
   d_doIPv6AdditionalProcessing = ::arg().mustDo("do-ipv6-additional-processing");
-  d_sendRootReferral = ::arg().mustDo("send-root-referral")
-                            ? ( pdns_iequals(::arg()["send-root-referral"], "lean") ? LEAN_ROOT_REFERRAL : FULL_ROOT_REFERRAL )
-                            : NO_ROOT_REFERRAL;
   string fname= ::arg()["lua-prequery-script"];
   if(fname.empty())
   {
@@ -94,44 +85,6 @@ PacketHandler::~PacketHandler()
   DLOG(L<<Logger::Error<<"PacketHandler destructor called - "<<s_count<<" left"<<endl);
 }
 
-void PacketHandler::addRootReferral(DNSPacket* r)
-{  
-  // nobody reads what we output, but it appears to be the magic that shuts some nameservers up
-  static const char*ips[]={"198.41.0.4", "192.228.79.201", "192.33.4.12", "199.7.91.13", "192.203.230.10", "192.5.5.241", "192.112.36.4", "198.97.190.53", 
-                     "192.36.148.17","192.58.128.30", "193.0.14.129", "199.7.83.42", "202.12.27.33"};
-  static char templ[40];
-  strncpy(templ,"a.root-servers.net", sizeof(templ) - 1);
-
-  // add . NS records
-  DNSResourceRecord rr;
-  rr.qname = DNSName(".");
-  rr.qtype=QType::NS;
-  rr.ttl=518400;
-  rr.d_place=DNSResourceRecord::AUTHORITY;
-  
-  for(char c='a';c<='m';++c) {
-    *templ=c;
-    rr.content=templ;
-    r->addRecord(rr);
-  }
-
-  if( d_sendRootReferral == LEAN_ROOT_REFERRAL )
-     return;
-
-  // add the additional stuff
-  
-  rr.ttl=3600000;
-  rr.qtype=QType::A;
-  rr.d_place=DNSResourceRecord::ADDITIONAL;
-
-  for(char c='a';c<='m';++c) {
-    *templ=c;
-    rr.qname=DNSName(templ);
-    rr.content=ips[c-'a'];
-    r->addRecord(rr);
-  }
-}
-
 /**
  * This adds CDNSKEY records to the answer packet. Returns true if one was added.
  *
@@ -143,7 +96,7 @@ void PacketHandler::addRootReferral(DNSPacket* r)
 bool PacketHandler::addCDNSKEY(DNSPacket *p, DNSPacket *r, const SOAData& sd)
 {
   string publishCDNSKEY;
-  d_dk.getFromMeta(p->qdomain, "PUBLISH_CDNSKEY", publishCDNSKEY);
+  d_dk.getFromMeta(p->qdomain, "PUBLISH-CDNSKEY", publishCDNSKEY);
   if (publishCDNSKEY != "1")
     return false;
 
@@ -224,7 +177,7 @@ bool PacketHandler::addDNSKEY(DNSPacket *p, DNSPacket *r, const SOAData& sd)
 bool PacketHandler::addCDS(DNSPacket *p, DNSPacket *r, const SOAData& sd)
 {
   string publishCDS;
-  d_dk.getFromMeta(p->qdomain, "PUBLISH_CDS", publishCDS);
+  d_dk.getFromMeta(p->qdomain, "PUBLISH-CDS", publishCDS);
   if (publishCDS.empty())
     return false;
 
@@ -495,11 +448,11 @@ void PacketHandler::emitNSEC(DNSPacket *r, const SOAData& sd, const DNSName& nam
     nrc.d_set.insert(QType::SOA); // 1dfd8ad SOA can live outside the records table
     nrc.d_set.insert(QType::DNSKEY);
     string publishCDNSKEY;
-    d_dk.getFromMeta(name, "PUBLISH_CDNSKEY", publishCDNSKEY);
+    d_dk.getFromMeta(name, "PUBLISH-CDNSKEY", publishCDNSKEY);
     if (publishCDNSKEY == "1")
       nrc.d_set.insert(QType::CDNSKEY);
     string publishCDS;
-    d_dk.getFromMeta(name, "PUBLISH_CDS", publishCDS);
+    d_dk.getFromMeta(name, "PUBLISH-CDS", publishCDS);
     if (! publishCDS.empty())
       nrc.d_set.insert(QType::CDS);
   }
@@ -539,11 +492,11 @@ void PacketHandler::emitNSEC3(DNSPacket *r, const SOAData& sd, const NSEC3PARAMR
       n3rc.d_set.insert(QType::NSEC3PARAM);
       n3rc.d_set.insert(QType::DNSKEY);
       string publishCDNSKEY;
-      d_dk.getFromMeta(name, "PUBLISH_CDNSKEY", publishCDNSKEY);
+      d_dk.getFromMeta(name, "PUBLISH-CDNSKEY", publishCDNSKEY);
       if (publishCDNSKEY == "1")
         n3rc.d_set.insert(QType::CDNSKEY);
       string publishCDS;
-      d_dk.getFromMeta(name, "PUBLISH_CDS", publishCDS);
+      d_dk.getFromMeta(name, "PUBLISH-CDS", publishCDS);
       if (! publishCDS.empty())
         n3rc.d_set.insert(QType::CDS);
     }
@@ -651,7 +604,7 @@ bool getNSEC3Hashes(bool narrow, DNSBackend* db, int id, const std::string& hash
 
 void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const DNSName& target, const DNSName& wildcard, const DNSName& auth, const NSEC3PARAMRecordContent& ns3rc, bool narrow, int mode)
 {
-  DLOG(L<<"addNSEC3() mode="<<mode<<" auth="<<auth<<" target="<<target<<" wildcard="<<wildcard<<endl);
+  DLOG(L<<"addNSEC3() mode="<<mode<<" auth="<<auth<<" target="<<target<<" wildcard="<<wildcard.toLogString()<<endl);
 
   SOAData sd;
   if(!B.getSOAUncached(auth, sd)) {
@@ -737,7 +690,7 @@ void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const DNSName& target, 
 
 void PacketHandler::addNSEC(DNSPacket *p, DNSPacket *r, const DNSName& target, const DNSName& wildcard, const DNSName& auth, int mode)
 {
-  DLOG(L<<"addNSEC() mode="<<mode<<" auth="<<auth<<" target="<<target<<" wildcard="<<(wildcard.empty() ? "<empty>" : wildcard.toString())<<endl);
+  DLOG(L<<"addNSEC() mode="<<mode<<" auth="<<auth<<" target="<<target<<" wildcard="<<wildcard.toLogString()<<endl);
 
   SOAData sd;
   if(!B.getSOAUncached(auth, sd)) {
@@ -927,21 +880,6 @@ int PacketHandler::processNotify(DNSPacket *p)
   Communicator.addSlaveCheckRequest(di, p->d_remote);
   return 0;
 }
-
-bool validDNSName(const string &name)
-{
-  string::size_type pos, length=name.length();
-  char c;
-  for(pos=0; pos < length; ++pos) {
-    c=name[pos];
-    if(!((c >= 'a' && c <= 'z') ||
-         (c >= 'A' && c <= 'Z') ||
-         (c >= '0' && c <= '9') ||
-         c =='-' || c == '_' || c=='*' || c=='.' || c=='/' || c=='@' || c==' ' || c=='\\' || c==':'))
-      return false;
-  }
-  return true;
-}  
 
 DNSPacket *PacketHandler::question(DNSPacket *p)
 {
@@ -1314,15 +1252,9 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
         return 0;
       }
       
-      if(!retargetcount)
+      if(!retargetcount) {
         r->setA(false); // drop AA if we never had a SOA in the first place
-      if( d_sendRootReferral != NO_ROOT_REFERRAL ) {
-        DLOG(L<<Logger::Warning<<"Adding root-referral"<<endl);
-        addRootReferral(r);
-      }
-      else {
-        if (!retargetcount)
-          r->setRcode(RCode::Refused); // send REFUSED - but only on empty 'no idea'
+        r->setRcode(RCode::Refused); // send REFUSED - but only on empty 'no idea'
       }
       goto sendit;
     }
@@ -1408,7 +1340,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
       if(rr.qtype.getCode() == QType::CNAME && p->qtype.getCode() != QType::CNAME) 
         weRedirected=1;
 
-      if(DP && rr.qtype.getCode() == QType::ALIAS) {
+      if(DP && rr.qtype.getCode() == QType::ALIAS && (p->qtype.getCode() == QType::A || p->qtype.getCode() == QType::AAAA || p->qtype.getCode() == QType::ANY)) {
         haveAlias=DNSName(rr.content);
       }
 
@@ -1438,7 +1370,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
       goto sendit;
     }
 
-    if(!haveAlias.empty() && !weDone) {
+    if(!haveAlias.empty() && (!weDone || p->qtype.getCode() == QType::ANY)) {
       DLOG(L<<Logger::Warning<<"Found nothing that matched for '"<<target<<"', but did get alias to '"<<haveAlias<<"', referring"<<endl);
       DP->completePacket(r, haveAlias, target);
       return 0;
@@ -1497,7 +1429,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
     else if(weDone) {
       bool haveRecords = false;
       for(const auto& rr: rrset) {
-        if((p->qtype.getCode() == QType::ANY || rr.qtype == p->qtype) && rr.qtype.getCode() && rr.auth) {
+        if((p->qtype.getCode() == QType::ANY || rr.qtype == p->qtype) && rr.qtype.getCode() && rr.qtype != QType::ALIAS && rr.auth) {
           r->addRecord(rr);
           haveRecords = true;
         }
@@ -1562,7 +1494,7 @@ DNSPacket *PacketHandler::questionOrRecurse(DNSPacket *p, bool *shouldRecurse)
     throw; // we WANT to die at this point
   }
   catch(std::exception &e) {
-    L<<Logger::Error<<"Exception building answer packet ("<<e.what()<<") sending out servfail"<<endl;
+    L<<Logger::Error<<"Exception building answer packet for "<<p->qdomain.toLogString()<<"/"<<p->qtype.getName()<<" ("<<e.what()<<") sending out servfail"<<endl;
     delete r;
     r=p->replyPacket(); // generate an empty reply packet
     r->setRcode(RCode::ServFail);

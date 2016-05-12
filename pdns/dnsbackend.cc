@@ -33,34 +33,9 @@
 #include "dnspacket.hh"
 #include "dns.hh"
 
-bool DNSBackend::getAuth(DNSPacket *p, SOAData *sd, const DNSName &target, const int best_match_len, map<DNSName,int>& negCacheMap)
+bool DNSBackend::getAuth(DNSPacket *p, SOAData *sd, const DNSName &target)
 {
-  bool found=false;
-  DNSName subdomain(target);
-  do {
-    if( best_match_len >= (int)subdomain.toString().length() && p->qtype != QType::DS )
-      break;
-
-    map<DNSName,int>::iterator it = negCacheMap.find(subdomain);
-    bool negCached = ( it != negCacheMap.end() && it->second == 1 );
-
-    if(! negCached && this->getSOA( subdomain, *sd, p ) ) {
-      sd->qname = subdomain;
-      if (found) // Second SOA found, we are done
-        return true;
-
-      if(p->qtype.getCode() == QType::DS && subdomain==target) {
-        // Found authoritative zone but look for parent zone with 'DS' record.
-        found=true;
-      } else
-        return true;
-    }
-    if (found)
-      negCacheMap[subdomain]=2; // don't cache SOA's during our quest for a parent zone
-  }
-  while( subdomain.chopOff() );   // 'www.powerdns.org' -> 'powerdns.org' -> 'org' -> ''
-
-  return found;
+  return this->getSOA(target, *sd, p);
 }
 
 void DNSBackend::setArgPrefix(const string &prefix)
@@ -136,7 +111,7 @@ void BackendMakerClass::load_all()
 
 void BackendMakerClass::load(const string &module)
 {
-  int res;
+  bool res;
 
   if(module.find(".")==string::npos)
     res=UeberBackend::loadmodule(arg()["module-dir"]+"/lib"+module+"backend.so");
@@ -158,6 +133,10 @@ void BackendMakerClass::launch(const string &instr)
 
   vector<string> parts;
   stringtok(parts,instr,", ");
+
+  for (const auto part : parts)
+    if (count(parts.begin(), parts.end(), part) > 1)
+      throw ArgException("Refusing to launch multiple backends with the same name '" + part + "', verify all 'launch' statements in your configuration");
 
   for(vector<string>::const_iterator i=parts.begin();i!=parts.end();++i) {
     const string &part=*i;
@@ -294,7 +273,7 @@ bool DNSBackend::getBeforeAndAfterNames(uint32_t id, const DNSName& zonename, co
   // lcqname=labelReverse(lcqname);
   DNSName dnc;
   string relqname, sbefore, safter;
-  relqname=labelReverse(makeRelative(qname.toString(), zonename.toString()));
+  relqname=labelReverse(makeRelative(qname.toStringNoDot(), zonename.toStringNoDot())); // FIXME400
   //sbefore = before.toString();
   //safter = after.toString();
   bool ret = this->getBeforeAndAfterNamesAbsolute(id, relqname, dnc, sbefore, safter);

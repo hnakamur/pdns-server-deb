@@ -172,7 +172,10 @@ static int ldp_getWild(lua_State *L) {
 
 static int ldp_getZone(lua_State *L) {
   DNSPacket *p=ldp_checkDNSPacket(L);
-  lua_pushstring(L, p->qdomainzone.toString().c_str());
+  if(p->qdomainzone.empty())
+    lua_pushnil(L);
+  else
+    lua_pushstring(L, p->qdomainzone.toString().c_str());
   return 1;
 }
 
@@ -189,6 +192,18 @@ static int ldp_addRecords(lua_State *L) {
 static int ldp_getRemote(lua_State *L) {
   DNSPacket *p=ldp_checkDNSPacket(L);
   lua_pushstring(L, p->getRemote().c_str());
+  return 1;
+}
+
+static int ldp_getRemoteRaw(lua_State *L) {
+  DNSPacket *p=ldp_checkDNSPacket(L);
+  const ComboAddress& ca=p->d_remote;
+  if(ca.sin4.sin_family == AF_INET) {
+    lua_pushlstring(L, (const char*)&ca.sin4.sin_addr.s_addr, 4);
+  }
+  else {
+    lua_pushlstring(L, (const char*)&ca.sin6.sin6_addr.s6_addr, 16);
+  }
   return 1;
 }
 
@@ -221,6 +236,7 @@ static const struct luaL_Reg ldp_methods [] = {
       {"getZone", ldp_getZone},
       {"addRecords", ldp_addRecords},
       {"getRemote", ldp_getRemote},
+      {"getRemoteRaw", ldp_getRemoteRaw},
       {"getSize", ldp_getSize},
       {"getRRCounts", ldp_getRRCounts},
       {"getRcode", ldp_getRcode},

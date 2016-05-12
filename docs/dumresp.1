@@ -1,0 +1,24 @@
+.TH "DUMRESP" "1" "April 2016" "" ""
+.SH NAME
+.PP
+\f[B]dumresp\f[] \- A dumb DNS responder
+.SH SYNOPSIS
+.PP
+\f[B]dumresp\f[] \f[I]LOCAL\-ADDRESS\f[] \f[I]LOCAL\-PORT\f[]
+\f[I]NUMBER\-OF\-PROCESSES\f[]
+.SH DESCRIPTION
+.PP
+\f[B]dumresp\f[] accepts DNS packets on
+\f[I]LOCAL\-ADDRESS\f[]:\f[I]LOCAL\-PORT\f[] and simply replies with the
+same query, with the QR bit set.
+When \f[I]NUMBER\-OF\-PROCESSES\f[] is set to anything but 1,
+\f[B]dumresp\f[] will spawn \f[I]NUMBER\-OF\-PROCESSES\f[] forks and use
+the SO_REUSEPORT option to bind to the port.
+.SH OPTIONS
+.PP
+None
+.SH SEE ALSO
+.PP
+socket(7)
+.SH AUTHORS
+PowerDNS.com BV.

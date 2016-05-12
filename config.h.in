@@ -12,11 +12,17 @@
 /* Defined if the requested minimum BOOST version is satisfied */
 #undef HAVE_BOOST
 
+/* Defined if the Boost program_options library is available */
+#undef HAVE_BOOST_PROGRAM_OPTIONS
+
 /* Define to 1 if you have <boost/program_options.hpp> */
 #undef HAVE_BOOST_PROGRAM_OPTIONS_HPP
 
 /* Define to 1 if you have <boost/test/unit_test.hpp> */
 #undef HAVE_BOOST_TEST_UNIT_TEST_HPP
+
+/* Defined if the Boost unit_test_framework library is available */
+#undef HAVE_BOOST_UNIT_TEST_FRAMEWORK
 
 /* Define to 1 if you have botan 1.10 */
 #undef HAVE_BOTAN110
@@ -78,6 +84,9 @@
 /* Define to 1 if you have 0.20 or newer P11-kit */
 #undef HAVE_P11KIT1_V2
 
+/* Define if using protobuf. */
+#undef HAVE_PROTOBUF
+
 /* Define to 1 if you have the `recvmmsg' function. */
 #undef HAVE_RECVMMSG
 
@@ -98,6 +107,9 @@
 
 /* Define to 1 if you have the <string.h> header file. */
 #undef HAVE_STRING_H
+
+/* Systemd available and enabled */
+#undef HAVE_SYSTEMD
 
 /* Define to 1 if you have the <sys/mman.h> header file. */
 #undef HAVE_SYS_MMAN_H

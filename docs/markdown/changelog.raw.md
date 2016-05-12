@@ -30,12 +30,71 @@ In addition to this cleanup, which has many internal benefits and solves longsta
 
 Please be aware that beyond the items listed here, there have been heaps of tiny changes. As always, please carefully test a new release before deploying it.
 
-As of alpha1, we are aware of the following brokenness:
+As of alpha3, we are aware of the following brokenness:
 
-- The validator misjudges the DNSSEC status of many domains. Please report such errors if you find them.
+- The validator misjudges the DNSSEC status of some domains. Please report such errors if you find them.
+
+## PowerDNS Recursor 4.0.0-alpha3
+Released May 10th 2016
+
+This release features several leaps in the correctness and stability of the DNSSEC implementation.
+
+Notable changes are:
+
+- [#3752](https://github.com/PowerDNS/pdns/pull/3752) Correct handling of query flags in conformance with [RFC 6840](https://tools.ietf.org/html/rfc6840)
+
+## Bug fixes
+
+- [#3804](https://github.com/PowerDNS/pdns/pull/3804) Fix a memory leak in DNSSEC validation
+- [#3785](https://github.com/PowerDNS/pdns/pull/3785) and [#3390](https://github.com/PowerDNS/pdns/pull/3390) Correctly validate insecure delegations
+- [#3606](https://github.com/PowerDNS/pdns/pull/3606) Various DNSSEC fixes, disabling DNSSEC on forward-zones
+- [#3681](https://github.com/PowerDNS/pdns/pull/3681) Catch exception with a malformed DNSName in `rec_control wipe-cache`
+- [#3779](https://github.com/PowerDNS/pdns/pull/3779), [#3768](https://github.com/PowerDNS/pdns/pull/3768), [#3766](https://github.com/PowerDNS/pdns/pull/3766), [#3783](https://github.com/PowerDNS/pdns/pull/3783) and [#3789](https://github.com/PowerDNS/pdns/pull/3789) DNSName and other hardening improvements
+
+## Improvements
+
+- [#3801](https://github.com/PowerDNS/pdns/pull/3801) Add missing Lua rcodes bindings
+- [#3587](https://github.com/PowerDNS/pdns/pull/3587) Update L-Root addresses
+
+## PowerDNS Recursor 4.0.0-alpha2
+Released March 9th 2016
+
+Note that the DNSSEC implementation has several bugs in this release, it is advised to set `dnssec=off` in your recursor.conf.
+
+This release features many low-level performance fixes. Other notable changes since 4.0.0-alpha1 are:
+
+- [#3259](https://github.com/PowerDNS/pdns/pull/3259), [#3280](https://github.com/PowerDNS/pdns/pull/3280) The PowerDNS Recursor now properly uses GNU autoconf and autotools for building and installing
+- OpenSSL crypto primitives are now used for DNSSEC validation
+- [#3313](https://github.com/PowerDNS/pdns/pull/3313) Implement the logic we need to generate EDNS MAC fields in dnsdist & read them in recursor ([blogpost](http://blog.powerdns.com/2016/01/27/per-device-dns-settings-selective-parental-control/)
+- [#3350](https://github.com/PowerDNS/pdns/pull/3350) Add lowercase-outgoing feature to Recursor
+- [#3410](https://github.com/PowerDNS/pdns/pull/3410) Recuweb is now built-in to the daemon
+- [#3230](https://github.com/PowerDNS/pdns/pull/3230) API: drop JSONP, add web security headers (Christian Hofstaedtler)
+- [#3485](https://github.com/PowerDNS/pdns/pull/3485) Allow multiple carbon-servers
+- [#3427](https://github.com/PowerDNS/pdns/pull/3427), [#3479](https://github.com/PowerDNS/pdns/pull/3479), [#3472](https://github.com/PowerDNS/pdns/pull/3472) MTasker modernization (Andrew Nelless)
+
+### Bug fixes
+
+- [#3444](https://github.com/PowerDNS/pdns/pull/3444), [#3442](https://github.com/PowerDNS/pdns/pull/3442) RPZ IXFR fixes
+- [#3448](https://github.com/PowerDNS/pdns/pull/3448) Remove edns-subnet-whitelist whitelist pointing to powerdns.com (Christian Hofstaedtler)
+- [#3293](https://github.com/PowerDNS/pdns/pull/3293) make asynchronous UDP Lua queries work again in 4.x
+- [#3365](https://github.com/PowerDNS/pdns/pull/3365) Apply rcode set in UDPQueryResponse callback (Jan Broers)
+- [#3244](https://github.com/PowerDNS/pdns/pull/3244) Fix the forward zones in the recursor
+- [#3135](https://github.com/PowerDNS/pdns/pull/3135) Use 56 bits instead of 64 in EDNS Client Subnet option (Winfried Angele)
+- [#3527](https://github.com/PowerDNS/pdns/pull/3527) Make the recursor counters atomic
+
+### Improvements
+
+- [#3435](https://github.com/PowerDNS/pdns/pull/3435) Add `toStringNoDot` and `chopOff` functions to Lua
+- [#3437](https://github.com/PowerDNS/pdns/pull/3352) Add `pdns.now` timeval struct to recursor Lua
+- [#3352](https://github.com/PowerDNS/pdns/pull/3352) Cache improvements
+- [#3502](https://github.com/PowerDNS/pdns/pull/3502) Make second argument to pdnslog optional (Thiago Farina)
+- [#3520](https://github.com/PowerDNS/pdns/pull/3520) Reduce log level of periodic statistics to notice (Jan Broers)
+
+## PowerDNS Recursor 4.0.0-alpha1
+Released December 24th 2015
 
 # PowerDNS Authoritative Server 4.0.0
-UNRELEASED - trial packages on [our builder](https://builder.powerdns.com) and on [our repositories](https://repo.powerdns.com).
+UNRELEASED - trial packages in [our repositories](https://repo.powerdns.com).
 
 PowerDNS Authoritative Server 4.0.0 is part of [the great 4.x "Spring Cleaning"](http://blog.powerdns.com/2015/11/28/powerdns-spring-cleaning/)
 of PowerDNS which lasted through the end of 2015.
@@ -50,12 +109,22 @@ As part of the general cleanup and improvements, we did the following:
 In addition to this cleanup, 4.0.0 brings the following new features:
 
 - A revived ODBC backend ([godbc](authoritative/backend-generic-odbc.md)).
+- A revived LDAP backend ([ldap](authoritative/backend-ldap.md)).
 - Support for [CDS/CDNSKEY](authoritative/howtos.md#cds-cdnskey-key-rollover) and [RFC 7344](https://tools.ietf.org/html/rfc7344) key-rollovers.
 - Support for the [ALIAS](authoritative/howtos.md#using-alias-records) record.
 - The webserver and API are no longer marked experimental.
+    - The API-path has moved to `/api/v1`
 - DNSUpdate is no longer experimental.
 - Default ECDSA (algorithms 13 and 14) support without external dependencies.
 - Experimental support for ed25519 DNSSEC signatures (when compiled with libsodium support).
+- Many new `pdnsutil` commands
+    - `help` command now produces the help
+    - Warns if the configuration file cannot be read
+    - Does not check disabled records with `check-zone` unless verbose mode is enabled
+    - `create-zone` command creates a new zone
+    - `add-record` command to add records
+    - `delete-rrset` and `replace-rrset` commands to delete and add rrsets
+    - `edit-zone` command that spawns `$EDITOR` with the zone contents in zonefile format regardless of the backend used ([blogpost](http://blog.powerdns.com/2016/02/02/powerdns-authoritative-the-new-old-way-to-manage-domains/)
 
 The following backend have been dropped in 4.0.0:
 
@@ -67,13 +136,95 @@ Important changes:
 - `pdnssec` has been renamed to `pdnsutil`
 - PowerDNS Authoritative Server now listens by default on all IPv6 addresses.
 - The default for `pdnsutil secure-zone` has been changed from 1 2048 bit RSA KSK and 1 1024 bit RSA ZSK to a single 256 bit ECDSA (algorithm 13, ECDSAP256SHA256) key.
+- Several superfluous queries have been dropped from the SQL backend, if you use a non-standard SQL schema, please review the new defaults
+    - `insert-ent-query`, `insert-empty-non-terminal-query`, `insert-ent-order-query` have been replaced by one query named `insert-empty-non-terminal-order-query`
+    - `insert-record-order-query` has been dropped, `insert-record-query` now sets the ordername (or NULL)
+    - `insert-slave-query` has been dropped, `insert-zone-query` now sets the type of zone
+- Crypto++ and mbedTLS support is dropped, these are replaced by OpenSSL
+- The INCEPTION, INCEPTION-WEEK and EPOCH SOA-EDIT metadata values are marked as deprecated and will be removed in 4.1
 
 There are several **known issues** that will be fixed before the final 4.0.0 release:
 
-- CDS/CDNSKEY publishing does not yet work with the new default key-scheme.
+- There is no dynamic signing of synthesized records from ALIAS, these are only signed on outgoing AXFR
 - Several thrown exceptions are not caught, causing program abortion. Please run inside a supervisor or the guardian and reports these exceptions.
 
 to be continued....
+
+## PowerDNS Authoritative Server 4.0.0-alpha3
+Unreleased
+
+Notable changes since 4.0.0-alpha2
+
+- [#3415](https://github.com/PowerDNS/pdns/pull/3415) pdnsutil: add clear-zone command
+- [#3586](https://github.com/PowerDNS/pdns/pull/3415) Remove send-root-referral option
+- [#3578](https://github.com/PowerDNS/pdns/pull/3415) Add disable-syslog option
+- [#3733](https://github.com/PowerDNS/pdns/pull/3415) ALIAS improvements: DNSSEC and optional on-AXFR expansion of records
+- [#3764](https://github.com/PowerDNS/pdns/pull/3764) Notify support for systemd
+- [#3807](https://github.com/PowerDNS/pdns/pull/3807) Add TTL settings for DNSSECKeeper's caches
+
+### Bug fixes
+
+- [#3553](https://github.com/PowerDNS/pdns/pull/3553) pdnsutil: properly show key sizes for presigned zones in show-zone
+- [#3507](https://github.com/PowerDNS/pdns/pull/3553) webserver: mask out the api-key setting (Christian Hofstaedtler)
+- [#3580](https://github.com/PowerDNS/pdns/pull/3580) bindbackend: set domain in list() (Kees Monshouwer)
+- [#3595](https://github.com/PowerDNS/pdns/pull/3595) pdnsutil: add NS record without trailing dot with create-zone
+- [#3653](https://github.com/PowerDNS/pdns/pull/3653) Allow tabs at whitespace in zonefiles
+- [#3666](https://github.com/PowerDNS/pdns/pull/3666) Restore recycle backend behaviour (Kees Monshouwer)
+- [#3612](https://github.com/PowerDNS/pdns/pull/3612) Prevent segfault in PostgreSQL backend
+- [#3779](https://github.com/PowerDNS/pdns/pull/3779), [#3768](https://github.com/PowerDNS/pdns/pull/3768), [#3766](https://github.com/PowerDNS/pdns/pull/3766), [#3783](https://github.com/PowerDNS/pdns/pull/3783) and [#3789](https://github.com/PowerDNS/pdns/pull/3789) DNSName and other hardening improvements
+- [#3784](https://github.com/PowerDNS/pdns/pull/3784) fix SOA caching with multiple backends (Kees Monshouwer)
+
+### Improvements
+
+- [#3637](https://github.com/PowerDNS/pdns/pull/3637), [#3678](https://github.com/PowerDNS/pdns/pull/3678), [#3740](https://github.com/PowerDNS/pdns/pull/3740) Correct root-zone slaving and serving (Kees Monshouwer and others)
+- [#3495](https://github.com/PowerDNS/pdns/pull/3495) API: Add discovery endpoint (Christian Hofstaedtler)
+- [#3389](https://github.com/PowerDNS/pdns/pull/3389) pdnsutil: support chroot
+- [#3596](https://github.com/PowerDNS/pdns/pull/3396) Remove botan-based ecdsa and rsa signers (Kees Monshouwer)
+- [#3478](https://github.com/PowerDNS/pdns/pull/3478), [#3603](https://github.com/PowerDNS/pdns/pull/3603), [#3628](https://github.com/PowerDNS/pdns/pull/3628) Various build system improvements (Ruben Kerkhof)
+- [#3621](https://github.com/PowerDNS/pdns/pull/3621) Always lowercase when inserting into the database
+- [#3651](https://github.com/PowerDNS/pdns/pull/3651) Rename PUBLISH\_\* to PUBLISH-\* domainmetadata
+- [#3656](https://github.com/PowerDNS/pdns/pull/3656) API: clean up cryptokeys resource (Christian Hofstaedtler)
+- [#3632](https://github.com/PowerDNS/pdns/pull/3632) pdnsutil: Fix exit statuses to constants and return 0 when success (saltsa)
+- [#3655](https://github.com/PowerDNS/pdns/pull/3655) API: Fix set-ptr to honor SOA-EDIT-API (Christian Hofstaedtler)
+- [#3720](https://github.com/PowerDNS/pdns/pull/3720) Many fixes for dnswasher (Robert Edmonds)
+- [#3707](https://github.com/PowerDNS/pdns/pull/3707), [#3788](https://github.com/PowerDNS/pdns/pull/3788) Make MySQL timeout configurable (Kees Monshouwer and Brynjar Eide)
+- [#3806](https://github.com/PowerDNS/pdns/pull/3806) Move key validity check out of `fromISCMap()`, improves DNSSEC performance
+- [#3820](https://github.com/PowerDNS/pdns/pull/3806) pdnsutil load-zone: ignore double SOA
+
+## PowerDNS Authoritative Server 4.0.0-alpha2
+Released February 25th 2016
+
+Notable changes since 4.0.0-alpha1
+
+- [#3037](https://github.com/PowerDNS/pdns/pull/3037) Remove superfluous gsql queries and stop relying on schema defaults
+- [#3176](https://github.com/PowerDNS/pdns/pull/3176), [#3139](https://github.com/PowerDNS/pdns/pull/3139) OpenSSL support (Christian Hofstaedtler and Kees Monshouwer)
+- [#3128](https://github.com/PowerDNS/pdns/pull/3128) ECDSA support to DNSSEC infra via OpenSSL (Kees Monshouwer)
+- [#3281](https://github.com/PowerDNS/pdns/pull/3281), [#3283](https://github.com/PowerDNS/pdns/pull/3283), [#3363](https://github.com/PowerDNS/pdns/pull/3363) Remove Crypto++ and mbedTLS support
+- [#3298](https://github.com/PowerDNS/pdns/pull/3298) Implement pdnsutil create-zone zone nsname, add-record, delete-rrset, replace-rrset
+- [#3407](https://github.com/PowerDNS/pdns/pull/3407) API: Permit wildcard manipulation  (Aki Tuomi)
+- [#3230](https://github.com/PowerDNS/pdns/pull/3230) API: drop JSONP, add web security headers (Christian Hofstaedtler)
+- [#3428](https://github.com/PowerDNS/pdns/pull/3428) API: Fix zone/records design mistake (Christian Hofstaedtler)
+    - **Note**: this is a breaking change from alpha1, please review the [API documentation](httpapi/api_spec.md)
+
+### Bug fixes
+
+- [#3124](https://github.com/PowerDNS/pdns/pull/3124) Fix several bugs with introduced with the change to a single signing key (e.g. the SEP bit is set on these single keys)
+- [#3151](https://github.com/PowerDNS/pdns/pull/3151) Catch DNSName build errors in dynhandler (Christian Hofstaedtler)
+- [#3264](https://github.com/PowerDNS/pdns/pull/3264) GeoIP backend: Use correct id numbers for domains (Aki Tuomi)
+- [#3271](https://github.com/PowerDNS/pdns/pull/3271) ZoneParser: Throw PDNSException on too many SOA data elements
+- [#3302](https://github.com/PowerDNS/pdns/pull/3302) Fix bindbackend's feedRecord to handle being slave for the root
+- [#3399](https://github.com/PowerDNS/pdns/pull/3399) Report OpenSSL RSA keysize in bits (Kees Monshouwer)
+
+### Improvements
+
+- [#3119](https://github.com/PowerDNS/pdns/pull/3119) Show DNSSEC keys for slaved zone (Aki Tuomi)
+- [#3255](https://github.com/PowerDNS/pdns/pull/3255) Don't log authentication errors before sending HTTP basic auth challenge (Jan Broer)
+- [#3338](https://github.com/PowerDNS/pdns/pull/3338) Add weight feature to GeoIP backend (Aki Tuomi)
+- [#3364](https://github.com/PowerDNS/pdns/pull/3364) Shrink PacketID by 10% by eliminating padding. (Andrew Nelless)
+- [#3443](https://github.com/PowerDNS/pdns/pull/3443) Many speedup and correctness fixes
+
+## PowerDNS Authoritative Server 4.0.0-alpha1
+Released December 24th 2015
 
 # PowerDNS Authoritative Server 3.4.8
 Released 3rd of February 2016

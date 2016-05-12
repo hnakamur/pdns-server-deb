@@ -38,7 +38,10 @@ class DNSCryptoKeyEngine
       throw std::runtime_error("Can't import from PEM string");
     }
     virtual void fromPublicKeyString(const std::string& content) = 0;
-    
+    virtual bool checkKey() const
+    {
+      return true;
+    }
     static DNSCryptoKeyEngine* makeFromISCFile(DNSKEYRecordContent& drc, const char* fname);
     static DNSCryptoKeyEngine* makeFromISCString(DNSKEYRecordContent& drc, const std::string& content);
     static DNSCryptoKeyEngine* makeFromPEMString(DNSKEYRecordContent& drc, const std::string& raw);
@@ -110,7 +113,7 @@ struct CanonicalCompare: public std::binary_function<string, string, bool>
 };
 
 bool sharedDNSSECCompare(const std::shared_ptr<DNSRecordContent>& a, const shared_ptr<DNSRecordContent>& b);
-string getMessageForRRSET(const DNSName& qname, const RRSIGRecordContent& rrc, std::vector<std::shared_ptr<DNSRecordContent> >& signRecords);
+string getMessageForRRSET(const DNSName& qname, const RRSIGRecordContent& rrc, std::vector<std::shared_ptr<DNSRecordContent> >& signRecords, bool processRRSIGLabels = false);
 
 DSRecordContent makeDSFromDNSKey(const DNSName& qname, const DNSKEYRecordContent& drc, int digest=1);
 
@@ -127,6 +130,7 @@ int getRRSIGsForRRSET(DNSSECKeeper& dk, const DNSName& signer, const DNSName sig
   vector<shared_ptr<DNSRecordContent> >& toSign, vector<RRSIGRecordContent> &rrc);
 
 string hashQNameWithSalt(const NSEC3PARAMRecordContent& ns3prc, const DNSName& qname);
+string hashQNameWithSalt(const std::string& salt, unsigned int iterations, const DNSName& qname);
 void decodeDERIntegerSequence(const std::string& input, vector<string>& output);
 class DNSPacket;
 void addRRSigs(DNSSECKeeper& dk, UeberBackend& db, const std::set<DNSName>& authMap, vector<DNSResourceRecord>& rrs);

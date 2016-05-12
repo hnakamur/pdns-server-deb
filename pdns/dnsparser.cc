@@ -84,25 +84,6 @@ private:
   vector<uint8_t> d_record;
 };
 
-//FIXME400 lots of overlap with DNSPacketWriter::xfrName
-static const string EncodeDNSLabel(const DNSName& input)
-{  
-  if(!input.countLabels()) // otherwise we encode .. (long story)
-    return string (1, 0);
-    
-  auto parts = input.getRawLabels();
-  string ret;
-
-  for(auto &label: parts) {
-    ret.append(1, label.size());
-    ret.append(label);
-  }
-
-  ret.append(1, 0);
-  return ret;
-}
-
-
 shared_ptr<DNSRecordContent> DNSRecordContent::unserialize(const DNSName& qname, uint16_t qtype, const string& serialized)
 {
   dnsheader dnsheader;
@@ -114,7 +95,7 @@ shared_ptr<DNSRecordContent> DNSRecordContent::unserialize(const DNSName& qname,
 
   /* will look like: dnsheader, 5 bytes, encoded qname, dns record header, serialized data */
 
-  string encoded=EncodeDNSLabel(qname);
+  string encoded=qname.toDNSString();
 
   packet.resize(sizeof(dnsheader) + 5 + encoded.size() + sizeof(struct dnsrecordheader) + serialized.size());
 
@@ -418,7 +399,7 @@ DNSName PacketReader::getName()
 {
   unsigned int consumed;
   try {
-    DNSName dn((const char*) d_content.data() - 12, d_content.size() + 12, d_pos + sizeof(dnsheader), true /* uncompress */, 0 /* qtype */, 0 /* qclass */, &consumed);
+    DNSName dn((const char*) d_content.data() - 12, d_content.size() + 12, d_pos + sizeof(dnsheader), true /* uncompress */, 0 /* qtype */, 0 /* qclass */, &consumed, sizeof(dnsheader));
     
     // the -12 fakery is because we don't have the header in 'd_content', but we do need to get 
     // the internal offsets to work
@@ -458,7 +439,7 @@ static string txtEscape(const string &name)
 }
 
 // exceptions thrown here do not result in logging in the main pdns auth server - just so you know!
-string PacketReader::getText(bool multi)
+string PacketReader::getText(bool multi, bool lenField)
 {
   string ret;
   ret.reserve(40);
@@ -466,7 +447,11 @@ string PacketReader::getText(bool multi)
     if(!ret.empty()) {
       ret.append(1,' ');
     }
-    unsigned char labellen=d_content.at(d_pos++);
+    uint16_t labellen;
+    if(lenField)
+      labellen=d_content.at(d_pos++);
+    else
+      labellen=d_recordlen - (d_pos - d_startrecordpos);
     
     ret.append(1,'"');
     if(labellen) { // no need to do anything for an empty string
@@ -482,6 +467,22 @@ string PacketReader::getText(bool multi)
   return ret;
 }
 
+string PacketReader::getUnquotedText(bool lenField)
+{
+  int16_t stop_at;
+  if(lenField)
+    stop_at = (uint8_t)d_content.at(d_pos) + d_pos + 1;
+  else
+    stop_at = d_recordlen;
+
+  if(stop_at == d_pos)
+    return "";
+
+  d_pos++;
+  string ret(&d_content.at(d_pos), &d_content.at(stop_at));
+  d_pos = stop_at;
+  return ret;
+}
 
 void PacketReader::xfrBlob(string& blob)
 try
@@ -548,17 +549,6 @@ string simpleCompress(const string& elabel, const string& root)
 }
 
 
-// FIXME400 this function needs to go
-void simpleExpandTo(const string& label, unsigned int frompos, string& ret)
-{
-  unsigned int labellen=0;
-  while((labellen=(unsigned char)label.at(frompos++))) {
-    ret.append(label.c_str()+frompos, labellen);
-    ret.append(1,'.');
-    frompos+=labellen;
-  }
-}
-
 /** Simple DNSPacketMangler. Ritual is: get a pointer into the packet and moveOffset() to beyond your needs
  *  If you survive that, feel free to read from the pointer */
 class DNSPacketMangler
@@ -586,12 +576,20 @@ public:
   {
       moveOffset(bytes);
   }
+  uint32_t get32BitInt()
+  {
+    const char* p = d_packet + d_offset;
+    moveOffset(4);
+    uint32_t ret;
+    memcpy(&ret, (void*)p, sizeof(ret));
+    return ntohl(ret);
+  }
   uint16_t get16BitInt()
   {
     const char* p = d_packet + d_offset;
     moveOffset(2);
     uint16_t ret;
-    memcpy(&ret, (void*)p, 2);
+    memcpy(&ret, (void*)p, sizeof(ret));
     return ntohs(ret);
   }
   
@@ -644,10 +642,10 @@ void ageDNSPacket(char* packet, size_t length, uint32_t seconds)
   {
     dnsheader dh;
     memcpy((void*)&dh, (const dnsheader*)packet, sizeof(dh));
-    int numrecords = ntohs(dh.ancount) + ntohs(dh.nscount) + ntohs(dh.arcount);
+    uint64_t numrecords = ntohs(dh.ancount) + ntohs(dh.nscount) + ntohs(dh.arcount);
     DNSPacketMangler dpm(packet, length);
-    
-    int n;
+
+    uint64_t n;
     for(n=0; n < ntohs(dh.qdcount) ; ++n) {
       dpm.skipLabel();
       dpm.skipBytes(4); // qtype, qclass
@@ -675,4 +673,43 @@ void ageDNSPacket(char* packet, size_t length, uint32_t seconds)
 void ageDNSPacket(std::string& packet, uint32_t seconds)
 {
   ageDNSPacket((char*)packet.c_str(), packet.length(), seconds);
+}
+
+uint32_t getDNSPacketMinTTL(const char* packet, size_t length)
+{
+  uint32_t result = std::numeric_limits<uint32_t>::max();
+  if(length < sizeof(dnsheader)) {
+    return result;
+  }
+  try
+  {
+    const dnsheader* dh = (const dnsheader*) packet;
+    DNSPacketMangler dpm(const_cast<char*>(packet), length);
+
+    const uint16_t qdcount = ntohs(dh->qdcount);
+    for(size_t n = 0; n < qdcount; ++n) {
+      dpm.skipLabel();
+      dpm.skipBytes(4); // qtype, qclass
+    }
+    const size_t numrecords = ntohs(dh->ancount) + ntohs(dh->nscount) + ntohs(dh->arcount);
+    for(size_t n = 0; n < numrecords; ++n) {
+      dpm.skipLabel();
+
+      const uint16_t dnstype = dpm.get16BitInt();
+      /* uint16_t dnsclass = */ dpm.get16BitInt();
+
+      if(dnstype == QType::OPT)
+        break;
+
+      const uint32_t ttl = dpm.get32BitInt();
+      if (result > ttl)
+        result = ttl;
+
+      dpm.skipRData();
+    }
+  }
+  catch(...)
+  {
+  }
+  return result;
 }

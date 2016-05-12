@@ -6,9 +6,11 @@
 #include "recpacketcache.hh"
 #include "cachecleaner.hh"
 #include "dns.hh"
+#include "dnsparser.hh"
 #include "namespaces.hh"
 #include "lock.hh"
 #include "dnswriter.hh"
+#include "ednsoptions.hh"
 
 RecursorPacketCache::RecursorPacketCache()
 {
@@ -46,7 +48,7 @@ static bool qrMatch(const std::string& query, const std::string& response)
   uint16_t rqtype, rqclass, qqtype, qqclass;
   DNSName queryname(query.c_str(), query.length(), sizeof(dnsheader), false, &qqtype, &qqclass, 0);
   DNSName respname(response.c_str(), response.length(), sizeof(dnsheader), false, &rqtype, &rqclass, 0);
-  
+  // this ignores checking on the EDNS subnet flags! 
   return queryname==respname && rqtype == qqtype && rqclass == qqclass;
 }
 
@@ -61,8 +63,36 @@ uint32_t RecursorPacketCache::canHashPacket(const std::string& origPacket)
   for(; p < end && *p; ++p) { // XXX if you embed a 0 in your qname we'll stop lowercasing there
     const char l = dns_tolower(*p); // label lengths can safely be lower cased
     ret=burtle((const unsigned char*)&l, 1, ret);
+  }                           // XXX the embedded 0 in the qname will break the subnet stripping
+
+  struct dnsheader* dh = (struct dnsheader*)origPacket.c_str();
+  const char* skipBegin = p;
+  const char* skipEnd = p;
+  /* we need at least 1 (final empty label) + 2 (QTYPE) + 2 (QCLASS)
+     + OPT root label (1), type (2), class (2) and ttl (4)
+     + the OPT RR rdlen (2)
+     = 16
+  */
+  if(ntohs(dh->arcount)==1 && (p+16) < end) {
+    char* optionBegin = nullptr;
+    size_t optionLen = 0;
+    /* skip the final empty label (1), the qtype (2), qclass (2) */
+    /* root label (1), type (2), class (2) and ttl (4) */
+    int res = getEDNSOption((char*) p + 14, end - (p + 14), EDNSOptionCode::ECS, &optionBegin, &optionLen);
+    if (res == 0) {
+      skipBegin = optionBegin;
+      skipEnd = optionBegin + optionLen;
+    }
   }
-  return burtle((const unsigned char*)p, end-p, ret);
+  if (skipBegin > p) {
+    //cout << "Hashing from " << (p-origPacket.c_str()) << " for " << skipBegin-p << "bytes, end is at "<< end-origPacket.c_str() << endl;
+    ret = burtle((const unsigned char*)p, skipBegin-p, ret);
+  }
+  if (skipEnd < end) {
+    //cout << "Hashing from " << (skipEnd-origPacket.c_str()) << " for " << end-skipEnd << "bytes, end is at " << end-origPacket.c_str() << endl;
+    ret = burtle((const unsigned char*) skipEnd, end-skipEnd, ret);
+  }
+  return ret;
 }
 
 bool RecursorPacketCache::getResponsePacket(unsigned int tag, const std::string& queryPacket, time_t now, 
@@ -126,6 +156,7 @@ void RecursorPacketCache::insertResponsePacket(unsigned int tag, const DNSName& 
     DNSName respname(iter->d_packet.c_str(), iter->d_packet.length(), sizeof(dnsheader), false, 0, 0, 0);
     if(qname != respname)
       continue;
+    moveCacheItemToBack(d_packetCache, iter);
     iter->d_packet = responsePacket;
     iter->d_ttd = now + ttl;
     iter->d_creation = now;
@@ -164,3 +195,27 @@ void RecursorPacketCache::doPruneTo(unsigned int maxCached)
   pruneCollection(d_packetCache, maxCached);
 }
 
+uint64_t RecursorPacketCache::doDump(int fd)
+{
+  FILE* fp=fdopen(dup(fd), "w");
+  if(!fp) { // dup probably failed
+    return 0;
+  }
+  fprintf(fp, "; main packet cache dump from thread follows\n;\n");
+  const auto& sidx=d_packetCache.get<1>();
+
+  uint64_t count=0;
+  time_t now=time(0);
+  for(auto i=sidx.cbegin(); i != sidx.cend(); ++i) {
+    count++;
+    try {
+      fprintf(fp, "%s %d %s  ; tag %d\n", i->d_name.toString().c_str(), (int32_t)(i->d_ttd - now), DNSRecordContent::NumberToType(i->d_type).c_str(), i->d_tag);
+    }
+    catch(...) {
+      fprintf(fp, "; error printing '%s'\n", i->d_name.empty() ? "EMPTY" : i->d_name.toString().c_str());
+    }
+  }
+  fclose(fp);
+  return count;
+
+}

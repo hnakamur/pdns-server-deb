@@ -183,6 +183,7 @@ bool DNSSECKeeper::activateKey(const DNSName& zname, unsigned int id)
 
 void DNSSECKeeper::getFromMeta(const DNSName& zname, const std::string& key, std::string& value)
 {
+  static int ttl = ::arg().asNum("domain-metadata-cache-ttl");
   value.clear();
   unsigned int now = time(0);
 
@@ -190,7 +191,7 @@ void DNSSECKeeper::getFromMeta(const DNSName& zname, const std::string& key, std
     cleanup();
   }
 
-  {
+  if (ttl > 0) {
     ReadLock l(&s_metacachelock); 
     
     metacache_t::const_iterator iter = s_metacache.find(tie(zname, key));
@@ -203,15 +204,17 @@ void DNSSECKeeper::getFromMeta(const DNSName& zname, const std::string& key, std
   d_keymetadb->getDomainMetadata(zname, key, meta);
   if(!meta.empty())
     value=*meta.begin();
-    
-  METACacheEntry nce;
-  nce.d_domain=zname;
-  nce.d_ttd = now+60;
-  nce.d_key= key;
-  nce.d_value = value;
-  { 
-    WriteLock l(&s_metacachelock);
-    replacing_insert(s_metacache, nce);
+
+  if (ttl > 0) {
+    METACacheEntry nce;
+    nce.d_domain=zname;
+    nce.d_ttd = now + ttl;
+    nce.d_key= key;
+    nce.d_value = value;
+    {
+      WriteLock l(&s_metacachelock);
+      replacing_insert(s_metacache, nce);
+    }
   }
 }
 
@@ -262,6 +265,10 @@ bool DNSSECKeeper::getNSEC3PARAM(const DNSName& zname, NSEC3PARAMRecordContent* 
       ns3p->d_iterations = maxNSEC3Iterations;
       L<<Logger::Error<<"Number of NSEC3 iterations for zone '"<<zname<<"' is above 'max-nsec3-iterations'. Value adjusted to: "<<maxNSEC3Iterations<<endl;
     }
+    if (ns3p->d_algorithm != 1) {
+      L<<Logger::Error<<"Invalid hash algorithm for NSEC3: '"<<std::to_string(ns3p->d_algorithm)<<"', setting to 1 for zone '"<<zname<<"'."<<endl;
+      ns3p->d_algorithm = 1;
+    }
   }
   if(narrow) {
     getFromMeta(zname, "NSEC3NARROW", value);
@@ -275,6 +282,9 @@ bool DNSSECKeeper::setNSEC3PARAM(const DNSName& zname, const NSEC3PARAMRecordCon
   static int maxNSEC3Iterations=::arg().asNum("max-nsec3-iterations");
   if (ns3p.d_iterations > maxNSEC3Iterations)
     throw runtime_error("Can't set NSEC3PARAM for zone '"+zname.toString()+"': number of NSEC3 iterations is above 'max-nsec3-iterations'");
+
+  if (ns3p.d_algorithm != 1)
+    throw runtime_error("Invalid hash algorithm for NSEC3: '"+std::to_string(ns3p.d_algorithm)+"' for zone '"+zname.toString()+"'. The only valid value is '1'");
 
   clearCaches(zname);
   string descr = ns3p.getZoneRepresentation();
@@ -326,7 +336,7 @@ bool DNSSECKeeper::setPublishCDS(const DNSName& zname, const string& digestAlgos
   clearCaches(zname);
   vector<string> meta;
   meta.push_back(digestAlgos);
-  return d_keymetadb->setDomainMetadata(zname, "PUBLISH_CDS", meta);
+  return d_keymetadb->setDomainMetadata(zname, "PUBLISH-CDS", meta);
 }
 
 /**
@@ -338,7 +348,7 @@ bool DNSSECKeeper::setPublishCDS(const DNSName& zname, const string& digestAlgos
 bool DNSSECKeeper::unsetPublishCDS(const DNSName& zname)
 {
   clearCaches(zname);
-  return d_keymetadb->setDomainMetadata(zname, "PUBLISH_CDS", vector<string>());
+  return d_keymetadb->setDomainMetadata(zname, "PUBLISH-CDS", vector<string>());
 }
 
 /**
@@ -352,7 +362,7 @@ bool DNSSECKeeper::setPublishCDNSKEY(const DNSName& zname)
   clearCaches(zname);
   vector<string> meta;
   meta.push_back("1");
-  return d_keymetadb->setDomainMetadata(zname, "PUBLISH_CDNSKEY", meta);
+  return d_keymetadb->setDomainMetadata(zname, "PUBLISH-CDNSKEY", meta);
 }
 
 /**
@@ -364,7 +374,7 @@ bool DNSSECKeeper::setPublishCDNSKEY(const DNSName& zname)
 bool DNSSECKeeper::unsetPublishCDNSKEY(const DNSName& zname)
 {
   clearCaches(zname);
-  return d_keymetadb->setDomainMetadata(zname, "PUBLISH_CDNSKEY", vector<string>());
+  return d_keymetadb->setDomainMetadata(zname, "PUBLISH-CDNSKEY", vector<string>());
 }
 
 /**
@@ -387,13 +397,14 @@ DNSSECKeeper::keyset_t DNSSECKeeper::getEntryPoints(const DNSName& zname)
 
 DNSSECKeeper::keyset_t DNSSECKeeper::getKeys(const DNSName& zone, bool useCache)
 {
+  static int ttl = ::arg().asNum("dnssec-key-cache-ttl");
   unsigned int now = time(0);
 
   if(!((++s_ops) % 100000)) {
     cleanup();
   }
 
-  if (useCache) {
+  if (useCache && ttl > 0) {
     ReadLock l(&s_keycachelock);
     keycache_t::const_iterator iter = s_keycache.find(zone);
 
@@ -457,15 +468,34 @@ DNSSECKeeper::keyset_t DNSSECKeeper::getKeys(const DNSName& zone, bool useCache)
   }
   sort(retkeyset.begin(), retkeyset.end(), keyCompareByKindAndID);
 
-  KeyCacheEntry kce;
-  kce.d_domain=zone;
-  kce.d_keys = retkeyset;
-  kce.d_ttd = now + 30;
-  {
-    WriteLock l(&s_keycachelock);
-    replacing_insert(s_keycache, kce);
+  if (ttl > 0) {
+    KeyCacheEntry kce;
+    kce.d_domain=zone;
+    kce.d_keys = retkeyset;
+    kce.d_ttd = now + ttl;
+    {
+      WriteLock l(&s_keycachelock);
+      replacing_insert(s_keycache, kce);
+    }
   }
+
   return retkeyset;
+}
+
+bool DNSSECKeeper::checkKeys(const DNSName& zone)
+{
+  vector<DNSBackend::KeyData> dbkeyset;
+  d_keymetadb->getDomainKeys(zone, 0, dbkeyset);
+
+  for(const DNSBackend::KeyData &keydata : dbkeyset) {
+    DNSKEYRecordContent dkrc;
+    shared_ptr<DNSCryptoKeyEngine> dke(DNSCryptoKeyEngine::makeFromISCString(dkrc, keydata.content));
+    if (!dke->checkKey()) {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 bool DNSSECKeeper::getPreRRSIGs(UeberBackend& db, const DNSName& signer, const DNSName& qname,

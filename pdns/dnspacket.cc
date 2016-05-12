@@ -447,7 +447,7 @@ void DNSPacket::spoofQuestion(const DNSPacket *qd)
   }
 }
 
-int DNSPacket::noparse(const char *mesg, int length)
+int DNSPacket::noparse(const char *mesg, size_t length)
 {
   d_rawpacket.assign(mesg,length); 
   if(length < 12) { 
@@ -465,6 +465,7 @@ int DNSPacket::noparse(const char *mesg, int length)
 void DNSPacket::setTSIGDetails(const TSIGRecordContent& tr, const DNSName& keyname, const string& secret, const string& previous, bool timersonly)
 {
   d_trc=tr;
+  d_trc.d_origID = (((d.id & 0xFF)<<8) | ((d.id & 0xFF00)>>8));
   d_tsigkeyname = keyname;
   d_tsigsecret = secret;
   d_tsigprevious = previous;
@@ -531,7 +532,7 @@ bool DNSPacket::getTKEYRecord(TKEYRecordContent *tr, DNSName *keyname) const
     it into our class. Results of calling this function multiple times on one packet are
     unknown. Returns -1 if the packet cannot be parsed.
 */
-int DNSPacket::parse(const char *mesg, int length)
+int DNSPacket::parse(const char *mesg, size_t length)
 try
 {
   d_rawpacket.assign(mesg,length); 

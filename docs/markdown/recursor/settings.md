@@ -167,9 +167,17 @@ Which domains we only accept delegations from (a Verisign special).
 Turn off the packet cache. Useful when running with Lua scripts that can not be
 cached.
 
+## `disable-syslog`
+* Boolean
+* Default: no
+
+Do not log to syslog, only to stdout. Use this setting when running inside a
+supervisor that handles logging (like systemd). **Note**: do not use this setting
+in combination with [`daemon`](#daemon) as all logging will disappear.
+
 ## `dnssec`
 * One of `off`, `process`, `log-fail`, `validate`, String
-* Default: `process`
+* Default: `off` (**note**: was `process` until 4.0.0-alpha2)
 * Available since: 4.0.0
 
 Set the mode for DNSSEC processing:
@@ -359,6 +367,19 @@ Some DNS errors occur rather frequently and are no cause for alarm.
 If set to a digit, logging is performed under this LOCAL facility. See
 [Logging](../common/logging.md#logging). Do not pass names like 'local0'!
 
+## `lowercase-outgoing`
+* Boolean
+* Default: no
+* Available since: 4.0.0
+
+Set to true to lowercase the outgoing queries. When set to 'no' (the default) a
+query from a client using mixed case in the DNS labels (such as a user entering
+mixed-case names or [draft-vixie-dnsext-dns0x20-00](http://tools.ietf.org/html/draft-vixie-dnsext-dns0x20-00)),
+PowerDNS preserves the case of the query. Broken authoritative servers might give
+a wrong or broken answer on this encoding. Setting `lowercase-outgoing` to 'yes'
+makes the PowerDNS Recursor lowercase all the labels in the query to the authoritative
+servers, but still return the proper case to the client requesting.
+
 ## `lua-config-file`
 * Filename
 * Available since 4.0.0
@@ -409,16 +430,16 @@ DNS responses based on a policy loaded via a zonefile.
 
 Frequently, Response Policy Zones get to be very large, so it is customary to update them over IXFR.
 
-An RPZ can be loaded from file or slaved from a master. To load from file, use:
+An RPZ can be loaded from file or slaved from a master. To load from file, use for example:
 
 ```
-rpzFile("filename", ..settings.. )
+rpzFile("dblfilename", {defpol=Policy.Custom, defcontent="badserver.example.com"})
 ```
 
-To slave from a master and start IXFR to get updates, use:
+To slave from a master and start IXFR to get updates, use for example:
 
 ```
-rpzMaster("192.0.2.4", "policy.rpz", ..settings..)
+rpzMaster("192.0.2.4", "policy.rpz", {defpol=Policy.Drop})
 ```
 
 In this example, 'policy.rpz' denotes the name of the zone to query for. 
@@ -538,6 +559,9 @@ the original TTL specified.
 * Available since: 3.2
 
 Maximum number of seconds to cache a 'server failure' answer in the packet cache.
+From 4.0.0 onward, this settings maximum is capped to [`packetcache-ttl`](#packetcache-ttl).
+i.e. setting `packetcache-ttl=15` and keeping `packetcache-servfail-ttl` at the
+default will lower `packetcache-servfail-ttl` to `15`.
 
 ## `pdns-distributes-queries`
 * Boolean
