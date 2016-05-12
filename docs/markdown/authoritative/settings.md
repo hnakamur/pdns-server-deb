@@ -17,7 +17,7 @@ For boolean settings, specifying the name of the setting without a value means
 
 If set, only these IP addresses or netmasks will be able to perform AXFR.
 
-## `allow-dns-update-from`
+## `allow-dnsupdate-from`
 * IP ranges, separated by commas
 
 Allow DNS updates from these IP ranges.
@@ -259,6 +259,14 @@ Do not allow zone transfers.
 Disable the rectify step during an outgoing AXFR. Only required for regression
 testing.
 
+## `disable-syslog`
+* Boolean
+* Default: no
+
+Do not log to syslog, only to stdout. Use this setting when running inside a
+supervisor that handles logging (like systemd). **Note**: do not use this setting
+in combination with [`daemon`](#daemon) as all logging will disappear.
+
 ## `disable-tcp`
 * Boolean
 * Default: no
@@ -279,6 +287,12 @@ Number of Distributor (backend) threads to start per receiver thread. See
 Synthesise CNAME records from DNAME records as required. This approximately
 doubles query load. **Do not combine with DNSSEC!**
 
+## `dnssec-key-cache-ttl`
+* Integer
+* Default: 30
+
+Seconds to cache DNSSEC keys from the database. A value of 0 disables caching.
+
 ## `dnsupdate`
 * Boolean
 * Default: no
@@ -291,6 +305,12 @@ Enable/Disable DNS update (RFC2136) support.
 
 Perform AAAA additional processing. This sends AAAA records in the ADDITIONAL
 section when sending a referral.
+
+## `domain-metadata-cache-ttl`
+* Integer
+* Default: 60
+
+Seconds to cache domain metadata from the database. A value of 0 disables caching.
 
 ## `edns-subnet-option-number`
 * Integer
@@ -311,7 +331,7 @@ Enables EDNS subnet processing, for backends that support it.
 
 Entropy source file to use.
 
-## `forward-dnsupdates`
+## `forward-dnsupdate`
 * Boolean
 * Default: no
 
@@ -568,6 +588,18 @@ with untrusted users.
 The docs had previously indicated that the default was "no", but the default has
 been "yes" since 2005.
 
+## `outgoing-axfr-expand-alias`
+* Boolean
+* Default: no
+
+If this is enabled, ALIAS records are expanded (synthesised to their A/AAAA)
+during outgoing AXFR. This means slaves will not automatically follow changes
+in those A/AAAA records unless you AXFR regularly!
+
+If this is disabled (the default), ALIAS records are sent verbatim during
+outgoing AXFR. Note that if your slaves do not support ALIAS, they will return
+NODATA for A/AAAA queries for such names.
+
 ## `pipebackend-abi-version`
 * Integer
 * Default: 1
@@ -646,16 +678,6 @@ If set, recursive queries will be handed to the recursor specified here. See
 * Default: 2
 
 Number of AXFR slave threads to start.
-
-## `send-root-referral`
-* Boolean or `lean`
-* Default: no
-
-if set, PowerDNS will send out old-fashioned root-referrals when queried for
-domains for which it is not authoritative. Wastes some bandwidth but may solve
-incoming query floods if domains are delegated to you for which you are not
-authoritative, but which are queried by broken recursors. It is possible to
-specify 'lean' root referrals, which waste less bandwidth.
 
 ## `setgid`
 * String

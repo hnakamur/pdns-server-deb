@@ -8,6 +8,9 @@ backend is needed to cover all needs.
 a '.' in PowerDNS storage! If a trailing '.' is present it will inevitably cause
 problems, problems that may be hard to debug.
 
+**Note**: Since 4.0.0, a root zone or record should have a name of '.' (no quotes).
+This is the only exception to the 'no terminating dot in SQL storage' rule.
+
 # Basic functionality
 All domains in the generic SQL backends have a 'type' field that describes the
 [mode of operation](modes-of-operation.md).
@@ -101,7 +104,7 @@ serial set to `0` in the database. The serial in SOA responses is set to the
 highest value of the `change_date` field in the "records" table.
 
 
-# Handeling DNSSEC signed zones
+# Handling DNSSEC signed zones
 To enable DNSSEC processing, the `backend-dnssec` option must be set to 'yes'.
 
 ## Rules for filling out DNSSEC fields

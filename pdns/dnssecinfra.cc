@@ -38,7 +38,12 @@ DNSCryptoKeyEngine* DNSCryptoKeyEngine::makeFromISCFile(DNSKEYRecordContent& drc
     isc += sline;
   }
   fclose(fp);
-  return makeFromISCString(drc, isc);
+  DNSCryptoKeyEngine* dke = makeFromISCString(drc, isc);
+  if(!dke->checkKey()) {
+    delete dke;
+    throw runtime_error("Invalid DNS Private Key in file '"+string(fname));
+  }
+  return dke;
 }
 
 DNSCryptoKeyEngine* DNSCryptoKeyEngine::makeFromISCString(DNSKEYRecordContent& drc, const std::string& content)
@@ -252,6 +257,9 @@ pair<unsigned int, unsigned int> DNSCryptoKeyEngine::testMakers(unsigned int alg
       stormap[toLower(key)]=raw;
     }
     dckeSign->fromISCMap(dkrc, stormap);
+    if(!dckeSign->checkKey()) {
+      throw runtime_error("Verification of key with creator "+dckeCreate->getName()+" with signer "+dckeSign->getName()+" and verifier "+dckeVerify->getName()+" failed");
+    }
   }
 
   string message("Hi! How is life?");
@@ -308,7 +316,20 @@ bool sharedDNSSECCompare(const shared_ptr<DNSRecordContent>& a, const shared_ptr
   return a->serialize(DNSName("."), true, true) < b->serialize(DNSName("."), true, true);
 }
 
-string getMessageForRRSET(const DNSName& qname, const RRSIGRecordContent& rrc, vector<shared_ptr<DNSRecordContent> >& signRecords) 
+/**
+ * Returns the string that should be hashed to create/verify the RRSIG content
+ *
+ * @param qname               DNSName of the RRSIG's owner name.
+ * @param rrc                 The RRSIGRecordContent we take the Type Covered and
+ *                            original TTL fields from.
+ * @param signRecords         A vector of DNSRecordContent shared_ptr's that are covered
+ *                            by the RRSIG, where we get the RDATA from.
+ * @param processRRSIGLabels  A boolean to trigger processing the RRSIG's "Labels"
+ *                            field. This is usually only needed for validation
+ *                            purposes, as the authoritative server correctly
+ *                            sets qname to the wildcard.
+ */
+string getMessageForRRSET(const DNSName& qname, const RRSIGRecordContent& rrc, vector<shared_ptr<DNSRecordContent> >& signRecords, bool processRRSIGLabels)
 {
   sort(signRecords.begin(), signRecords.end(), sharedDNSSECCompare);
 
@@ -316,8 +337,26 @@ string getMessageForRRSET(const DNSName& qname, const RRSIGRecordContent& rrc, v
   toHash.append(const_cast<RRSIGRecordContent&>(rrc).serialize(DNSName("."), true, true));
   toHash.resize(toHash.size() - rrc.d_signature.length()); // chop off the end, don't sign the signature!
 
+  string nameToHash(qname.toDNSStringLC());
+
+  if (processRRSIGLabels) {
+    unsigned int rrsig_labels = rrc.d_labels;
+    unsigned int fqdn_labels = qname.countLabels();
+
+    if (rrsig_labels < fqdn_labels) {
+      DNSName choppedQname(qname);
+      while (choppedQname.countLabels() > rrsig_labels)
+        choppedQname.chopOff();
+      nameToHash = "\x01*" + choppedQname.toDNSStringLC();
+    } else if (rrsig_labels > fqdn_labels) {
+      // The RRSIG Labels field is a lie (or the qname is wrong) and the RRSIG
+      // can never be valid
+      return "";
+    }
+  }
+
   for(shared_ptr<DNSRecordContent>& add :  signRecords) {
-    toHash.append(qname.toDNSStringLC()); 
+    toHash.append(nameToHash);
     uint16_t tmp=htons(rrc.d_type);
     toHash.append((char*)&tmp, 2);
     tmp=htons(1); // class
@@ -404,12 +443,17 @@ uint32_t getStartOfWeek()
 
 string hashQNameWithSalt(const NSEC3PARAMRecordContent& ns3prc, const DNSName& qname)
 {
-  unsigned int times = ns3prc.d_iterations;
+  return hashQNameWithSalt(ns3prc.d_salt, ns3prc.d_iterations, qname);
+}
+
+string hashQNameWithSalt(const std::string& salt, unsigned int iterations, const DNSName& qname)
+{
+  unsigned int times = iterations;
   unsigned char hash[20];
   string toHash(qname.toDNSStringLC());
 
   for(;;) {
-    toHash.append(ns3prc.d_salt);
+    toHash.append(salt);
     SHA1((unsigned char*)toHash.c_str(), toHash.length(), hash);
     toHash.assign((char*)hash, sizeof(hash));
     if(!times--)

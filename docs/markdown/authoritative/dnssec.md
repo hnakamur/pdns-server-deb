@@ -17,7 +17,6 @@ As an example, securing an existing zone can be as simple as:
 
 ```
 $ pdnsutil secure-zone powerdnssec.org
-$ pdnsutil rectify-zone powerdnssec.org
 ```
 
 Alternatively, PowerDNS can serve pre-signed zones, without knowledge of
@@ -295,7 +294,7 @@ changes in database schemas as shown in the [upgrade documentation](upgrading.md
 **Warning**: Once the relevant `backend-dnssec` switch has been set, stricter
 rules apply for filling out the database! The short version is: run
 `pdnsutil rectify-all-zones`, even those not secured with DNSSEC! For more
-information, see the [DNSSEC documentation for Generic SQL backends](backend-generic-sql.md#handeling-dnssec-signed-zones).
+information, see the [DNSSEC documentation for Generic SQL backends](backend-generic-sql.md#handling-dnssec-signed-zones).
 
 To deliver a correctly signed zone with the [DNSSEC defaults](#dnssec-defaults),
 invoke:
@@ -518,11 +517,15 @@ to find the day for inception time.
 **Warning**: The SOA serial will only change on inception day, so changes to the
 zone will get visible on slaves only on the following inception day.
 
+**Note**: Will be removed in PowerDNS Authoritative Server 4.1.0
+
 #### INCEPTION-WEEK (not recommended)
 Sets the SOA serial to the number of weeks since the epoch, which is the last
 inception time in weeks.
 
 **Warning**: Same problem as INCEPTION.
+
+**Note**: Will be removed in PowerDNS Authoritative Server 4.1.0
 
 #### EPOCH
 Sets the SOA serial to the number of seconds since the epoch.
@@ -530,6 +533,8 @@ Sets the SOA serial to the number of seconds since the epoch.
 **Warning**: Don't combine this with AXFR - the slaves would keep refreshing all
 the time. If you need fast updates, sync the backend databases directly with
 incremental updates (or use the same database server on the slaves)
+
+**Note**: Will be removed in PowerDNS Authoritative Server 4.1.0
 
 #### NONE
 Ignore [`default-soa-edit`](settings.md#default-soa-edit) and/or

@@ -29,6 +29,9 @@
 #include <sys/resource.h>
 #include "dynhandler.hh"
 
+#ifdef HAVE_SYSTEMD
+#include <systemd/sd-daemon.h>
+#endif
 
 bool g_anyToTcp;
 typedef Distributor<DNSPacket,DNSPacket,PacketHandler> DNSDistributor;
@@ -88,6 +91,7 @@ void declareArguments()
   ::arg().set("version-string","PowerDNS version in packets - full, anonymous, powerdns or custom")="full"; 
   ::arg().set("control-console","Debugging switch - don't use")="no"; // but I know you will!
   ::arg().set("loglevel","Amount of logging. Higher is more. Do not set below 3")="4";
+  ::arg().set("disable-syslog","Disable logging to syslog, useful when running inside a supervisor that logs stdout")="no";
   ::arg().set("default-soa-name","name to insert in the SOA record if none set in the backend")="a.misconfigured.powerdns.server";
   ::arg().set("default-soa-mail","mail address to insert in the SOA record if none set in the backend")="";
   ::arg().set("distributor-threads","Default number of Distributor (backend) threads to start")="3";
@@ -119,7 +123,6 @@ void declareArguments()
   ::arg().setSwitch("master","Act as a master")="no";
   ::arg().setSwitch("disable-axfr-rectify","Disable the rectify step during an outgoing AXFR. Only required for regression testing.")="no";
   ::arg().setSwitch("guardian","Run within a guardian process")="no";
-  ::arg().setSwitch("send-root-referral","Send out old-fashioned root-referral instead of ServFail in case of no authority")="no";
   ::arg().setSwitch("prevent-self-notification","Don't send notifications to what we think is ourself")="yes";
   ::arg().setSwitch("webserver","Start a webserver for monitoring")="no"; 
   ::arg().setSwitch("webserver-print-arguments","If the webserver should print arguments")="no"; 
@@ -149,6 +152,8 @@ void declareArguments()
   ::arg().set("soa-expire-default","Default SOA expire")="604800";
   ::arg().set("default-soa-edit","Default SOA-EDIT value")="";
   ::arg().set("default-soa-edit-signed","Default SOA-EDIT value for signed zones")="";
+  ::arg().set("dnssec-key-cache-ttl","Seconds to cache DNSSEC keys from the database")="30";
+  ::arg().set("domain-metadata-cache-ttl","Seconds to cache domain metadata from the database")="60";
 
   ::arg().set("trusted-notification-proxy", "IP address of incoming notification proxy")="";
   ::arg().set("slave-renotify", "If we should send out notifications for slaved updates")="no";
@@ -170,14 +175,16 @@ void declareArguments()
 
   ::arg().setSwitch("traceback-handler","Enable the traceback handler (Linux only)")="yes";
   ::arg().setSwitch("direct-dnskey","Fetch DNSKEY RRs from backend during DNSKEY synthesis")="no";
-  ::arg().set("default-ksk-algorithms","Default KSK algorithms")="";
+  ::arg().set("default-ksk-algorithms","Default KSK algorithms")="ecdsa256";
   ::arg().set("default-ksk-size","Default KSK size (0 means default)")="0";
-  ::arg().set("default-zsk-algorithms","Default ZSK algorithms")="ecdsa256";
+  ::arg().set("default-zsk-algorithms","Default ZSK algorithms")="";
   ::arg().set("default-zsk-size","Default ZSK size (0 means default)")="0";
   ::arg().set("max-nsec3-iterations","Limit the number of NSEC3 hash iterations")="500"; // RFC5155 10.3
 
   ::arg().set("include-dir","Include *.conf files from this directory");
   ::arg().set("security-poll-suffix","Domain name from which to query security update notifications")="secpoll.powerdns.com.";
+
+  ::arg().setSwitch("outgoing-axfr-expand-alias", "Expand ALIAS records during outgoing AXFR")="no";
 }
 
 static time_t s_start=time(0);
@@ -472,7 +479,7 @@ void mainthread()
    DNSPacket::s_udpTruncationThreshold = std::max(512, ::arg().asNum("udp-truncation-threshold"));
    DNSPacket::s_doEDNSSubnetProcessing = ::arg().mustDo("edns-subnet-processing");
 
-   secPollParseResolveConf();
+   stubParseResolveConf();
 
    if(!::arg()["chroot"].empty()) {
      triggerLoadOfLibraries();
@@ -530,6 +537,15 @@ void mainthread()
     pthread_create(&qtid,0,qthread, reinterpret_cast<void *>(n)); // receives packets
 
   pthread_create(&qtid,0,carbonDumpThread, 0); // runs even w/o carbon, might change @ runtime    
+
+#ifdef HAVE_SYSTEMD
+  /* If we are here, notify systemd that we are ay-ok! This might have some
+   * timing issues with the backend-threads. e.g. if the initial MySQL connection
+   * is slow and times out (leading to process termination through the backend)
+   * We probably have told systemd already that we have started correctly.
+   */
+    sd_notify(0, "READY=1");
+#endif
 
   for(;;) {
     sleep(1800);

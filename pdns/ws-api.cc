@@ -91,6 +91,22 @@ static Json getServerDetail() {
   };
 }
 
+/* Return information about the supported API versions.
+ * The format of this MUST NEVER CHANGE at it's not versioned.
+ */
+void apiDiscovery(HttpRequest* req, HttpResponse* resp) {
+  if(req->method != "GET")
+    throw HttpMethodNotAllowedException();
+
+  Json version1 = Json::object {
+    { "version", 1 },
+    { "url", "/api/v1" }
+  };
+  Json doc = Json::array { version1 };
+
+  resp->setBody(doc);
+}
+
 void apiServer(HttpRequest* req, HttpResponse* resp) {
   if(req->method != "GET")
     throw HttpMethodNotAllowedException();
@@ -114,7 +130,7 @@ void apiServerConfig(HttpRequest* req, HttpResponse* resp) {
   string value;
   Json::array doc;
   for(const string& item : items) {
-    if(item.find("password") != string::npos)
+    if(item.find("password") != string::npos || item.find("api-key") != string::npos)
       value = "***";
     else
       value = ::arg()[item];

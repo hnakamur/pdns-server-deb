@@ -1,6 +1,6 @@
 /*
     PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2011  Netherlabs Computer Consulting BV
+    Copyright (C) 2011 - 2016  Netherlabs Computer Consulting BV
 
     This program is free software; you can redistribute it and/or modify
     it under the terms of the GNU General Public License version 2 as 
@@ -28,8 +28,6 @@
 
 extern NetmaskGroup g_ednssubnets;
 extern SuffixMatchNode g_ednsdomains;
-
-
 struct EDNSSubnetOpts
 {
 	Netmask source;
@@ -37,5 +35,6 @@ struct EDNSSubnetOpts
 };
 
 bool getEDNSSubnetOptsFromString(const string& options, EDNSSubnetOpts* eso);
+bool getEDNSSubnetOptsFromString(const char* options, unsigned int len, EDNSSubnetOpts* eso);
 string makeEDNSSubnetOptsString(const EDNSSubnetOpts& eso);
 #endif

@@ -1,4 +1,4 @@
-PowerDNS is copyright Ⓒ 2002-2015 by PowerDNS.COM BV and lots of
+PowerDNS is copyright © 2002-2016 by PowerDNS.COM BV and lots of
 contributors, using the GNU GPLv2 license (see NOTICE for the
 exact license and exception used).
 
@@ -22,8 +22,9 @@ Source code is available on GitHub:
 
     $ git clone https://github.com/PowerDNS/pdns.git
     
-This repository contains the sources both for the PowerDNS Recursor and for PowerDNS Authoritative Server,
-and both can be built from this repository. Both are released separately as .tar.bz2, .deb and .rpm however!
+This repository contains the sources for the PowerDNS Recursor, the PowerDNS Authoritative Server,
+and the PowerDNS dns load balancer. All three can be built from this repository. All three are
+released separately as .tar.bz2, .deb and .rpm however!
 
 COMPILING Authoritative Server
 ------------------------------
@@ -59,6 +60,11 @@ See http://doc.powerdns.com/compiling-powerdns.html for more details.
 
 COMPILING THE RECURSOR
 ----------------------
+
+On Ubuntu 14.04, the following is useful:
+
+    apt-get install git libboost1.55-dev autoconf libtool pandoc ragel zip automake pkg-config g++ libssl-dev make
+
 The portable, and supported, way to build the recursor is:
 
     $ cd pdns/recursordist

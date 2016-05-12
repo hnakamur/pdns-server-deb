@@ -1,0 +1,31 @@
+.TH "CALIDNS" "1" "April 2016" "" ""
+.SH NAME
+.PP
+\f[B]calidns\f[] \- A DNS recursor testing tool
+.SH SYNOPSIS
+.PP
+\f[B]calidns\f[] \f[I]QUERY_FILE\f[] \f[I]DESTINATION\f[]
+\f[I]INITIAL_QPS\f[] \f[I]HITRATE\f[]
+.SH DESCRIPTION
+.PP
+\f[B]calidns\f[] reads queries from \f[I]QUERY_FILE\f[] and sends them
+as a recursive query to \f[I]DESTINATION\f[] (an IPv4 or IPv6 address,
+optionally with a port number), starting at INITIAL_QPS queries per
+second and aims to have a cache hitrate of \f[I]HITRATE\f[] percent.
+.PP
+It will then try to determine the maximum amount of queries per second
+the recursor can handle with the aforementioned \f[I]HITRATE\f[].
+.SH QUERY_FILE format
+.PP
+The format of the \f[I]QUERY_FILE\f[] is very simple, it should contain
+"QNAMEQTYPE" tuples, one per line.
+For example:
+.PP
+powerdns.com A powerdns.com AAAA google.com A
+.PP
+This is similar to Alexa top 1 million list.
+.SH OPTIONS
+.PP
+None
+.SH AUTHORS
+PowerDNS.com BV.

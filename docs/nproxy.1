@@ -1,0 +1,76 @@
+.TH "NPROXY" "1" "April 2016" "" ""
+.SH NAME
+.PP
+\f[B]nproxy\f[] \- DNS notification proxy
+.SH SYNOPSIS
+.PP
+nproxy \-\-powerdns\-address \f[I]ADDRESS\f[] [\f[I]OPTION\f[]]...
+\f[I]ADDRESS\f[]...
+.SH DESCRIPTION
+.PP
+\f[B]nproxy\f[] is a simple daemon that reads DNS NOTIFY queries on one
+address and forwards them to an \[aq]inner\[aq] nameserver that will
+process the notification.
+.PP
+Its usecase is e.g.
+a private authoritative server inside a NAT or firewalled LAN where
+\f[B]nproxy\f[] is deployed in the DMZ.
+.PP
+The PowerDNS Authoritative Server has the trusted\-notification\-proxy
+option that should be set to the address set with
+\f[I]\-\-origin\-address\f[] to accept these proxied notifications.
+.PP
+\f[B]nproxy\f[] also has a health\-check option built in.
+A query for \[aq]pdns.nproxy.\[aq] with QType \[aq]TXT\[aq] will be
+responded to with an answer of "OK" (inside the TXT record.
+When the query is for an A\-record, \[aq]1.2.3.4.\[aq] is returned.
+.SH OPTIONS
+.TP
+.B \-\-powerdns\-address \f[I]ADDRESS\f[]
+IP address of the PowerDNS server to forward the notifications to.
+.RS
+.RE
+.TP
+.B \-\-chroot \f[I]PATH\f[]
+chroot to \f[I]PATH\f[] for additional security.
+.RS
+.RE
+.TP
+.B \-\-setuid \f[I]UID\f[]
+setuid to this numerical \f[I]UID\f[].
+.RS
+.RE
+.TP
+.B \-\-setgid \f[I]GID\f[]
+setgid to this numerical \f[I]GID\f[].
+.RS
+.RE
+.TP
+.B \-\-origin\-address \f[I]ADDRESS\f[]
+Set the source of the notifications sent to PowerDNS to
+\f[I]ADDRESS\f[].
+By default, the best matching address (kernel\[aq]s choice) is used.
+.RS
+.RE
+.TP
+.B \-\-listen\-address \f[I]ADDRESS\f[]
+IP addresses to listen on.
+.RS
+.RE
+.TP
+.B \-\-listen\-port \f[I]PORT\f[]
+Source port to listen on, 53 by default.
+.RS
+.RE
+.TP
+.B \-d,\-\-daemon \f[I]ARG\f[]
+Set \f[I]ARG\f[] to 0 to disable running in the background.
+.RS
+.RE
+.TP
+.B \-v,\-\-verbose
+Be verbose
+.RS
+.RE
+.SH AUTHORS
+PowerDNS.com BV.

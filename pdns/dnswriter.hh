@@ -49,7 +49,7 @@ public:
 
   /** Shorthand way to add an Opt-record, for example for EDNS0 purposes */
   typedef vector<pair<uint16_t,std::string> > optvect_t;
-  void addOpt(int udpsize, int extRCode, int Z, const optvect_t& options=optvect_t());
+  void addOpt(uint16_t udpsize, int extRCode, int Z, const optvect_t& options=optvect_t());
 
   /** needs to be called after the last record is added, but can be called again and again later on. Is called internally by startRecord too.
       The content of the vector<> passed to the constructor is inconsistent until commit is called.
@@ -87,7 +87,8 @@ public:
   void xfr8BitInt(uint8_t val);
 
   void xfrName(const DNSName& label, bool compress=false, bool noDot=false);
-  void xfrText(const string& text, bool multi=false);
+  void xfrText(const string& text, bool multi=false, bool lenField=true);
+  void xfrUnquotedText(const string& text, bool lenField);
   void xfrBlob(const string& blob, int len=-1);
   void xfrBlobNoSpaces(const string& blob, int len=-1);
   void xfrHexBlob(const string& blob, bool keepReading=false);

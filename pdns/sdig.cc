@@ -11,6 +11,21 @@
 #include "ednssubnet.hh"
 StatBag S;
 
+bool hidettl=false;
+
+string ttl(uint32_t ttl)
+{
+  if(hidettl)
+    return "[ttl]";
+  else
+    return std::to_string(ttl);
+}
+
+void usage() {
+  cerr<<"sdig"<<endl;
+  cerr<<"Syntax: sdig IP-ADDRESS PORT QUESTION QUESTION-TYPE [dnssec] [recurse] [showflags] [hidesoadetails] [hidettl] [tcp] [ednssubnet SUBNET]"<<endl;
+}
+
 int main(int argc, char** argv)
 try
 {
@@ -21,12 +36,25 @@ try
   bool hidesoadetails=false;
   boost::optional<Netmask> ednsnm;
 
-  reportAllTypes();
+
+  for(int i=1; i<argc; i++) {
+    if ((string) argv[i] == "--help") {
+      usage();
+      exit(EXIT_SUCCESS);
+    }
+
+    if ((string) argv[i] == "--version") {
+      cerr<<"sdig "<<VERSION<<endl;
+      exit(EXIT_SUCCESS);
+    }
+  }
 
   if(argc < 5) {
-    cerr<<"Syntax: sdig IP-address port question question-type [dnssec] [recurse] [showflags] [hidesoadetails] [tcp] [ednssubnet SUBNET]\n";
+    usage();
     exit(EXIT_FAILURE);
   }
+
+  reportAllTypes();
 
   if (argc > 5) {
     for(int i=5; i<argc; i++) {
@@ -38,10 +66,12 @@ try
         showflags=true;
       if (strcmp(argv[i], "hidesoadetails") == 0)
         hidesoadetails=true;
+      if (strcmp(argv[i], "hidettl") == 0)
+        hidettl=true;
       if (strcmp(argv[i], "tcp") == 0)
         tcp=true;
       if (strcmp(argv[i], "ednssubnet") == 0) {
-	ednsnm=Netmask(argv[++i]);
+        ednsnm=Netmask(argv[++i]);
       }
     }
   }
@@ -127,14 +157,14 @@ try
       string zoneRep = i->first.d_content->getZoneRepresentation();
       vector<string> parts;
       stringtok(parts, zoneRep);
-      cout<<"\t"<<i->first.d_ttl<<"\t"<< parts[0]<<" "<<parts[1]<<" "<<parts[2]<<" "<<parts[3]<<" [expiry] [inception] [keytag] "<<parts[7]<<" ...\n";
+      cout<<"\t"<<ttl(i->first.d_ttl)<<"\t"<< parts[0]<<" "<<parts[1]<<" "<<parts[2]<<" "<<parts[3]<<" [expiry] [inception] [keytag] "<<parts[7]<<" ...\n";
     }
     else if(!showflags && i->first.d_type == QType::NSEC3)
     {
       string zoneRep = i->first.d_content->getZoneRepresentation();
       vector<string> parts;
       stringtok(parts, zoneRep);
-      cout<<"\t"<<i->first.d_ttl<<"\t"<< parts[0]<<" [flags] "<<parts[2]<<" "<<parts[3]<<" "<<parts[4];
+      cout<<"\t"<<ttl(i->first.d_ttl)<<"\t"<< parts[0]<<" [flags] "<<parts[2]<<" "<<parts[3]<<" "<<parts[4];
       for(vector<string>::iterator iter = parts.begin()+5; iter != parts.end(); ++iter)
         cout<<" "<<*iter;
       cout<<"\n";
@@ -144,18 +174,18 @@ try
       string zoneRep = i->first.d_content->getZoneRepresentation();
       vector<string> parts;
       stringtok(parts, zoneRep);
-      cout<<"\t"<<i->first.d_ttl<<"\t"<< parts[0]<<" "<<parts[1]<<" "<<parts[2]<<" ...\n";
+      cout<<"\t"<<ttl(i->first.d_ttl)<<"\t"<< parts[0]<<" "<<parts[1]<<" "<<parts[2]<<" ...\n";
     }
     else if (i->first.d_type == QType::SOA && hidesoadetails)
     {
       string zoneRep = i->first.d_content->getZoneRepresentation();
       vector<string> parts;
       stringtok(parts, zoneRep);
-      cout<<"\t"<<i->first.d_ttl<<"\t"<<parts[0]<<" "<<parts[1]<<" [serial] "<<parts[3]<<" "<<parts[4]<<" "<<parts[5]<<" "<<parts[6]<<"\n";
+      cout<<"\t"<<ttl(i->first.d_ttl)<<"\t"<<parts[0]<<" "<<parts[1]<<" [serial] "<<parts[3]<<" "<<parts[4]<<" "<<parts[5]<<" "<<parts[6]<<"\n";
     }
     else
     {
-      cout<<"\t"<<i->first.d_ttl<<"\t"<< i->first.d_content->getZoneRepresentation()<<"\n";
+      cout<<"\t"<<ttl(i->first.d_ttl)<<"\t"<< i->first.d_content->getZoneRepresentation()<<"\n";
     }
 
   }
@@ -184,9 +214,12 @@ try
     }
 
   }
-
 }
 catch(std::exception &e)
 {
   cerr<<"Fatal: "<<e.what()<<endl;
+}
+catch(PDNSException &e)
+{
+  cerr<<"Fatal: "<<e.reason<<endl;
 }

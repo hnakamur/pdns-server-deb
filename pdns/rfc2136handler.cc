@@ -596,6 +596,10 @@ int PacketHandler::forwardPacket(const string &msgPrefix, DNSPacket *p, DomainIn
     else
       local = ComboAddress("::");
     int sock = makeQuerySocket(local, false); // create TCP socket. RFC2136 section 6.2 seems to be ok with this.
+    if(sock < 0) {
+      L<<Logger::Error<<msgPrefix<<"Error creating socket: "<<stringerror()<<endl;
+      continue;
+    }
 
     if( connect(sock, (struct sockaddr*)&remote, remote.getSocklen()) < 0 ) {
       L<<Logger::Error<<msgPrefix<<"Failed to connect to "<<remote.toStringWithPort()<<": "<<stringerror()<<endl;
@@ -957,7 +961,7 @@ void PacketHandler::increaseSerial(const string &msgPrefix, const DomainInfo *di
   }
   SOAData soa2Update;
   fillSOAData(rec.content, soa2Update);
-  int oldSerial = soa2Update.serial;
+  uint32_t oldSerial = soa2Update.serial;
 
   if (oldSerial == 0) { // using Autoserial, leave the serial alone.
     L<<Logger::Notice<<msgPrefix<<"AutoSerial being used, not updating SOA serial."<<endl;

@@ -96,6 +96,21 @@ Common Error Causes
 3. For requests that operate on a zone, the `zone_id` URL part was invalid. To get a valid `zone_id`, list the zones with the `/api/v1/servers/:server_id/zones` endpoint.
 
 
+URL: /api
+---------
+
+Version discovery endpoint.
+
+Allowed methods: `GET`
+
+    [
+      {
+        "url": "/api/v1",
+        "version": 1
+      }
+    ]
+
+
 URL: /api/v1
 ------------
 
@@ -103,7 +118,7 @@ Allowed methods: `GET`
 
     {
       "server_url": "/api/v1/servers{/server}",
-      "api_features": [],
+      "api_features": []
     }
 
 **TODO**:
@@ -301,7 +316,7 @@ zone_collection
       "nameservers": ["<string>", ...],
       "servers": ["<string>", ...],
       "recursion_desired": <bool>,
-      "rrset": [<RRset>, ...],
+      "rrsets": [<RRset>, ...],
     }
 
 
@@ -633,7 +648,7 @@ cryptokey\_resource
       "active": <bool>,
       "keytype": <keytype>,
       "dnskey": <string>,
-      "content": <string>,
+      "privatekey": <string>,
       "ds": [ <ds>,
               <ds>,
               .... ]
@@ -644,12 +659,13 @@ cryptokey\_resource
 
 `id`: read-only.
 
-`keytype`: `<keytype>` is one of the following: `ksk` or `zsk`, and they are
-both mutually exclusive.
+`keytype`: `<keytype>` is one of the following: `ksk`, `zsk`, `csk`.
 
 `dnskey`: the DNSKEY for this key
 
 `ds`: an array with all DSes for this key
+
+`privatekey`: private key data (in ISC format).
 
 
 URL: /api/v1/servers/:server\_id/zones/:zone\_name/cryptokeys
@@ -659,7 +675,7 @@ Allowed methods: `GET`, `POST`
 
 #### GET
 
-Returns all public data about cryptokeys, but not `content`.
+Returns all public data about cryptokeys, but not `privatekey`.
 
 #### POST
 
@@ -685,7 +701,7 @@ Allowed methods: `GET`, `PUT`, `DELETE`
 
 #### GET
 
-Returns all public data about cryptokeys, including `content`, with all the private data. An array is returned, even though a single key is requested.
+Returns all public data about cryptokeys, including `privatekey`.
 
 #### PUT
 

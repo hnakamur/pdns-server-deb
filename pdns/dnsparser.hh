@@ -71,7 +71,10 @@ public:
   PacketReader(const vector<uint8_t>& content) 
     : d_pos(0), d_startrecordpos(0), d_content(content)
   {
-    d_recordlen = content.size();
+    if(content.size() > std::numeric_limits<uint16_t>::max())
+      throw std::out_of_range("packet too large");
+
+    d_recordlen = (uint16_t) content.size();
     not_used = 0;
   }
 
@@ -124,9 +127,13 @@ public:
     name=getName();
   }
 
-  void xfrText(string &text, bool multi=false)
+  void xfrText(string &text, bool multi=false, bool lenField=true)
   {
-    text=getText(multi);
+    text=getText(multi, lenField);
+  }
+
+  void xfrUnquotedText(string &text, bool lenField){
+    text=getUnquotedText(lenField);
   }
 
   void xfrBlob(string& blob);
@@ -141,7 +148,8 @@ public:
   void copyRecord(unsigned char* dest, uint16_t len);
 
   DNSName getName();
-  string getText(bool multi);
+  string getText(bool multi, bool lenField);
+  string getUnquotedText(bool lenField);
 
   uint16_t d_pos;
 
@@ -219,7 +227,7 @@ public:
       return iter->second.second;
     
     if(boost::starts_with(name, "TYPE") || boost::starts_with(name, "type"))
-      return pdns_stou(name.substr(4));
+      return (uint16_t) pdns_stou(name.substr(4));
     
     throw runtime_error("Unknown DNS type '"+name+"'");
   }
@@ -280,6 +288,33 @@ struct DNSRecord
     
     return lzrp < rzrp;
   }
+
+  // this orders in canonical order and keeps the SOA record on top
+  static bool prettyCompare(const DNSRecord& a, const DNSRecord& b) 
+  {
+    auto aType = (a.d_type == QType::SOA) ? 0 : a.d_type; 
+    auto bType = (b.d_type == QType::SOA) ? 0 : b.d_type; 
+
+    if(a.d_name.canonCompare(b.d_name))
+      return true;
+    if(b.d_name.canonCompare(a.d_name))
+      return false;
+
+    if(tie(aType, a.d_class, a.d_ttl) < tie(bType, b.d_class, b.d_ttl))
+      return true;
+    
+    if(tie(aType, a.d_class, a.d_ttl) != tie(bType, b.d_class, b.d_ttl))
+      return false;
+    
+    string lzrp, rzrp;
+    if(a.d_content)
+      lzrp=toLower(a.d_content->getZoneRepresentation());
+    if(b.d_content)
+      rzrp=toLower(b.d_content->getZoneRepresentation());
+    
+    return lzrp < rzrp;
+  }
+
 
   bool operator==(const DNSRecord& rhs) const
   {
@@ -343,9 +378,9 @@ private:
 };
 
 string simpleCompress(const string& label, const string& root="");
-void simpleExpandTo(const string& label, unsigned int frompos, string& ret);
 void ageDNSPacket(char* packet, size_t length, uint32_t seconds);
 void ageDNSPacket(std::string& packet, uint32_t seconds);
+uint32_t getDNSPacketMinTTL(const char* packet, size_t length);
 
 template<typename T>
 std::shared_ptr<T> getRR(const DNSRecord& dr)

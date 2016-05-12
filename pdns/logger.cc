@@ -56,7 +56,7 @@ void Logger::log(const string &msg, Urgency u)
     Lock l(&m); // the C++-2011 spec says we need this, and OSX actually does
     clog << string(buffer) + msg <<endl;
   }
-  if( u <= d_loglevel ) {
+  if( u <= d_loglevel && !d_disableSyslog ) {
 #ifndef RECURSOR
     S.ringAccount("logmessages",msg);
 #endif
@@ -101,6 +101,7 @@ Logger::Logger(const string &n, int facility)
   flags=LOG_PID|LOG_NDELAY;
   d_facility=facility;
   d_loglevel=Logger::None;
+  d_disableSyslog=false;
   consoleUrgency=Error;
   name=n;
 
