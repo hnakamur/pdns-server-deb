@@ -14,7 +14,10 @@ DEB_HOST_MULTIARCH  ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 # Use new build system
 %:
-	dh $@ --with autoreconf --parallel
+	dh $@ \
+		--with autoreconf \
+		--with systemd \
+		--parallel
 
 override_dh_auto_configure:
 	mv pdns/dnslabeltext.cc debian/dnslabeltext.cc.moved
@@ -34,7 +37,9 @@ override_dh_auto_configure:
 		--enable-botan1.10 \
 		--enable-tools \
 		--enable-unit-tests \
-		--enable-reproducible
+		--enable-reproducible \
+		--enable-systemd \
+		--with-systemd=/lib/systemd/system
 
 override_dh_strip:
 	dh_strip --ddeb-migration='pdns-server-dbg (<< 4.0.0-0)'
