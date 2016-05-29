@@ -1,3 +1,14 @@
+pdns (4.0.0~beta1-1) unstable; urgency=medium
+
+  * New upstream version.
+    * Build with systemd Type=notify support and use it.
+    * Merge some upstream packaging changes, gets us new tools and
+      manpages in pdns-tools.
+  * Stop patching config-dir in pdns.conf
+  * pdns-backend-mysql: Fix ucf registration (Closes: #816362)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sun, 29 May 2016 14:43:55 +0000
+
 pdns (4.0.0~alpha3-1) unstable; urgency=medium
 
   * d/watch: Set versionmangle for alpha releases
