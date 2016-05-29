@@ -15,12 +15,12 @@ DEB_HOST_MULTIARCH  ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 # Use new build system
 %:
 	dh $@ \
-		--with autoreconf \
-		--with systemd \
-		--parallel
+	  --with autoreconf \
+	  --with systemd \
+	  --parallel
 
 override_dh_auto_configure:
-	mv pdns/dnslabeltext.cc debian/dnslabeltext.cc.moved
+	test -f pdns/dnslabeltext.cc && mv pdns/dnslabeltext.cc debian/dnslabeltext.cc.moved || true
 	./configure \
 		--host=$(DEB_HOST_GNU_TYPE) \
 		--build=$(DEB_BUILD_GNU_TYPE) \
@@ -33,9 +33,9 @@ override_dh_auto_configure:
 		--with-dynmodules="$(backends)" \
 		--with-modules="" \
 		--with-pgsql-includes=`pg_config --includedir` \
-		--disable-cryptopp \
 		--enable-botan1.10 \
 		--enable-tools \
+		--without-protobuf \
 		--enable-unit-tests \
 		--enable-reproducible \
 		--enable-systemd \
@@ -56,18 +56,15 @@ override_dh_installinit:
 	dh_systemd_start --restart-after-upgrade
 
 override_dh_install:
-	make -C pdns sdig dnsgram
-	install -c pdns/sdig debian/tmp/usr/bin/sdig
-	install -c pdns/dnsgram debian/tmp/usr/bin/dnsgram
 	dh_install
 	./pdns/pdns_server --no-config --config | sed \
-		-e 's!# module-dir=.*!!' \
-		-e 's!# include-dir=.*!&\ninclude-dir=/etc/powerdns/pdns.d!' \
-		-e 's!# launch=.*!&\nlaunch=!' \
-		-e 's!# setgid=.*!setgid=pdns!' \
-		-e 's!# setuid=.*!setuid=pdns!' \
-		-e 's!# security-poll-suffix=.*!&\nsecurity-poll-suffix=!' \
-		> debian/pdns-server/usr/share/pdns-server/pdns.conf
+	  -e 's!# module-dir=.*!!' \
+	  -e 's!# include-dir=.*!&\ninclude-dir=/etc/powerdns/pdns.d!' \
+	  -e 's!# launch=.*!&\nlaunch=!' \
+	  -e 's!# setgid=.*!setgid=pdns!' \
+	  -e 's!# setuid=.*!setuid=pdns!' \
+	  -e 's!# security-poll-suffix=.*!&\nsecurity-poll-suffix=!' \
+	  > debian/pdns-server/usr/share/pdns-server/pdns.conf
 
 # Verbose build (shows used compiler/linker and their flags)
 override_dh_auto_build-arch:
