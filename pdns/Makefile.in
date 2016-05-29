@@ -102,6 +102,7 @@ bin_PROGRAMS = pdns_control$(EXEEXT) pdnsutil$(EXEEXT) \
 @TOOLS_TRUE@	nproxy \
 @TOOLS_TRUE@	nsec3dig \
 @TOOLS_TRUE@	saxfr \
+@TOOLS_TRUE@	stubquery \
 @TOOLS_TRUE@	ixplore \
 @TOOLS_TRUE@	sdig
 
@@ -111,9 +112,10 @@ EXTRA_PROGRAMS = calidns$(EXEEXT) comfun$(EXEEXT) dnsbulktest$(EXEEXT) \
 	dnsscan$(EXEEXT) dnsscope$(EXEEXT) dnstcpbench$(EXEEXT) \
 	dnswasher$(EXEEXT) dumresp$(EXEEXT) kvresp$(EXEEXT) \
 	ixplore$(EXEEXT) notify$(EXEEXT) nproxy$(EXEEXT) \
-	nsec3dig$(EXEEXT) saxfr$(EXEEXT) sdig$(EXEEXT) \
-	speedtest$(EXEEXT) testrunner$(EXEEXT) toysdig$(EXEEXT) \
-	tsig-tests$(EXEEXT) zone2ldap$(EXEEXT) $(am__EXEEXT_1)
+	nsec3dig$(EXEEXT) saxfr$(EXEEXT) stubquery$(EXEEXT) \
+	sdig$(EXEEXT) speedtest$(EXEEXT) testrunner$(EXEEXT) \
+	toysdig$(EXEEXT) tsig-tests$(EXEEXT) zone2ldap$(EXEEXT) \
+	$(am__EXEEXT_1)
 @BOTAN110_TRUE@am__append_8 = botan110signers.cc
 @BOTAN110_TRUE@am__append_9 = $(BOTAN110_LIBS)
 @LIBSODIUM_TRUE@am__append_10 = sodiumsigners.cc
@@ -227,7 +229,8 @@ CONFIG_CLEAN_VPATH_FILES =
 @TOOLS_TRUE@	dnsscope$(EXEEXT) dnstcpbench$(EXEEXT) \
 @TOOLS_TRUE@	dnswasher$(EXEEXT) dumresp$(EXEEXT) \
 @TOOLS_TRUE@	notify$(EXEEXT) nproxy$(EXEEXT) nsec3dig$(EXEEXT) \
-@TOOLS_TRUE@	saxfr$(EXEEXT) ixplore$(EXEEXT) sdig$(EXEEXT)
+@TOOLS_TRUE@	saxfr$(EXEEXT) stubquery$(EXEEXT) ixplore$(EXEEXT) \
+@TOOLS_TRUE@	sdig$(EXEEXT)
 @HAVE_RECVMMSG_TRUE@@TOOLS_TRUE@am__EXEEXT_3 = calidns$(EXEEXT)
 @LDAP_TRUE@am__EXEEXT_4 = zone2ldap$(EXEEXT)
 am__installdirs = "$(DESTDIR)$(bindir)" "$(DESTDIR)$(sbindir)" \
@@ -640,14 +643,27 @@ speedtest_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 speedtest_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(speedtest_LDFLAGS) $(LDFLAGS) -o $@
+am_stubquery_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
+	base64.$(OBJEXT) dns_random.$(OBJEXT) dnslabeltext.$(OBJEXT) \
+	dnsname.$(OBJEXT) dnsparser.$(OBJEXT) dnsrecords.$(OBJEXT) \
+	dnswriter.$(OBJEXT) logger.$(OBJEXT) misc.$(OBJEXT) \
+	nsecrecords.$(OBJEXT) qtype.$(OBJEXT) rcpgenerator.$(OBJEXT) \
+	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
+	stubresolver.$(OBJEXT) stubquery.$(OBJEXT) \
+	unix_utility.$(OBJEXT)
+stubquery_OBJECTS = $(am_stubquery_OBJECTS)
+stubquery_DEPENDENCIES = $(am__DEPENDENCIES_1)
+stubquery_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
+	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(stubquery_LDFLAGS) $(LDFLAGS) -o $@
 am__testrunner_SOURCES_DIST = arguments.cc base32.cc base64.cc \
 	bindlexer.l bindparser.yy dns.cc dns_random.cc dnsbackend.cc \
 	dnslabeltext.cc dnsname.cc dnsname.hh dnspacket.cc \
 	dnsparser.hh dnsparser.cc dnsrecords.cc dnssecinfra.cc \
 	dnswriter.cc ednsoptions.cc ednsoptions.hh ednssubnet.cc \
-	gss_context.cc gss_context.hh iputils.cc logger.cc misc.cc \
-	nameserver.cc nsecrecords.cc packetcache.cc qtype.cc \
-	rcpgenerator.cc recpacketcache.cc recpacketcache.hh \
+	gettime.cc gettime.hh gss_context.cc gss_context.hh iputils.cc \
+	logger.cc misc.cc nameserver.cc nsecrecords.cc packetcache.cc \
+	qtype.cc rcpgenerator.cc recpacketcache.cc recpacketcache.hh \
 	responsestats.cc responsestats-auth.cc sillyrecords.cc \
 	statbag.cc test-arguments_cc.cc test-base32_cc.cc \
 	test-base64_cc.cc test-bindparser_cc.cc test-delaypipe_hh.cc \
@@ -666,20 +682,21 @@ am_testrunner_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnspacket.$(OBJEXT) \
 	dnsparser.$(OBJEXT) dnsrecords.$(OBJEXT) dnssecinfra.$(OBJEXT) \
 	dnswriter.$(OBJEXT) ednsoptions.$(OBJEXT) ednssubnet.$(OBJEXT) \
-	gss_context.$(OBJEXT) iputils.$(OBJEXT) logger.$(OBJEXT) \
-	misc.$(OBJEXT) nameserver.$(OBJEXT) nsecrecords.$(OBJEXT) \
-	packetcache.$(OBJEXT) qtype.$(OBJEXT) rcpgenerator.$(OBJEXT) \
-	recpacketcache.$(OBJEXT) responsestats.$(OBJEXT) \
-	responsestats-auth.$(OBJEXT) sillyrecords.$(OBJEXT) \
-	statbag.$(OBJEXT) test-arguments_cc.$(OBJEXT) \
-	test-base32_cc.$(OBJEXT) test-base64_cc.$(OBJEXT) \
-	test-bindparser_cc.$(OBJEXT) test-delaypipe_hh.$(OBJEXT) \
-	test-distributor_hh.$(OBJEXT) test-dns_random_hh.$(OBJEXT) \
-	test-dnsname_cc.$(OBJEXT) test-dnsparser_hh.$(OBJEXT) \
-	test-dnsrecords_cc.$(OBJEXT) test-iputils_hh.$(OBJEXT) \
-	test-md5_hh.$(OBJEXT) test-misc_hh.$(OBJEXT) \
-	test-nameserver_cc.$(OBJEXT) test-nmtree.$(OBJEXT) \
-	test-packetcache_cc.$(OBJEXT) test-rcpgenerator_cc.$(OBJEXT) \
+	gettime.$(OBJEXT) gss_context.$(OBJEXT) iputils.$(OBJEXT) \
+	logger.$(OBJEXT) misc.$(OBJEXT) nameserver.$(OBJEXT) \
+	nsecrecords.$(OBJEXT) packetcache.$(OBJEXT) qtype.$(OBJEXT) \
+	rcpgenerator.$(OBJEXT) recpacketcache.$(OBJEXT) \
+	responsestats.$(OBJEXT) responsestats-auth.$(OBJEXT) \
+	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
+	test-arguments_cc.$(OBJEXT) test-base32_cc.$(OBJEXT) \
+	test-base64_cc.$(OBJEXT) test-bindparser_cc.$(OBJEXT) \
+	test-delaypipe_hh.$(OBJEXT) test-distributor_hh.$(OBJEXT) \
+	test-dns_random_hh.$(OBJEXT) test-dnsname_cc.$(OBJEXT) \
+	test-dnsparser_hh.$(OBJEXT) test-dnsrecords_cc.$(OBJEXT) \
+	test-iputils_hh.$(OBJEXT) test-md5_hh.$(OBJEXT) \
+	test-misc_hh.$(OBJEXT) test-nameserver_cc.$(OBJEXT) \
+	test-nmtree.$(OBJEXT) test-packetcache_cc.$(OBJEXT) \
+	test-rcpgenerator_cc.$(OBJEXT) \
 	test-recpacketcache_cc.$(OBJEXT) test-sha_hh.$(OBJEXT) \
 	test-statbag_cc.$(OBJEXT) test-zoneparser_tng_cc.$(OBJEXT) \
 	testrunner.$(OBJEXT) ueberbackend.$(OBJEXT) \
@@ -860,9 +877,9 @@ SOURCES = $(calidns_SOURCES) $(comfun_SOURCES) $(dnsbulktest_SOURCES) \
 	$(ixplore_SOURCES) $(kvresp_SOURCES) $(notify_SOURCES) \
 	$(nproxy_SOURCES) $(nsec3dig_SOURCES) $(pdns_control_SOURCES) \
 	$(pdns_server_SOURCES) $(pdnsutil_SOURCES) $(saxfr_SOURCES) \
-	$(sdig_SOURCES) $(speedtest_SOURCES) $(testrunner_SOURCES) \
-	$(toysdig_SOURCES) $(tsig_tests_SOURCES) $(zone2json_SOURCES) \
-	$(zone2ldap_SOURCES) $(zone2sql_SOURCES)
+	$(sdig_SOURCES) $(speedtest_SOURCES) $(stubquery_SOURCES) \
+	$(testrunner_SOURCES) $(toysdig_SOURCES) $(tsig_tests_SOURCES) \
+	$(zone2json_SOURCES) $(zone2ldap_SOURCES) $(zone2sql_SOURCES)
 DIST_SOURCES = $(calidns_SOURCES) $(comfun_SOURCES) \
 	$(dnsbulktest_SOURCES) $(dnsdemog_SOURCES) $(dnsgram_SOURCES) \
 	$(am__dnspcap2protobuf_SOURCES_DIST) $(dnsreplay_SOURCES) \
@@ -873,9 +890,9 @@ DIST_SOURCES = $(calidns_SOURCES) $(comfun_SOURCES) \
 	$(am__nsec3dig_SOURCES_DIST) $(pdns_control_SOURCES) \
 	$(am__pdns_server_SOURCES_DIST) $(am__pdnsutil_SOURCES_DIST) \
 	$(am__saxfr_SOURCES_DIST) $(sdig_SOURCES) $(speedtest_SOURCES) \
-	$(am__testrunner_SOURCES_DIST) $(am__toysdig_SOURCES_DIST) \
-	$(am__tsig_tests_SOURCES_DIST) $(zone2json_SOURCES) \
-	$(zone2ldap_SOURCES) $(zone2sql_SOURCES)
+	$(stubquery_SOURCES) $(am__testrunner_SOURCES_DIST) \
+	$(am__toysdig_SOURCES_DIST) $(am__tsig_tests_SOURCES_DIST) \
+	$(zone2json_SOURCES) $(zone2ldap_SOURCES) $(zone2sql_SOURCES)
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -1570,6 +1587,29 @@ kvresp_SOURCES = \
 	unix_utility.cc \
 	qtype.cc 
 
+stubquery_SOURCES = \
+	arguments.cc arguments.hh \
+	base32.cc \
+	base64.cc \
+	dns_random.cc \
+	dnslabeltext.cc \
+	dnsname.cc \
+	dnsparser.cc \
+	dnsrecords.cc \
+	dnswriter.cc \
+	logger.cc \
+	misc.cc \
+	nsecrecords.cc \
+	qtype.cc \
+	rcpgenerator.cc \
+	sillyrecords.cc \
+	statbag.cc \
+	stubresolver.cc stubresolver.hh \
+	stubquery.cc \
+	unix_utility.cc
+
+stubquery_LDADD = $(OPENSSL_LIBS)
+stubquery_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
 saxfr_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	dns_random.hh dnslabeltext.cc dnsname.cc dnsname.hh \
 	dnsparser.cc dnsparser.hh dnsrecords.cc dnssecinfra.cc \
@@ -1739,7 +1779,6 @@ comfun_LDFLAGS = \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 comfun_LDADD = \
-	$(MBEDTLS_LIBS) \
 	$(OPENSSL_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
@@ -1981,9 +2020,9 @@ testrunner_SOURCES = arguments.cc base32.cc base64.cc bindlexer.l \
 	dnslabeltext.cc dnsname.cc dnsname.hh dnspacket.cc \
 	dnsparser.hh dnsparser.cc dnsrecords.cc dnssecinfra.cc \
 	dnswriter.cc ednsoptions.cc ednsoptions.hh ednssubnet.cc \
-	gss_context.cc gss_context.hh iputils.cc logger.cc misc.cc \
-	nameserver.cc nsecrecords.cc packetcache.cc qtype.cc \
-	rcpgenerator.cc recpacketcache.cc recpacketcache.hh \
+	gettime.cc gettime.hh gss_context.cc gss_context.hh iputils.cc \
+	logger.cc misc.cc nameserver.cc nsecrecords.cc packetcache.cc \
+	qtype.cc rcpgenerator.cc recpacketcache.cc recpacketcache.hh \
 	responsestats.cc responsestats-auth.cc sillyrecords.cc \
 	statbag.cc test-arguments_cc.cc test-base32_cc.cc \
 	test-base64_cc.cc test-bindparser_cc.cc test-delaypipe_hh.cc \
@@ -2020,7 +2059,8 @@ curl_verbose_ = $(curl_verbose_$(AM_DEFAULT_VERBOSITY))
 curl_verbose_0 = @echo "  CURL    " $@;
 @HAVE_SYSTEMD_TRUE@systemdsystemunitdir = $(SYSTEMD_DIR)
 @HAVE_SYSTEMD_TRUE@systemdsystemunit_DATA = \
-@HAVE_SYSTEMD_TRUE@	pdns.service
+@HAVE_SYSTEMD_TRUE@	pdns.service \
+@HAVE_SYSTEMD_TRUE@	pdns@.service
 
 all: $(BUILT_SOURCES)
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -2261,6 +2301,10 @@ speedtest$(EXEEXT): $(speedtest_OBJECTS) $(speedtest_DEPENDENCIES) $(EXTRA_speed
 	@rm -f speedtest$(EXEEXT)
 	$(AM_V_CXXLD)$(speedtest_LINK) $(speedtest_OBJECTS) $(speedtest_LDADD) $(LIBS)
 
+stubquery$(EXEEXT): $(stubquery_OBJECTS) $(stubquery_DEPENDENCIES) $(EXTRA_stubquery_DEPENDENCIES) 
+	@rm -f stubquery$(EXEEXT)
+	$(AM_V_CXXLD)$(stubquery_LINK) $(stubquery_OBJECTS) $(stubquery_LDADD) $(LIBS)
+
 testrunner$(EXEEXT): $(testrunner_OBJECTS) $(testrunner_DEPENDENCIES) $(EXTRA_testrunner_DEPENDENCIES) 
 	@rm -f testrunner$(EXEEXT)
 	$(AM_V_CXXLD)$(testrunner_LINK) $(testrunner_OBJECTS) $(testrunner_LDADD) $(LIBS)
@@ -2334,6 +2378,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynmessenger.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ednsoptions.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ednssubnet.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gettime.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gss_context.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/iputils.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ixfr.Po@am__quote@
@@ -2377,6 +2422,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/speedtest.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ssqlite3.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/statbag.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stubquery.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/stubresolver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tcpreceiver.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-arguments_cc.Po@am__quote@
@@ -2946,6 +2992,11 @@ dnsdist:
 
 @HAVE_SYSTEMD_TRUE@pdns.service: pdns.service.in
 @HAVE_SYSTEMD_TRUE@	$(AM_V_GEN)sed -e 's![@]sbindir[@]!$(sbindir)!' < $< > $@
+
+@HAVE_SYSTEMD_TRUE@pdns@.service: pdns.service
+@HAVE_SYSTEMD_TRUE@	$(AM_V_GEN)sed -e 's!/pdns_server!& --config-name=%i!' \
+@HAVE_SYSTEMD_TRUE@	  -e 's!Authoritative Server!& %i!' \
+@HAVE_SYSTEMD_TRUE@	  < $< > $@
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
