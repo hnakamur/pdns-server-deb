@@ -8,4 +8,5 @@ usr/bin/pdnsutil
 usr/bin/zone2json
 usr/bin/zone2sql
 usr/lib/*/pdns/libbindbackend.so*
+usr/lib/*/pdns/librandombackend.so*
 usr/sbin/pdns_server
