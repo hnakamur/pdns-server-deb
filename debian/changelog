@@ -1,3 +1,13 @@
+pdns (4.0.0~beta1-2) unstable; urgency=medium
+
+  * Drop extra -latomic, fixed upstream.
+  * Import proposed patch renaming notify to pdns_notify. (Closes: #825804)
+  * Enable OpenDBX backend. (Closes: #716726)
+  * Enable godbc backend.
+  * Enable random backend (part of the pdns-server binary package).
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 06 Jun 2016 20:36:37 +0000
+
 pdns (4.0.0~beta1-1) unstable; urgency=medium
 
   * New upstream version.
