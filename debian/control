@@ -2,9 +2,9 @@ Source: pdns
 Section: net
 Priority: extra
 Standards-Version: 3.9.8
-Maintainer: Debian PowerDNS Maintainers <pkg-pdns-maintainers@lists.alioth.debian.org>
-Uploaders: Marc Haber <mh+debian-packages@zugschlus.de>,
-           Christian Hofstaedtler <zeha@debian.org>
+Maintainer: Debian DNS Packaging <pkg-dns-devel@lists.alioth.debian.org>
+Uploaders: Christian Hofstaedtler <zeha@debian.org>,
+           Marc Haber <mh+debian-packages@zugschlus.de>
 Build-Depends: autoconf,
                automake,
                autotools-dev,
@@ -36,8 +36,8 @@ Build-Depends: autoconf,
                po-debconf,
                ragel,
                unixodbc-dev (>= 2.3.1)
-Vcs-Git: https://anonscm.debian.org/git/pkg-pdns/pdns.git
-Vcs-Browser: https://anonscm.debian.org/cgit/pkg-pdns/pdns.git
+Vcs-Git: https://anonscm.debian.org/git/pkg-dns/pdns.git
+Vcs-Browser: https://anonscm.debian.org/cgit/pkg-dns/pdns.git
 Homepage: http://www.powerdns.com/
 
 Package: pdns-server
