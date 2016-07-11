@@ -1,7 +1,7 @@
 .TH "PDNS_CONTROL" "1" "December 2002" "" ""
 .SH NAME
 .PP
-\f[B]pdns_control\f[] \- Contreol the PowerDNS nameserver
+\f[B]pdns_control\f[] \- Control the PowerDNS nameserver
 .SH SYNOPSIS
 .PP
 \f[B]pdns_control\f[] [\f[I]OPTION\f[]]...
@@ -52,6 +52,31 @@ Where the controlsocket lives.
 .RS
 .RE
 .SH COMMANDS
+.TP
+.B bind\-add\-zone \f[I]DOMAIN\f[] \f[I]FILENAME\f[]
+When using the bindbackend, add a zone.
+This zone is added in\-memory and served immediately.
+Note that this does not add the zone to the bind\-config file.
+\f[I]FILENAME\f[] must be an absolute path.
+.RS
+.RE
+.TP
+.B bind\-domain\-status [\f[I]DOMAIN\f[]...]
+When using the bindbackend, list status of all domains.
+Optionally, append \f[I]DOMAIN\f[]s to get the status of specific zones.
+.RS
+.RE
+.TP
+.B bind\-list\-rejects
+When using the bindbackend, get a list of all rejected domains.
+.RS
+.RE
+.TP
+.B bind\-reload\-now \f[I]DOMAIN\f[] [\f[I]DOMAIN\f[]...]
+When using the bindbackend, immediately reload \f[I]DOMAIN\f[] from
+disk.
+.RS
+.RE
 .TP
 .B ccounts
 Show the content of the cache.

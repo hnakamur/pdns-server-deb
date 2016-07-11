@@ -1,8 +1,24 @@
-//
-// SQLite backend for PowerDNS
-// Copyright (C) 2003, Michel Stol <michel@powerdns.com>
-// Copyright (C) 2011, PowerDNS.COM BV
-//
+/*  SQLite backend for PowerDNS
+ *  Copyright (C) 2003, Michel Stol <michel@powerdns.com>
+ *  Copyright (C) 2011, PowerDNS.COM BV
+ *
+ *  This program is free software; you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License version 2
+ *  as published by the Free Software Foundation.
+ *
+ *  Additionally, the license of this program contains a special
+ *  exception which allows to distribute the program in binary form when
+ *  it is linked against OpenSSL.
+ *
+ *  This program is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with this program; if not, write to the Free Software
+ *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -34,7 +50,9 @@ gSQLite3Backend::gSQLite3Backend( const std::string & mode, const std::string & 
     if(!getArg("pragma-synchronous").empty()) {
       ptr->execute("PRAGMA synchronous="+getArg("pragma-synchronous"));
     }
-    ptr->execute("PRAGMA foreign_keys = 1");
+    if (mustDo("pragma-foreign-keys")) {
+      ptr->execute("PRAGMA foreign_keys = 1");
+    }
   }  
   catch( SSqlException & e ) 
   {
@@ -136,7 +154,6 @@ public:
     declare(suffix, "delete-comments-query", "", "DELETE FROM comments WHERE domain_id=:domain_id");
     declare(suffix, "search-records-query", "", record_query+" name LIKE :value OR content LIKE :value2 LIMIT :limit");
     declare(suffix, "search-comments-query", "", "SELECT domain_id,name,type,modified_at,account,comment FROM comments WHERE name LIKE :value OR comment LIKE :value2 LIMIT :limit");
-    declare(suffix, "is-our-domain-query", "", "SELECT id FROM domains WHERE id = :id OR name = :zone");
   }
 
   //! Constructs a new gSQLite3Backend object.

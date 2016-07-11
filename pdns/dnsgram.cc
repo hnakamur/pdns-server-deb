@@ -120,7 +120,7 @@ try
     /* we measure every 60 seconds, each interval with 10% less answers than questions is interesting */
     /* report chunked */
     
-    struct pdns_timeval lastreport={0, 0};
+    struct pdns_timeval lastreport;
     
     typedef set<pair<DNSName, uint16_t> > queries_t;
     queries_t questions, answers;
@@ -211,7 +211,7 @@ try
     ofstream failed("failed");
     failed<<"name\ttype\tnumber\n";
     for(diff_t::const_iterator i = diff.begin(); i != diff.end() ; ++i) {
-      failed << i->first.toString() << "\t" << DNSRecordContent::NumberToType(i->second) << "\t"<< counts[make_pair(i->first, i->second)]<<"\n";
+      failed << i->first << "\t" << DNSRecordContent::NumberToType(i->second) << "\t"<< counts[make_pair(i->first, i->second)]<<"\n";
     }
 
     diff.clear();
@@ -223,7 +223,7 @@ try
     ofstream succeeded("succeeded");
     succeeded<<"name\ttype\tnumber\n";
     for(queries_t::const_iterator i = answers.begin(); i != answers.end() ; ++i) {
-      succeeded << i->first.toString() << "\t" <<DNSRecordContent::NumberToType(i->second) << "\t" << counts[make_pair(i->first, i->second)]<<"\n";
+      succeeded << i->first << "\t" <<DNSRecordContent::NumberToType(i->second) << "\t" << counts[make_pair(i->first, i->second)]<<"\n";
     }
   }
 }

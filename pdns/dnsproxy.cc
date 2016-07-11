@@ -234,7 +234,7 @@ void DNSProxy::mainloop(void)
 
         if(p.qtype.getCode() != i->second.qtype || p.qdomain != i->second.qname) {
           L<<Logger::Error<<"Discarding packet from recursor backend with id "<<(d.id^d_xor)<<
-            ", qname or qtype mismatch ("<<p.qtype.getCode()<<" v " <<i->second.qtype<<", "<<p.qdomain.toLogString()<<" v "<<i->second.qname.toLogString()<<")"<<endl;
+            ", qname or qtype mismatch ("<<p.qtype.getCode()<<" v " <<i->second.qtype<<", "<<p.qdomain<<" v "<<i->second.qname<<")"<<endl;
           continue;
         }
 
@@ -276,6 +276,7 @@ void DNSProxy::mainloop(void)
         msgh.msg_iovlen = 1;
         msgh.msg_name = (struct sockaddr*)&i->second.remote;
         msgh.msg_namelen = i->second.remote.getSocklen();
+        msgh.msg_control=NULL;
 
         if(i->second.anyLocal) {
           addCMsgSrcAddr(&msgh, cbuf, i->second.anyLocal.get_ptr(), 0);

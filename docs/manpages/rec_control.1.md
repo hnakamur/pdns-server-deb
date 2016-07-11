@@ -43,8 +43,22 @@ To dump the cache to disk, execute:
      respond. Set to 0 for infinite.
 
 # COMMANDS
+add-nta *DOMAIN* [*REASON*]
+:    Add a Negative Trust Anchor for *DOMAIN*, suffixed optionally with *REASON*.
+
+add-ta *DOMAIN* *DSRECORD*
+:    Add a Trust Anchor for *DOMAIN* with DS record data *DSRECORD*.
+
 current-queries
 :    Shows the currently active queries.
+
+clear-nta *DOMAIN*...
+:    Remove Negative Trust Anchor for one or more *DOMAIN*s. Set domain to `'*'`
+     to remove all NTA's.
+
+clear-ta [*DOMAIN*]...
+:    Remove Trust Anchor for one or more *DOMAIN*s. Note that removing the root
+     trust anchor is not possible.
 
 dump-cache *FILENAME*
 :    Dumps the entire cache to *FILENAME*. This file should
@@ -68,6 +82,12 @@ get *STATISTIC* [*STATISTIC*]...
 get-all
 :    Retrieve all known statistics.
 
+get-ntas
+:    Get a list of the currently configured Negative Trust Anchors.
+
+get-tas
+:    Get a list of the currently configured Trust Anchors.
+
 get-parameter *KEY* [*KEY*]...
 :    Retrieves the specified configuration parameter(s).
 
@@ -89,12 +109,24 @@ quit-nicely
 reload-acls
 :    Reloads ACLs.
 
-reload-lua-script *FILENAME*
-:    (Re)loads Lua script *FILENAME*. This replaces the script currently loaded.
+reload-lua-script [*FILENAME*]
+:    (Re)loads Lua script *FILENAME*. If *FILENAME* is empty, attempt to reload
+     the currently loaded script. This replaces the script currently loaded.
+
+reload-lua-config [*FILENAME*]
+:    (Re)loads Lua configuration *FILENAME*. If *FILENAME* is empty, attempt to
+     reload the currently loaded file. Note that *FILENAME* will be fully executed,
+     any settings changed at runtime that are not modified in this file, will
+     still be active. Reloading RPZ, especially by AXFR, can take some time; during
+     which the recursor will not answer questions.
 
 reload-zones
 :    Reload authoritative and forward zones. Retains current configuration
      in case of errors.
+
+set-dnssec-log-bogus *SETTING*
+:    Set dnssec-log-bogus setting to *SETTING*. Set to 'on' or 'yes' to log DNSSEC
+     validation failures and to 'no' or 'off' to disable logging these failures.
 
 set-minimum-ttl *NUM*
 :    Set minimum-ttl-override to *NUM*.

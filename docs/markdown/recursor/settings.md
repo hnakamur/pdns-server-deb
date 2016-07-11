@@ -176,8 +176,8 @@ supervisor that handles logging (like systemd). **Note**: do not use this settin
 in combination with [`daemon`](#daemon) as all logging will disappear.
 
 ## `dnssec`
-* One of `off`, `process`, `log-fail`, `validate`, String
-* Default: `off` (**note**: was `process` until 4.0.0-alpha2)
+* One of `off`, `process-no-validate`, `process`, `log-fail`, `validate`, String
+* Default: `process-no-validate` (**note**: was `process` until 4.0.0-alpha2)
 * Available since: 4.0.0
 
 Set the mode for DNSSEC processing:
@@ -187,9 +187,14 @@ No DNSSEC processing whatsoever. Ignore DO-bits in queries, don't request any
 DNSSEC information from authoritative servers. This behaviour is similar to
 PowerDNS Recursor pre-4.0.
 
-### `process`
+### `process-no-validate`
 Respond with DNSSEC records to clients that ask for it, set the DO bit on all
 outgoing queries. Don't do any validation.
+
+### `process`
+Respond with DNSSEC records to clients that ask for it, set the DO bit on all
+outgoing queries. Do validation for clients that request it (by means of the AD-
+bit in the query).
 
 ### `log-fail`
 Similar behaviour to `process`, but validate RRSIGs on responses and log bogus
@@ -197,6 +202,14 @@ responses.
 
 #### `validate`
 Full blown DNSSEC validation. Send SERVFAIL to clients on bogus responses.
+
+## `dnssec-log-bogus`
+* Boolean
+* Default: no
+* Available since: 4.0.0
+
+Log every DNSSEC validation failure.
+**Note**: This is not logged per-query but every time records are validated as Bogus.
 
 ## `dont-query`
 * Netmasks, comma separated
@@ -295,7 +308,7 @@ Comments are allowed since version 4.0.0. Everything behind '#' is ignored.
 
 Like regular [`forward-zones`](#forward-zones), but forwarded queries have the
 'recursion desired' bit set to 1, meaning that this setting is intended to
-forward queries to authoritative servers or to resolving servers.
+forward queries to other recursive servers.
 
 ## `hint-file`
 * Path
@@ -428,7 +441,9 @@ commas instead of semicolons. For the rest everything is identical.
 Response Policy Zone is an open standard developed by ISC, the authors of the BIND nameserver, to modify
 DNS responses based on a policy loaded via a zonefile.
 
-Frequently, Response Policy Zones get to be very large, so it is customary to update them over IXFR.
+Frequently, Response Policy Zones get to be very large and change quickly,
+so it is customary to update them over IXFR.
+It allows the use of third-party feeds, and near real-time policy updates.
 
 An RPZ can be loaded from file or slaved from a master. To load from file, use for example:
 
@@ -444,17 +459,61 @@ rpzMaster("192.0.2.4", "policy.rpz", {defpol=Policy.Drop})
 
 In this example, 'policy.rpz' denotes the name of the zone to query for. 
 
-Settings can contain:
+Settings for `rpzFile` and `rpzMaster` can contain:
 
 * defpol = Policy.Custom, Policy.Drop, Policy.NXDOMAIN, Policy.NODATA, Policy.Truncate, Policy.NoAction
 * defcontent = CNAME field to return in case of defpol=Policy.Custom
-* defttl = the TTL of the CNAME field to be synthesized
+* defttl = the TTL of the CNAME field to be synthesized. The default is to use the zone's TTL
+* policyName = the name logged as 'appliedPolicy' in protobuf messages when this policy is applied
+
+In addition to those, `rpzMaster` accepts:
+
 * tsigname = the name of the TSIG key to authenticate to the server (also set tsigalgo, tsigsecret)
 * tsigalgo = the name of the TSIG algorithm (like 'hmac-md5') used
 * tsigsecret = base64 encoded TSIG secret
 * refresh = an integer describing the interval between checks for updates. By default, the RPZ zone's default is used
 
 If no settings are included, the RPZ is taken literally with no overrides applied.
+
+The policy action are:
+
+* Policy.Custom will return a NoError, CNAME answer with the value specified with `defcontent`
+* Policy.Drop will simply cause the query to be dropped
+* Policy.NoAction will continue normal processing of the query
+* Policy.NODATA will return a NoError response with no value in the answer section
+* Policy.NXDOMAIN will return a response with a NXDomain rcode
+* Policy.Truncate will return a NoError, no answer, truncated response over UDP. Normal processing will continue over TCP
+
+### Protocol Buffers (protobuf)
+PowerDNS Recursor has the ability to emit a stream of protocol buffers messages over TCP,
+containing information about queries, answers and policy decisions.
+
+Messages contain the IP address of the client initiating the query,
+the one on which the message was received, whether it was received over UDP or TCP,
+a timestamp and the qname, qtype and qclass of the question.
+In addition, messages related to responses contain the name, type, class
+and rdata of A, AAAA and CNAME records present in the response, as well as the response
+code.
+
+Finally, if a RPZ or custom Lua policy has been applied, response messages
+also contain the applied policy name and some tags. This is particularly useful
+to detect and act on infected hosts.
+
+Protobuf export to a server is enabled using the `protobufServer()` directive:
+
+```
+protobufServer("192.0.2.1:4242" [[[[[, timeout], maxQueuedEntries], reconnectWaitTime], maskV4], maskV6])
+```
+
+The optional parameters are:
+
+* timeout = time in seconds to wait when sending a message, default to 2
+* maxQueuedEntries = how many entries will be kept in memory if the server becomes unreachable, default to 100
+* reconnectWaitTime = how long to wait, in seconds, between two reconnection attempts, default to 1
+* maskV4 = network mask to apply to the client IPv4 addresses, for anonymization purpose. The default of 32 means no anonymization
+* maskV6 = same as maskV4, but for IPv6. Default to 128
+
+The protocol buffers message types can be found in the [`dnsmessage.proto`](https://github.com/PowerDNS/pdns/blob/master/pdns/dnsmessage.proto) file.
 
 ## `lua-dns-script`
 * Path
