@@ -34,6 +34,7 @@
 #endif
 
 bool g_anyToTcp;
+bool g_8bitDNS;
 typedef Distributor<DNSPacket,DNSPacket,PacketHandler> DNSDistributor;
 
 ArgvMap theArg;
@@ -159,7 +160,7 @@ void declareArguments()
   ::arg().set("slave-renotify", "If we should send out notifications for slaved updates")="no";
 
   ::arg().set("default-ttl","Seconds a result is valid if not set otherwise")="3600";
-  ::arg().set("max-tcp-connections","Maximum number of TCP connections")="10";
+  ::arg().set("max-tcp-connections","Maximum number of TCP connections")="20";
   ::arg().setSwitch("no-shuffle","Set this to prevent random shuffling of answers - for regression testing")="off";
 
   ::arg().set("setuid","If set, change user id to this uid for more security")="";
@@ -185,6 +186,7 @@ void declareArguments()
   ::arg().set("security-poll-suffix","Domain name from which to query security update notifications")="secpoll.powerdns.com.";
 
   ::arg().setSwitch("outgoing-axfr-expand-alias", "Expand ALIAS records during outgoing AXFR")="no";
+  ::arg().setSwitch("8bit-dns", "Allow 8bit dns queries")="no";
 }
 
 static time_t s_start=time(0);
@@ -475,6 +477,7 @@ void mainthread()
      newuid=Utility::makeUidNumeric(::arg()["setuid"]); 
    
    g_anyToTcp = ::arg().mustDo("any-to-tcp");
+   g_8bitDNS = ::arg().mustDo("8bit-dns");
 
    DNSPacket::s_udpTruncationThreshold = std::max(512, ::arg().asNum("udp-truncation-threshold"));
    DNSPacket::s_doEDNSSubnetProcessing = ::arg().mustDo("edns-subnet-processing");

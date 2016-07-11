@@ -94,8 +94,7 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/pdns_check_flex.m4 \
 	$(top_srcdir)/m4/pdns_check_ldap.m4 \
 	$(top_srcdir)/m4/pdns_check_libsodium.m4 \
-	$(top_srcdir)/m4/pdns_check_linkchecker.m4 \
-	$(top_srcdir)/m4/pdns_check_mkdocs.m4 \
+	$(top_srcdir)/m4/pdns_check_lua_hpp.m4 \
 	$(top_srcdir)/m4/pdns_check_network_libs.m4 \
 	$(top_srcdir)/m4/pdns_check_opendbx.m4 \
 	$(top_srcdir)/m4/pdns_check_os.m4 \
@@ -113,6 +112,7 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/pdns_enable_sanitizers.m4 \
 	$(top_srcdir)/m4/pdns_enable_unit_tests.m4 \
 	$(top_srcdir)/m4/pdns_enable_verbose_logging.m4 \
+	$(top_srcdir)/m4/pdns_from_git.m4 \
 	$(top_srcdir)/m4/pdns_param_ssp_buffer_size.m4 \
 	$(top_srcdir)/m4/pdns_pie.m4 $(top_srcdir)/m4/pdns_relro.m4 \
 	$(top_srcdir)/m4/pdns_stack_protector.m4 \
@@ -179,7 +179,6 @@ CCDEPMODE = @CCDEPMODE@
 CDB_CFLAGS = @CDB_CFLAGS@
 CDB_LIBS = @CDB_LIBS@
 CFLAGS = @CFLAGS@
-CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CURL = @CURL@
 CXX = @CXX@
@@ -226,7 +225,6 @@ LIBSODIUM_LIBS = @LIBSODIUM_LIBS@
 LIBTOOL = @LIBTOOL@
 LIBZMQ_CFLAGS = @LIBZMQ_CFLAGS@
 LIBZMQ_LIBS = @LIBZMQ_LIBS@
-LINKCHECKER = @LINKCHECKER@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
@@ -235,7 +233,6 @@ LUA_LIBS = @LUA_LIBS@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
-MKDOCS = @MKDOCS@
 MYSQL_CFLAGS = @MYSQL_CFLAGS@
 MYSQL_LIBS = @MYSQL_LIBS@
 MYSQL_config = @MYSQL_config@

@@ -95,8 +95,14 @@ uint32_t RecursorPacketCache::canHashPacket(const std::string& origPacket)
   return ret;
 }
 
-bool RecursorPacketCache::getResponsePacket(unsigned int tag, const std::string& queryPacket, time_t now, 
-  std::string* responsePacket, uint32_t* age)
+bool RecursorPacketCache::getResponsePacket(unsigned int tag, const std::string& queryPacket, time_t now,
+                                            std::string* responsePacket, uint32_t* age)
+{
+  return getResponsePacket(tag, queryPacket, now, responsePacket, age, nullptr);
+}
+
+bool RecursorPacketCache::getResponsePacket(unsigned int tag, const std::string& queryPacket, time_t now,
+                                            std::string* responsePacket, uint32_t* age, RecProtoBufMessage* protobufMessage)
 {
   uint32_t h = canHashPacket(queryPacket);
   auto& idx = d_packetCache.get<HashTag>();
@@ -128,6 +134,11 @@ bool RecursorPacketCache::getResponsePacket(unsigned int tag, const std::string&
 
       d_hits++;
       moveCacheItemToBack(d_packetCache, iter);
+#ifdef HAVE_PROTOBUF
+      if (protobufMessage) {
+        *protobufMessage = iter->d_protobufMessage;
+      }
+#endif
       
       return true;
     }
@@ -143,6 +154,11 @@ bool RecursorPacketCache::getResponsePacket(unsigned int tag, const std::string&
 
 
 void RecursorPacketCache::insertResponsePacket(unsigned int tag, const DNSName& qname, uint16_t qtype, const std::string& queryPacket, const std::string& responsePacket, time_t now, uint32_t ttl)
+{
+  insertResponsePacket(tag, qname, qtype, queryPacket, responsePacket, now, ttl, nullptr);
+}
+
+void RecursorPacketCache::insertResponsePacket(unsigned int tag, const DNSName& qname, uint16_t qtype, const std::string& queryPacket, const std::string& responsePacket, time_t now, uint32_t ttl, const RecProtoBufMessage* protobufMessage)
 {
   auto qhash = canHashPacket(queryPacket);
   auto& idx = d_packetCache.get<HashTag>();
@@ -160,6 +176,12 @@ void RecursorPacketCache::insertResponsePacket(unsigned int tag, const DNSName& 
     iter->d_packet = responsePacket;
     iter->d_ttd = now + ttl;
     iter->d_creation = now;
+#ifdef HAVE_PROTOBUF
+    if (protobufMessage) {
+      iter->d_protobufMessage = *protobufMessage;
+    }
+#endif
+
     break;
   }
   
@@ -172,6 +194,11 @@ void RecursorPacketCache::insertResponsePacket(unsigned int tag, const DNSName& 
     e.d_ttd = now+ttl;
     e.d_creation = now;
     e.d_tag = tag;
+#ifdef HAVE_PROTOBUF
+    if (protobufMessage) {
+      e.d_protobufMessage = *protobufMessage;
+    }
+#endif
     d_packetCache.insert(e);
   }
 }

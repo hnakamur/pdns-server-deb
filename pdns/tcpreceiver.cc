@@ -253,7 +253,17 @@ void *TCPNameserver::doConnection(void *data)
   shared_ptr<DNSPacket> packet;
   // Fix gcc-4.0 error (on AMD64)
   int fd=(int)(long)data; // gotta love C (generates a harmless warning on opteron)
+  ComboAddress remote;
+  socklen_t remotelen=sizeof(remote);
+
   pthread_detach(pthread_self());
+  if(getpeername(fd, (struct sockaddr *)&remote, &remotelen) < 0) {
+    L<<Logger::Warning<<"Received question from socket which had no remote address, dropping ("<<stringerror()<<")"<<endl;
+    d_connectionroom_sem->post();
+    closesocket(fd);
+    return 0;
+  }
+
   setNonBlocking(fd);
   try {
     int mesgsize=65535;
@@ -262,12 +272,6 @@ void *TCPNameserver::doConnection(void *data)
     DLOG(L<<"TCP Connection accepted on fd "<<fd<<endl);
     bool logDNSQueries= ::arg().mustDo("log-dns-queries");
     for(;;) {
-      ComboAddress remote;
-      socklen_t remotelen=sizeof(remote);
-      if(getpeername(fd, (struct sockaddr *)&remote, &remotelen) < 0) {
-        L<<Logger::Warning<<"Received question from socket which had no remote address, dropping ("<<stringerror()<<")"<<endl;
-        break;
-      }
 
       uint16_t pktlen;
       if(!readnWithTimeout(fd, &pktlen, 2, false))
@@ -839,7 +843,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
       }
     }
 
-    DLOG(for(const auto &rr: rrs) cerr<<rr.qname.toString()<<"\t"<<rr.qtype.getName()<<"\t"<<rr.auth<<endl;);
+    DLOG(for(const auto &rr: rrs) cerr<<rr.qname<<"\t"<<rr.qtype.getName()<<"\t"<<rr.auth<<endl;);
   }
 
 
@@ -1295,6 +1299,7 @@ void TCPNameserver::thread()
             if(pthread_create(&tid, 0, &doConnection, reinterpret_cast<void*>(fd))) {
               L<<Logger::Error<<"Error creating thread: "<<stringerror()<<endl;
               d_connectionroom_sem->post();
+              close(fd);
             }
           }
         }

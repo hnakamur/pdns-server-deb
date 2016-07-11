@@ -77,6 +77,10 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
+@HAVE_BOOST_GE_148_TRUE@am__append_1 = dnsbulktest.1 \
+@HAVE_BOOST_GE_148_TRUE@	dnstcpbench.1
+
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_2 = dnspcap2protobuf.1
 subdir = docs
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 	$(dist_man_MANS)
@@ -95,8 +99,7 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/pdns_check_flex.m4 \
 	$(top_srcdir)/m4/pdns_check_ldap.m4 \
 	$(top_srcdir)/m4/pdns_check_libsodium.m4 \
-	$(top_srcdir)/m4/pdns_check_linkchecker.m4 \
-	$(top_srcdir)/m4/pdns_check_mkdocs.m4 \
+	$(top_srcdir)/m4/pdns_check_lua_hpp.m4 \
 	$(top_srcdir)/m4/pdns_check_network_libs.m4 \
 	$(top_srcdir)/m4/pdns_check_opendbx.m4 \
 	$(top_srcdir)/m4/pdns_check_os.m4 \
@@ -114,6 +117,7 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/pdns_enable_sanitizers.m4 \
 	$(top_srcdir)/m4/pdns_enable_unit_tests.m4 \
 	$(top_srcdir)/m4/pdns_enable_verbose_logging.m4 \
+	$(top_srcdir)/m4/pdns_from_git.m4 \
 	$(top_srcdir)/m4/pdns_param_ssp_buffer_size.m4 \
 	$(top_srcdir)/m4/pdns_pie.m4 $(top_srcdir)/m4/pdns_relro.m4 \
 	$(top_srcdir)/m4/pdns_stack_protector.m4 \
@@ -211,7 +215,6 @@ CCDEPMODE = @CCDEPMODE@
 CDB_CFLAGS = @CDB_CFLAGS@
 CDB_LIBS = @CDB_LIBS@
 CFLAGS = @CFLAGS@
-CPP = @CPP@
 CPPFLAGS = @CPPFLAGS@
 CURL = @CURL@
 CXX = @CXX@
@@ -258,7 +261,6 @@ LIBSODIUM_LIBS = @LIBSODIUM_LIBS@
 LIBTOOL = @LIBTOOL@
 LIBZMQ_CFLAGS = @LIBZMQ_CFLAGS@
 LIBZMQ_LIBS = @LIBZMQ_LIBS@
-LINKCHECKER = @LINKCHECKER@
 LIPO = @LIPO@
 LN_S = @LN_S@
 LTLIBOBJS = @LTLIBOBJS@
@@ -267,7 +269,6 @@ LUA_LIBS = @LUA_LIBS@
 MAKEINFO = @MAKEINFO@
 MANIFEST_TOOL = @MANIFEST_TOOL@
 MKDIR_P = @MKDIR_P@
-MKDOCS = @MKDOCS@
 MYSQL_CFLAGS = @MYSQL_CFLAGS@
 MYSQL_LIBS = @MYSQL_LIBS@
 MYSQL_config = @MYSQL_config@
@@ -402,22 +403,9 @@ MANPAGES_TARGET_AUTH = pdns_server.1 \
 	zone2ldap.1 \
 	zone2sql.1
 
-MANPAGES_TARGET_TOOLS = calidns.1 \
-	dnsbulktest.1 \
-	dnsgram.1 \
-	dnsreplay.1 \
-	dnsscan.1 \
-	dnsscope.1 \
-	dnstcpbench.1 \
-	dnswasher.1 \
-	dumresp.1 \
-	ixplore.1 \
-	notify.1 \
-	nproxy.1 \
-	nsec3dig.1 \
-	saxfr.1 \
-	sdig.1
-
+MANPAGES_TARGET_TOOLS = calidns.1 dnsgram.1 dnsreplay.1 dnsscan.1 \
+	dnsscope.1 dnswasher.1 dumresp.1 ixplore.1 nproxy.1 nsec3dig.1 \
+	pdns_notify.1 saxfr.1 sdig.1 $(am__append_1) $(am__append_2)
 MANPAGES_TARGET_DNSDIST = dnsdist.1
 MANPAGES_TARGET_RECURSOR = pdns_recursor.1 \
 	rec_control.1
@@ -433,9 +421,7 @@ MANPAGES_TARGET_ALL = $(MANPAGES_TARGET_AUTH) \
 # auth server and tools. For the recursor and dnsdist tarballs,
 # the respective dist- scripts will take care of this
 @HAVE_PANDOC_TRUE@dist_man_MANS = $(MANPAGES_TARGET_AUTH) $(MANPAGES_TARGET_TOOLS)
-EXTRA_DIST = manpages \
-	markdown
-
+EXTRA_DIST = manpages markdown/*.md markdown/appendix markdown/authoritative markdown/common markdown/httpapi markdown/recursor markdown/security markdown/tools
 all: all-am
 
 .SUFFIXES:
@@ -673,18 +659,29 @@ uninstall-man: uninstall-man1
 
 
 .PHONY: html all-manpages
+
 html: html/index.html
 
-html/index.html: process-md.sh mkdocs.yml markdown/** markdown/*/** manpages/*
-	mkdir -p doc-build
-	rsync -a --delete markdown/. doc-build/.
-	cp -r manpages doc-build/
-	./process-md.sh pre
-	mkdocs build --clean
-	./process-md.sh post
+@FROM_GIT_TRUE@html/index.html: process-md.sh mkdocs.yml markdown/** markdown/*/** manpages/*
+@FROM_GIT_TRUE@	mkdir -p doc-build
+@FROM_GIT_TRUE@	rsync -a --delete markdown/. doc-build/.
+@FROM_GIT_TRUE@	cp -r manpages doc-build/
+@FROM_GIT_TRUE@	./process-md.sh pre
+@FROM_GIT_TRUE@	mkdocs build --clean
+@FROM_GIT_TRUE@	./process-md.sh post
 
-html.tar.bz2: html
-	tar cjf html.tar.bz2 html/
+@FROM_GIT_TRUE@html.tar.bz2: html
+@FROM_GIT_TRUE@	tar cjf html.tar.bz2 html/
+
+@FROM_GIT_TRUE@check-links: html
+@FROM_GIT_TRUE@	./checklinks.sh
+
+@FROM_GIT_TRUE@publish: html html.tar.bz2
+@FROM_GIT_TRUE@	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./html/ web1.powerdns.com:/srv/www/doc.powerdns.com/md
+@FROM_GIT_TRUE@	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./html.tar.bz2 web1.powerdns.com:/srv/www/doc.powerdns.com/html.tar.bz2
+@FROM_GIT_FALSE@html/index.html:
+@FROM_GIT_FALSE@	@echo "Building the documentation HTML is only"
+@FROM_GIT_FALSE@	@echo "supported from a git checkout"
 
 all-manpages: $(MANPAGES_TARGET_ALL)
 
@@ -694,15 +691,8 @@ all-manpages: $(MANPAGES_TARGET_ALL)
 @HAVE_PANDOC_FALSE@	echo "You need pandoc to generate the manpages"
 @HAVE_PANDOC_FALSE@	exit 1
 
-@HAVE_LINKCHECKER_TRUE@check-links: html
-@HAVE_LINKCHECKER_TRUE@	./checklinks.sh
-
 clean:
 	rm -rf html html.tar.bz2 *.8 *.1
-
-publish: html html.tar.bz2
-	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./html/ web1.powerdns.com:/srv/www/doc.powerdns.com/md
-	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./html.tar.bz2 web1.powerdns.com:/srv/www/doc.powerdns.com/html.tar.bz2
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.
