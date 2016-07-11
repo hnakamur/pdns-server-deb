@@ -1,3 +1,12 @@
+pdns (4.0.0-1) unstable; urgency=medium
+
+  * New upstream release, drop upstream applied patches.
+  * Update debhelper dependency for dbgsym options.
+  * Move package to pkg-dns team.
+  * Update debian/copyright for backend files, m4 files.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 11 Jul 2016 13:16:07 +0200
+
 pdns (4.0.0~beta1-2) unstable; urgency=medium
 
   * Drop extra -latomic, fixed upstream.
