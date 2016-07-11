@@ -3,28 +3,74 @@ Upstream-Name: PowerDNS
 Source: https://www.powerdns.com/downloads.html
 
 Files: *
-Copyright: 2002 - 2015 PowerDNS.COM BV and contributors
+Copyright: 2002 - 2016 PowerDNS.COM BV and contributors
 License: GPL-2 with OpenSSL Exception
- This program is free software; you can redistribute it and/or modify
- it under the terms of version 2 of the GNU General Public License as
- published by the Free Software Foundation.
+Comment: Sometimes, Netherlabs BV is credited, which is a precursor
+ to todays PowerDNS.COM BV.
+
+Files: m4/ax_check_openssl.m4
+Copyright: 2009,2010 Zmanda Inc. <http://www.zmanda.com/>
+ 2009,2010 Dustin J. Mitchell <dustin@zmanda.com>
+License:
+ Copying and distribution of this file, with or without modification, are
+ permitted in any medium without royalty provided the copyright notice
+ and this notice are preserved. This file is offered as-is, without any
+ warranty.
+
+Files: m4/ax_cxx_compile_stdcxx_11.m4
+Copyright: 2008 Benjamin Kosnik <bkoz@redhat.com>
+ 2012 Zack Weinberg <zackw@panix.com>
+ 2013 Roy Stogner <roystgnr@ices.utexas.edu>
+ 2014, 2015 Google Inc.; contributed by Alexey Sokolov <sokolov@google.com>
+License:
+ Copying and distribution of this file, with or without modification, are
+ permitted in any medium without royalty provided the copyright notice
+ and this notice are preserved. This file is offered as-is, without any
+ warranty.
+
+Files: m4/boost.m4
+Copyright: 2007-2011, 2014  Benoit Sigoure <tsuna@lrde.epita.fr>
+License: GPL-3 or Autoconf
+
+Files: m4/libtool.m4 m4/lt*.m4
+Copyright: 1996-2011 Free Software Foundation, Inc.
+License:
+ This file is free software; the Free Software Foundation gives
+ unlimited permission to copy and/or distribute it, with or without
+ modifications, as long as this notice is preserved.
+
+Files: m4/systemd.m4
+Copyright: 2014 Luis R. Rodriguez <mcgrof@suse.com>
+ 2016 Pieter Lexis <pieter.lexis@powerdns.com>
+License: GPL-2+
+
+Files: m4/warnings.m4
+Copyright: 2008-2015 Free Software Foundation, Inc.
+License:
+ This file is free software; the Free Software Foundation gives
+ unlimited permission to copy and/or distribute it, with or without
+ modifications, as long as this notice is preserved.
+
+Files: m4/pdns_d_fortify_source.m4 m4/pdns_param_ssp_buffer_size.m4 m4/pdns_pie.m4 m4/pdns_relro.m4 m4/pdns_stack_protector.m4
+Copyright: 2013 Red Hat, Inc.
+License:
+ This library is free software; you can redistribute it and/or
+ modify it under the terms of the GNU Lesser General Public
+ License as published by the Free Software Foundation; either
+ version 2.1 of the License, or (at your option) any later version.
  .
- In addition, for the avoidance of any doubt, permission is granted to
- link this program with OpenSSL and to (re)distribute the binaries
- produced as the result of such linking.
- .
- This program is distributed in the hope that it will be useful,
+ This library is distributed in the hope that it will be useful,
  but WITHOUT ANY WARRANTY; without even the implied warranty of
- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- GNU General Public License for more details.
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+ Lesser General Public License for more details.
  .
- You should have received a copy of the GNU General Public License
- along with this program; if not, write to the Free Software
- Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ You should have received a copy of the GNU Lesser General Public
+ License along with this library.  If not, see
+ <http://www.gnu.org/licenses/>.
  .
- On Debian systems, the full text of the GNU General Public
- License version 2 can be found in the file
- `/usr/share/common-licenses/GPL-2'.
+ On Debian systems, the full text of the GNU Lesser General Public
+ License version 2.1 can be found in the file
+ `/usr/share/common-licenses/LGPL-2.1'.
 
 Files: debian/*
 Copyright: 2002 - 2004 Wichert Akkermann <wichert@wiggy.net>
@@ -33,11 +79,37 @@ Copyright: 2002 - 2004 Wichert Akkermann <wichert@wiggy.net>
  2014 - 2015 Christian Hofstaedtler <zeha@debian.org>
 License: GPL-2
 
+Files: modules/gsqlite3backend/*
+Copyright: 2003 Michel Stol <michel@powerdns.com>
+ 2011 PowerDNS.COM BV
+License: GPL-2 with OpenSSL Exception
+
+Files: modules/mydnsbackend/*
+Copyright: 2011 Jonathan Oddy (Hostway UK) <jonathan@woaf.net>
+License: GPL-2 with OpenSSL Exception
+
+Files: modules/mydnsbackend/schema.mydns.sql
+Copyright: 2002-2005 Don Moore
+ 2007-2008 Howard Wilkinson
+License: GPL-2+
+
+Files: modules/ldapbackend/* pdns/zone2ldap.cc
+Copyright: 2003-2007 Norbert Sendetzky <norbert@linuxnetworks.de>
+License: GPL-2 with OpenSSL Exception
+
+Files: modules/luabackend/*
+Copyright: 2011 Fredrik Danerklint
+License: GPL-2 with OpenSSL Exception
+
 Files: modules/oraclebackend/*
 Copyright: 2010 - 2011 Maik Zumstrull
  Steinbuch Centre for Computing,
  Karlsruhe Institute of Technology
 License: Expat
+
+Files: modules/opendbxbackend/*
+Copyright: 2005-2007 Norbert Sendetzky <norbert@linuxnetworks.de>
+License: GPL-2 with OpenSSL Exception
 
 Files: ext/yahttp/*
 Copyright: 2014 Aki Tuomi
@@ -504,6 +576,53 @@ License: GPL-2+
  You should have received a copy of the GNU General Public License along
  with this program; if not, write to the Free Software Foundation, Inc.,
  51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ .
+ On Debian systems, the full text of the GNU General Public
+ License version 2 can be found in the file
+ `/usr/share/common-licenses/GPL-2'.
+
+License: GPL-3 or Autoconf
+ This program is free software: you can redistribute it and/or modify
+ it under the terms of the GNU General Public License as published by
+ the Free Software Foundation, either version 3 of the License, or
+ (at your option) any later version.
+ .
+ Additional permission under section 7 of the GNU General Public
+ License, version 3 ("GPLv3"):
+ .
+ If you convey this file as part of a work that contains a
+ configuration script generated by Autoconf, you may do so under
+ terms of your choice.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ .
+ On Debian systems, the full text of the GNU General Public
+ License version 3 can be found in the file
+ `/usr/share/common-licenses/GPL-3'.
+
+License: GPL-2 with OpenSSL Exception
+ This program is free software; you can redistribute it and/or modify
+ it under the terms of version 2 of the GNU General Public License as
+ published by the Free Software Foundation.
+ .
+ In addition, for the avoidance of any doubt, permission is granted to
+ link this program with OpenSSL and to (re)distribute the binaries
+ produced as the result of such linking.
+ .
+ This program is distributed in the hope that it will be useful,
+ but WITHOUT ANY WARRANTY; without even the implied warranty of
+ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ GNU General Public License for more details.
+ .
+ You should have received a copy of the GNU General Public License
+ along with this program; if not, write to the Free Software
+ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  .
  On Debian systems, the full text of the GNU General Public
  License version 2 can be found in the file
