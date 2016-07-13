@@ -1,9 +1,5 @@
-# Variables for PowerDNS
-
-# If you have resolvconf installed, you can enable the following to have
-# resolvconf update an recursor line in the pdns config, as determined by
-# resolvconf.
-RESOLVCONF_UPDATE_FORWARDERS=no
+# Variables for the PowerDNS sysv init script.
+# Note: ignored under systemd.
 
 # Arguments to the started daemon
 DAEMON_ARGS=""
