@@ -47,7 +47,6 @@ Depends: adduser,
          ucf (>= 0.28),
          ${misc:Depends},
          ${shlibs:Depends}
-Replaces: pdns
 Suggests: pdns-backend
 Description: extremely powerful and versatile nameserver
  PowerDNS is a versatile nameserver which supports a large number
