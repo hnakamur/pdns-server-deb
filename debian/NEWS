@@ -1,3 +1,14 @@
+pdns (4.0.0-2) unstable; urgency=medium
+
+  The "bind" backend is no longer included in the pdns-server package, instead
+  it is provided in pdns-backend-bind. Users having APT install Recommends
+  (the default), will continue to get it installed.  If you are upgrading from
+  a previous version and have disabled bindbackend previously, you need to do
+  so again, either by uninstalling pdns-backend-bind or by deleting
+  /etc/powerdns/pdns.d/bind.conf.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Wed, 13 Jul 2016 15:42:16 +0200
+
 pdns (4.0.0~alpha1-1) unstable; urgency=medium
 
   The "pdnssec" utility has been renamed to "pdnsutil".

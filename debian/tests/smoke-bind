@@ -2,7 +2,7 @@
 exec 2>&1
 set -ex
 
-cat <<EOF >/etc/powerdns/bindbackend.conf
+cat <<EOF >/etc/powerdns/named.conf
 zone "example.org" { type master; file "/etc/powerdns/example.org.zone"; };
 EOF
 

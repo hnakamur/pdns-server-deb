@@ -1,0 +1,12 @@
+#!/bin/sh
+set -e
+case "$1" in
+  upgrade)
+    # for upgrades from before 4.0.0-2
+    if [ -e /etc/powerdns/bindbackend.conf ] && [ ! -e /etc/powerdns/named.conf ]; then
+      mv /etc/powerdns/bindbackend.conf /etc/powerdns/named.conf
+    fi
+  ;;
+esac
+
+#DEBHELPER#

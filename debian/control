@@ -44,9 +44,9 @@ Package: pdns-server
 Architecture: any
 Depends: adduser,
          lsb-base,
-         ucf,
          ${misc:Depends},
          ${shlibs:Depends}
+Recommends: pdns-backend-bind
 Suggests: pdns-backend
 Description: extremely powerful and versatile nameserver
  PowerDNS is a versatile nameserver which supports a large number
@@ -55,9 +55,8 @@ Description: extremely powerful and versatile nameserver
  PowerDNS tries to emphasize speed and security.
  .
  This is the authoritative nameserver that answers questions about
- domains that it knows about. It also includes the bind backend that
- allows PowerDNS to retrieve domain info from zone files as used by
- the "bind" software.
+ domains that it knows about. You also need at least one backend installed to
+ serve data.
 
 Package: pdns-tools
 Architecture: any
@@ -84,6 +83,24 @@ Description: Tools for DNS debugging by PowerDNS
    * ixplore: Explore diffs from IXFRs
    * nsec3dig: Calculate the correctness of NSEC3 proofs
    * saxfr: AXFR zones and show extra information
+
+Package: pdns-backend-bind
+Architecture: any
+Depends: pdns-server (= ${binary:Version}),
+         ${misc:Depends},
+         ${shlibs:Depends}
+Provides: pdns-backend
+Replaces: pdns-server (<< 4.0.0-2~)
+Breaks: pdns-server (<< 4.0.0-2~)
+Description: BIND backend for PowerDNS
+ PowerDNS is a versatile nameserver which supports a large number
+ of different backends ranging from simple zonefiles to relational
+ databases and load balancing/failover algorithms.
+ PowerDNS tries to emphasize speed and security.
+ .
+ This package contains the bind backend for the PowerDNS nameserver.
+ Zone data will be read from flat BIND-style zone files, and the list
+ of zones needs to be given in a named.conf-style file.
 
 Package: pdns-backend-pipe
 Architecture: any

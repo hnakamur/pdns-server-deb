@@ -1,5 +1,5 @@
 Tests: smoke-bind
-Depends: pdns-server, dnsutils
+Depends: pdns-server, pdns-backend-bind, dnsutils
 Restrictions: needs-root
 
 Tests: smoke-mysql

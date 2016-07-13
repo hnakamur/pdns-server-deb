@@ -37,9 +37,11 @@ override_dh_strip:
 override_dh_systemd_enable:
 	dh_systemd_enable --name=pdns
 
-# init script needs to be named pdns, not pdns-server
+# init script needs to be named pdns, not pdns-server. if no pdns-backend
+# is installed, start will fail, so pass --no-start. backends will trigger
+# a restart.
 override_dh_installinit:
-	dh_installinit --error-handler=initscript_error --restart-after-upgrade --name=pdns
+	dh_installinit --error-handler=initscript_error --no-start --restart-after-upgrade --name=pdns
 
 override_dh_install:
 	dh_install
@@ -50,12 +52,17 @@ override_dh_install:
 	  -e 's!# setgid=.*!setgid=pdns!' \
 	  -e 's!# setuid=.*!setuid=pdns!' \
 	  -e 's!# security-poll-suffix=.*!&\nsecurity-poll-suffix=!' \
-	  > debian/pdns-server/usr/share/pdns-server/pdns.conf
+	  > debian/pdns-server/etc/powerdns/pdns.conf
 
 # Verbose tests (shows used compiler/linker and their flags)
 override_dh_auto_test:
 	echo Skipping make test, as dependencies are missing.
 	#dh_auto_test
+
+override_dh_fixperms:
+	dh_fixperms
+	# these files often contain passwords.
+	chmod 0600 debian/pdns-server/etc/powerdns/pdns.conf
 
 # restore moved files
 override_dh_clean:
