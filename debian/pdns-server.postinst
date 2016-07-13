@@ -47,6 +47,10 @@ renameconffile() {
   fi
 }
 
+# Startup errors should never cause dpkg to fail.
+initscript_error() {
+    return 0
+}
 
 case "$1" in
   configure)
@@ -101,7 +105,7 @@ case "$1" in
   ;;
 
   triggered)
-    invoke-rc.d pdns restart || exit $?
+    invoke-rc.d pdns restart || :
   ;;
 
   abort-upgrade|abort-remove|abort-deconfigure)
