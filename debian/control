@@ -44,7 +44,7 @@ Package: pdns-server
 Architecture: any
 Depends: adduser,
          lsb-base,
-         ucf (>= 0.28),
+         ucf,
          ${misc:Depends},
          ${shlibs:Depends}
 Suggests: pdns-backend
@@ -137,7 +137,7 @@ Architecture: any
 Depends: dbconfig-common,
          dbconfig-mysql,
          pdns-server (= ${binary:Version}),
-         ucf (>= 0.28),
+         ucf,
          ${misc:Depends},
          ${shlibs:Depends}
 Suggests: mysql-server
@@ -154,7 +154,7 @@ Description: generic MySQL backend for PowerDNS
 Package: pdns-backend-odbc
 Architecture: any
 Depends: pdns-server (>= ${source:Version}),
-         ucf (>= 0.28),
+         ucf,
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
@@ -172,7 +172,7 @@ Architecture: any
 Depends: dbconfig-common,
          dbconfig-pgsql,
          pdns-server (= ${binary:Version}),
-         ucf (>= 0.28),
+         ucf,
          ${misc:Depends},
          ${shlibs:Depends}
 Suggests: postgresql
@@ -191,7 +191,7 @@ Architecture: any
 Depends: dbconfig-common,
          dbconfig-sqlite3,
          pdns-server (= ${binary:Version}),
-         ucf (>= 0.28),
+         ucf,
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
