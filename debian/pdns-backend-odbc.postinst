@@ -3,8 +3,6 @@ set -e
 
 dpkg-trigger pdns-server
 
-ucfr pdns-backend-odbc /etc/powerdns/pdns.d/pdns.local.godbc.conf
-
 #DEBHELPER#
 
 exit 0

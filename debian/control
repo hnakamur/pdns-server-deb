@@ -154,7 +154,6 @@ Description: generic MySQL backend for PowerDNS
 Package: pdns-backend-odbc
 Architecture: any
 Depends: pdns-server (>= ${source:Version}),
-         ucf,
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend
