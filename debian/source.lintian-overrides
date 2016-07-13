@@ -1,3 +1,0 @@
-# Expect that these are gone in 4.0.0 final.
-pdns source: source-is-missing docs/markdown/theme/js/bootstrap-3.0.3.min.js
-pdns source: source-is-missing docs/markdown/theme/js/prettify-1.0.min.js
