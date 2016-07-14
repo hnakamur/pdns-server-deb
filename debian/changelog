@@ -1,3 +1,26 @@
+pdns (4.0.0-2) unstable; urgency=medium
+
+  * Split bind backend into its own package and stop using ucf where possible
+    (Closes: #701798)
+  * Update README.Debian, remove outdated info
+  * Drop "Replaces: pdns" which has not been needed since wheezy
+  * Drop version on Depends: lsb-base, which is already fulfilled in oldstable
+  * Drop version on Depends: ucf, which is already fulfilled in oldstable
+  * debian/copyright: Add short license names where needed
+  * Drop unused lintian overrides
+  * Simplify maintainer scripts, stop stopping pdns-server in prerm
+  * Ensure daemon startup errors do not cause dpkg to fail
+  * Drop upgrade code from versions before oldoldstable
+  * Drop unused lintian overrides (all of them)
+  * pdns-backend-godbc: Stop registering example with ucf
+  * Stop installing resolvconf recursor= update hook.
+    Mixing authoritative and recursive in a single daemon is not
+    recommended in the first place.
+  * Rename example config files
+  * Use dh_auto_configure and stop manually passing V=1 to make
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Thu, 14 Jul 2016 16:54:11 +0000
+
 pdns (4.0.0-1) unstable; urgency=medium
 
   * New upstream release, drop upstream applied patches.
