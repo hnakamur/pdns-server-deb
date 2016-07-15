@@ -1,3 +1,10 @@
+pdns (4.0.0-3) unstable; urgency=medium
+
+  * Avoid unchanged configuration prompt on upgrade from before 4.0.0-2
+  * Override lintian W: non-standard-file-perm etc/powerdns/pdns.conf
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Fri, 15 Jul 2016 22:28:26 +0000
+
 pdns (4.0.0-2) unstable; urgency=medium
 
   * Split bind backend into its own package and stop using ucf where possible
