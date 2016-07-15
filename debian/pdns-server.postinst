@@ -11,21 +11,6 @@ initscript_error() {
     return 0
 }
 
-unreg_ucf() {
-    # pdns-server no longer Depends: ucf, so only do this if ucf is installed.
-    if which ucf >/dev/null; then
-      ucf --purge "$1"
-      ucfr --purge pdns-server "$1"
-    fi
-}
-
-unreg_ucf_and_delete() {
-    unreg_ucf "$1"
-    if [ -e "$1" ]; then
-        mv "$1" "$1".dpkg-bak
-    fi
-}
-
 case "$1" in
   configure)
     if [ -z "`getent group pdns`" ]; then
@@ -35,15 +20,6 @@ case "$1" in
       echo -n "Creating user and group pdns..."
       adduser --quiet --system --home /var/spool/powerdns --shell /bin/false --ingroup pdns --disabled-password --disabled-login --gecos "PowerDNS" pdns
       echo "done"
-    fi
-
-    # 4.0.0-2 moved pdns-server' configuration files back under dpkg conffile control (from ucf),
-    # and bindbackend was split into its own package.
-    if dpkg --compare-versions "$2" le "4.0.0-2~"; then
-      unreg_ucf "/etc/default/pdns"
-      unreg_ucf "/etc/powerdns/pdns.conf"
-      unreg_ucf_and_delete "/etc/powerdns/pdns.d/pdns.local.conf"
-      unreg_ucf_and_delete "/etc/powerdns/pdns.d/pdns.simplebind.conf"
     fi
   ;;
 
