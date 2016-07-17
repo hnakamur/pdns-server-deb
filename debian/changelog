@@ -1,3 +1,10 @@
+pdns (4.0.0-4) unstable; urgency=medium
+
+  * debian/watch: Fix versionmangle for rc releases
+  * Remove supermaster.conf during purge if empty
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sun, 17 Jul 2016 20:15:27 +0000
+
 pdns (4.0.0-3) unstable; urgency=medium
 
   * Avoid unchanged configuration prompt on upgrade from before 4.0.0-2
