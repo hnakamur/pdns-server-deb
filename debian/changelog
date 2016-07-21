@@ -1,3 +1,11 @@
+pdns (4.0.0-5) unstable; urgency=medium
+
+  * Prevent empty DEALLOCATE.
+    Apply patch from upstream to prevent flooding PostgreSQL with empty
+    DEALLOCATE SQL commands. (Closes: #831741)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Thu, 21 Jul 2016 12:57:45 +0000
+
 pdns (4.0.0-4) unstable; urgency=medium
 
   * debian/watch: Fix versionmangle for rc releases
