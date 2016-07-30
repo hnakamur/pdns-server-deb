@@ -93,11 +93,12 @@ AC_CHECK_HEADERS(
 
 PDNS_ENABLE_BOTAN
 PDNS_CHECK_LIBSODIUM
-AX_CHECK_OPENSSL([
+PDNS_CHECK_LIBCRYPTO([
 ],[
-   AC_MSG_ERROR([OpenSSL not found])
+   AC_MSG_ERROR([OpenSSL/libcrypto not found])
   ]
 )
+PDNS_CHECK_LIBCRYPTO_ECDSA
 
 PDNS_CHECK_RAGEL
 PDNS_CHECK_CLOCK_GETTIME
@@ -108,6 +109,9 @@ BOOST_REQUIRE([1.35])
 AM_CONDITIONAL([HAVE_BOOST_GE_148], [test "$boost_major_version" -ge 148])
 
 BOOST_PROGRAM_OPTIONS([mt])
+AS_IF([test "$boost_cv_lib_program_options" = "no"], [
+  AC_MSG_ERROR([Boost Program Options library not found])
+])
 PDNS_ENABLE_UNIT_TESTS
 PDNS_ENABLE_REPRODUCIBLE
 
@@ -349,7 +353,7 @@ AC_MSG_NOTICE([----------------])
 AC_MSG_NOTICE([Built-in modules: $modules])
 AC_MSG_NOTICE([Dynamic modules: $dynmodules])
 AC_MSG_NOTICE([])
-AS_IF([test "x$openssl_ecdsa" == "xyes"],
+AS_IF([test "x$libcrypto_ecdsa" == "xyes"],
   [AC_MSG_NOTICE([OpenSSL ecdsa: yes])],
   [AC_MSG_NOTICE([OpenSSL ecdsa: no])]
 )
@@ -363,7 +367,7 @@ AS_IF([test "x$LUAPC" != "x"],
     [AC_MSG_NOTICE([LuaJit: $LUAJITPC])],
     [AC_MSG_NOTICE([Lua/LuaJit: no])])
 ])
-AS_IF([test "x$enable_experimental_gss_tsig" == "xyes"],
+AS_IF([test "x$enable_experimental_gss_tsig" = "xyes"],
   [AC_MSG_NOTICE([GSS-TSIG: yes])]
 )
 AS_IF([test "x$systemd" != "xn"],

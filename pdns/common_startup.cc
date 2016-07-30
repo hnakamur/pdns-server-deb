@@ -187,6 +187,8 @@ void declareArguments()
 
   ::arg().setSwitch("outgoing-axfr-expand-alias", "Expand ALIAS records during outgoing AXFR")="no";
   ::arg().setSwitch("8bit-dns", "Allow 8bit dns queries")="no";
+
+  ::arg().set("xfr-max-received-mbytes", "Maximum number of megabytes received from an incoming XFR")="100";
 }
 
 static time_t s_start=time(0);
@@ -285,6 +287,7 @@ void declareStats(void)
 
   S.declare("uptime", "Uptime of process in seconds", uptimeOfProcess);
   S.declare("real-memory-usage", "Actual unique use of memory in bytes (approx)", getRealMemoryUsage);
+  S.declare("fd-usage", "Number of open filedescriptors", getOpenFileDescriptors);
 #ifdef __linux__
   S.declare("udp-recvbuf-errors", "UDP 'recvbuf' errors", udpErrorStats);
   S.declare("udp-sndbuf-errors", "UDP 'sndbuf' errors", udpErrorStats);
@@ -384,14 +387,14 @@ void *qthread(void *number)
      if(P->d.qr)
        continue;
 
-    S.ringAccount("queries", P->qdomain.toString()+"/"+P->qtype.getName());
+    S.ringAccount("queries", P->qdomain.toLogString()+"/"+P->qtype.getName());
     S.ringAccount("remotes",P->d_remote);
     if(logDNSQueries) {
       string remote;
       if(P->hasEDNSSubnet()) 
-        remote = P->getRemote() + "<-" + P->getRealRemote().toString();
+        remote = P->getRemote().toString() + "<-" + P->getRealRemote().toString();
       else
-        remote = P->getRemote();
+        remote = P->getRemote().toString();
       L << Logger::Notice<<"Remote "<< remote <<" wants '" << P->qdomain<<"|"<<P->qtype.getName() << 
             "', do = " <<P->d_dnssecOk <<", bufsize = "<< P->getMaxReplyLen()<<": ";
     }

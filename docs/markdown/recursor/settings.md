@@ -194,7 +194,7 @@ outgoing queries. Don't do any validation.
 ### `process`
 Respond with DNSSEC records to clients that ask for it, set the DO bit on all
 outgoing queries. Do validation for clients that request it (by means of the AD-
-bit in the query).
+bit or DO-bit in the query).
 
 ### `log-fail`
 Similar behaviour to `process`, but validate RRSIGs on responses and log bogus
@@ -224,6 +224,13 @@ addresses, like for example 127.0.0.1. This can have odd effects, depending on
 your network, and may even be a security risk. Therefore, since version 3.1.5,
 the PowerDNS recursor by default does not query private space IP addresses.
 This setting can be used to expand or reduce the limitations.
+
+## `edns-outgoing-bufsize`
+* Integer
+* Default: 1680
+
+This is the value set for the EDNS0 buffer size in outgoing packets.
+Lower this if you experience timeouts.
 
 ## `entropy-source`
 * Path
@@ -472,6 +479,8 @@ In addition to those, `rpzMaster` accepts:
 * tsigalgo = the name of the TSIG algorithm (like 'hmac-md5') used
 * tsigsecret = base64 encoded TSIG secret
 * refresh = an integer describing the interval between checks for updates. By default, the RPZ zone's default is used
+* maxReceivedMBytes = the maximum size in megabytes of an AXFR/IXFR update, to prevent resource exhaustion.
+The default value of 0 means no restriction.
 
 If no settings are included, the RPZ is taken literally with no overrides applied.
 
@@ -656,8 +665,7 @@ Don't log queries.
 
 ## `root-nx-trust`
 * Boolean
-* Default: no
-* Available since: 3.7.0
+* Default: no (<= 4.0.0), yes
 
 If set, an NXDOMAIN from the root-servers will serve as a blanket NXDOMAIN for the entire TLD
 the query belonged to. The effect of this is far fewer queries to the root-servers.

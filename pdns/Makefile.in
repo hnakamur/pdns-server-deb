@@ -177,7 +177,6 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/ax_arg_default_enable_disable.m4 \
-	$(top_srcdir)/m4/ax_check_openssl.m4 \
 	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
@@ -188,6 +187,8 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/pdns_check_curl_program.m4 \
 	$(top_srcdir)/m4/pdns_check_flex.m4 \
 	$(top_srcdir)/m4/pdns_check_ldap.m4 \
+	$(top_srcdir)/m4/pdns_check_libcrypto.m4 \
+	$(top_srcdir)/m4/pdns_check_libcrypto_ecdsa.m4 \
 	$(top_srcdir)/m4/pdns_check_libsodium.m4 \
 	$(top_srcdir)/m4/pdns_check_lua_hpp.m4 \
 	$(top_srcdir)/m4/pdns_check_network_libs.m4 \
@@ -1144,7 +1145,7 @@ DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
 AMTAR = @AMTAR@
 AM_CPPFLAGS = @AM_CPPFLAGS@ -I$(top_srcdir)/ext/json11 \
-	$(YAHTTP_CFLAGS) $(LIBEDIT_CFLAGS) $(OPENSSL_INCLUDES) \
+	$(YAHTTP_CFLAGS) $(LIBEDIT_CFLAGS) $(LIBCRYPTO_INCLUDES) \
 	$(SYSTEMD_CFLAGS) $(am__append_1) $(am__append_2) \
 	$(am__append_3) $(am__append_4) $(am__append_5)
 AM_DEFAULT_VERBOSITY = @AM_DEFAULT_VERBOSITY@
@@ -1207,6 +1208,9 @@ LDFLAGS = @LDFLAGS@
 LEX = @LEX@
 LEXLIB = @LEXLIB@
 LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
+LIBCRYPTO_INCLUDES = @LIBCRYPTO_INCLUDES@
+LIBCRYPTO_LDFLAGS = @LIBCRYPTO_LDFLAGS@
+LIBCRYPTO_LIBS = @LIBCRYPTO_LIBS@
 LIBDL = @LIBDL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -1232,9 +1236,6 @@ OBJDUMP = @OBJDUMP@
 OBJEXT = @OBJEXT@
 OPENDBX_CFLAGS = @OPENDBX_CFLAGS@
 OPENDBX_LIBS = @OPENDBX_LIBS@
-OPENSSL_INCLUDES = @OPENSSL_INCLUDES@
-OPENSSL_LDFLAGS = @OPENSSL_LDFLAGS@
-OPENSSL_LIBS = @OPENSSL_LIBS@
 ORACLE_CFLAGS = @ORACLE_CFLAGS@
 ORACLE_LIBS = @ORACLE_LIBS@
 OTOOL = @OTOOL@
@@ -1423,13 +1424,13 @@ pdns_server_SOURCES = arguments.cc arguments.hh auth-carbon.cc \
 pdns_server_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(DYNLINKFLAGS) \
-	$(OPENSSL_LDFLAGS)
+	$(LIBCRYPTO_LDFLAGS)
 
 pdns_server_LDADD = @moduleobjects@ @modulelibs@ $(LIBDL) \
-	$(YAHTTP_LIBS) $(JSON11_LIBS) $(OPENSSL_LIBS) $(SYSTEMD_LIBS) \
-	$(am__append_10) $(am__append_12) $(am__append_14) \
-	$(am__append_15) $(am__append_17) $(am__append_18) \
-	$(am__append_19)
+	$(YAHTTP_LIBS) $(JSON11_LIBS) $(LIBCRYPTO_LIBS) \
+	$(SYSTEMD_LIBS) $(am__append_10) $(am__append_12) \
+	$(am__append_14) $(am__append_15) $(am__append_17) \
+	$(am__append_18) $(am__append_19)
 pdnsutil_SOURCES = arguments.cc backends/gsql/gsqlbackend.cc \
 	backends/gsql/gsqlbackend.hh backends/gsql/ssql.hh base32.cc \
 	base64.cc base64.hh bindlexer.l bindparser.yy cachecleaner.hh \
@@ -1449,11 +1450,11 @@ pdnsutil_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(DYNLINKFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS) \
-	$(OPENSSL_LDFLAGS)
+	$(LIBCRYPTO_LDFLAGS)
 
 pdnsutil_LDADD = @moduleobjects@ @modulelibs@ $(YAHTTP_LIBS) \
 	$(JSON11_LIBS) $(LIBDL) $(BOOST_PROGRAM_OPTIONS_LIBS) \
-	$(OPENSSL_LIBS) $(am__append_21) $(am__append_23) \
+	$(LIBCRYPTO_LIBS) $(am__append_21) $(am__append_23) \
 	$(am__append_25) $(am__append_26) $(am__append_28) \
 	$(am__append_29)
 zone2sql_SOURCES = \
@@ -1483,8 +1484,8 @@ zone2sql_SOURCES = \
 	zone2sql.cc \
 	zoneparser-tng.cc
 
-zone2sql_LDADD = $(OPENSSL_LIBS) $(JSON11_LIBS)
-zone2sql_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+zone2sql_LDADD = $(LIBCRYPTO_LIBS) $(JSON11_LIBS)
+zone2sql_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 zone2json_SOURCES = \
 	arguments.cc \
 	base32.cc \
@@ -1509,8 +1510,8 @@ zone2json_SOURCES = \
 	zone2json.cc \
 	zoneparser-tng.cc
 
-zone2json_LDADD = $(OPENSSL_LIBS) $(JSON11_LIBS)
-zone2json_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+zone2json_LDADD = $(LIBCRYPTO_LIBS) $(JSON11_LIBS)
+zone2json_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 zone2ldap_SOURCES = \
 	arguments.cc \
 	base32.cc \
@@ -1536,8 +1537,8 @@ zone2ldap_SOURCES = \
 	zone2ldap.cc \
 	zoneparser-tng.cc
 
-zone2ldap_LDADD = $(OPENSSL_LIBS)
-zone2ldap_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+zone2ldap_LDADD = $(LIBCRYPTO_LIBS)
+zone2ldap_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 sdig_SOURCES = \
 	base32.cc \
 	base64.cc base64.hh \
@@ -1559,8 +1560,8 @@ sdig_SOURCES = \
 	statbag.cc \
 	unix_utility.cc
 
-sdig_LDADD = $(OPENSSL_LIBS)
-sdig_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+sdig_LDADD = $(LIBCRYPTO_LIBS)
+sdig_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 calidns_SOURCES = \
 	base32.cc \
 	base64.cc base64.hh \
@@ -1581,8 +1582,8 @@ calidns_SOURCES = \
 	statbag.cc \
 	unix_utility.cc
 
-calidns_LDADD = $(OPENSSL_LIBS)
-calidns_LDFLAGS = $(AM_LDFLAGS) $(THREADFLAGS) $(OPENSSL_LDFLAGS)
+calidns_LDADD = $(LIBCRYPTO_LIBS)
+calidns_LDFLAGS = $(AM_LDFLAGS) $(THREADFLAGS) $(LIBCRYPTO_LDFLAGS)
 dumresp_SOURCES = \
 	dnslabeltext.cc \
 	dnsname.cc dnsname.hh \
@@ -1623,8 +1624,8 @@ stubquery_SOURCES = \
 	stubquery.cc \
 	unix_utility.cc
 
-stubquery_LDADD = $(OPENSSL_LIBS)
-stubquery_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+stubquery_LDADD = $(LIBCRYPTO_LIBS)
+stubquery_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 saxfr_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	dns_random.hh dnslabeltext.cc dnsname.cc dnsname.hh \
 	dnsparser.cc dnsparser.hh dnsrecords.cc dnssecinfra.cc \
@@ -1632,8 +1633,8 @@ saxfr_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	logger.cc misc.cc misc.hh nsecrecords.cc qtype.cc \
 	rcpgenerator.cc rcpgenerator.hh saxfr.cc sillyrecords.cc \
 	sstuff.hh statbag.cc unix_utility.cc $(am__append_31)
-saxfr_LDADD = $(OPENSSL_LIBS) $(am__append_32) $(am__append_33)
-saxfr_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+saxfr_LDADD = $(LIBCRYPTO_LIBS) $(am__append_32) $(am__append_33)
+saxfr_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 ixplore_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	dns_random.cc dns_random.hh dnslabeltext.cc dnsname.cc \
 	dnsname.hh dnsparser.cc dnsparser.hh dnsrecords.cc \
@@ -1642,8 +1643,8 @@ ixplore_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	qtype.cc rcpgenerator.cc rcpgenerator.hh resolver.cc ixfr.cc \
 	ixfr.hh ixplore.cc sillyrecords.cc sstuff.hh statbag.cc \
 	unix_utility.cc zoneparser-tng.cc $(am__append_34)
-ixplore_LDADD = $(OPENSSL_LIBS) $(am__append_35) $(am__append_36)
-ixplore_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+ixplore_LDADD = $(LIBCRYPTO_LIBS) $(am__append_35) $(am__append_36)
+ixplore_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 dnstcpbench_SOURCES = \
 	base32.cc \
 	base64.cc base64.hh \
@@ -1665,11 +1666,11 @@ dnstcpbench_SOURCES = \
 
 dnstcpbench_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS) \
+	$(LIBCRYPTO_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 dnstcpbench_LDADD = \
-	$(OPENSSL_LIBS) \
+	$(LIBCRYPTO_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 nsec3dig_SOURCES = base32.cc base64.cc base64.hh dnsname.cc dnsname.hh \
@@ -1679,8 +1680,8 @@ nsec3dig_SOURCES = base32.cc base64.cc base64.hh dnsname.cc dnsname.hh \
 	nsecrecords.cc qtype.cc rcpgenerator.cc rcpgenerator.hh \
 	sillyrecords.cc sstuff.hh statbag.cc unix_utility.cc \
 	$(am__append_37)
-nsec3dig_LDADD = $(OPENSSL_LIBS) $(am__append_38) $(am__append_39)
-nsec3dig_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+nsec3dig_LDADD = $(LIBCRYPTO_LIBS) $(am__append_38) $(am__append_39)
+nsec3dig_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 toysdig_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	dnsname.cc dnsname.hh dnslabeltext.cc dnsparser.cc \
 	dnsparser.hh dnsrecords.cc dnssecinfra.cc dnswriter.cc \
@@ -1692,9 +1693,9 @@ toysdig_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	sortlist.hh sstuff.hh statbag.cc toysdig.cc unix_utility.cc \
 	validate.cc validate.hh $(am__append_41) $(am__append_43)
 toysdig_LDFLAGS = $(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS)
+	$(LIBCRYPTO_LDFLAGS)
 
-toysdig_LDADD = $(OPENSSL_LIBS) $(am__append_40) $(am__append_42) \
+toysdig_LDADD = $(LIBCRYPTO_LIBS) $(am__append_40) $(am__append_42) \
 	$(am__append_44)
 tsig_tests_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	dns_random.cc dns_random.hh dnslabeltext.cc dnsname.cc \
@@ -1704,8 +1705,8 @@ tsig_tests_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
 	resolver.cc sillyrecords.cc sstuff.hh statbag.cc tsig-tests.cc \
 	unix_utility.cc $(am__append_45)
-tsig_tests_LDADD = $(OPENSSL_LIBS) $(am__append_46) $(am__append_47)
-tsig_tests_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
+tsig_tests_LDADD = $(LIBCRYPTO_LIBS) $(am__append_46) $(am__append_47)
+tsig_tests_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 speedtest_SOURCES = \
 	base32.cc \
 	base64.cc base64.hh \
@@ -1724,8 +1725,8 @@ speedtest_SOURCES = \
 	statbag.cc \
 	unix_utility.cc
 
-speedtest_LDFLAGS = $(AM_LDFLAGS) $(OPENSSL_LDFLAGS)
-speedtest_LDADD = $(OPENSSL_LIBS) \
+speedtest_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
+speedtest_LDADD = $(LIBCRYPTO_LIBS) \
 	$(RT_LIBS)
 
 dnswasher_SOURCES = \
@@ -1761,11 +1762,11 @@ dnsbulktest_SOURCES = \
 
 dnsbulktest_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS) \
+	$(LIBCRYPTO_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 dnsbulktest_LDADD = \
-	$(OPENSSL_LIBS) \
+	$(LIBCRYPTO_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 comfun_SOURCES = \
@@ -1790,11 +1791,11 @@ comfun_SOURCES = \
 
 comfun_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS) \
+	$(LIBCRYPTO_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 comfun_LDADD = \
-	$(OPENSSL_LIBS) \
+	$(LIBCRYPTO_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 dnsscan_SOURCES = \
@@ -1820,9 +1821,9 @@ dnsscan_SOURCES = \
 
 dnsscan_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS)
+	$(LIBCRYPTO_LDFLAGS)
 
-dnsscan_LDADD = $(OPENSSL_LIBS)
+dnsscan_LDADD = $(LIBCRYPTO_LIBS)
 dnsreplay_SOURCES = \
 	anadns.hh \
 	base32.cc \
@@ -1848,11 +1849,11 @@ dnsreplay_SOURCES = \
 
 dnsreplay_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS) \
+	$(LIBCRYPTO_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 dnsreplay_LDADD = \
-	$(OPENSSL_LIBS) \
+	$(LIBCRYPTO_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 nproxy_SOURCES = \
@@ -1877,11 +1878,11 @@ nproxy_SOURCES = \
 
 nproxy_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS) \
+	$(LIBCRYPTO_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 nproxy_LDADD = \
-	$(OPENSSL_LIBS) \
+	$(LIBCRYPTO_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 pdns_notify_SOURCES = \
@@ -1907,11 +1908,11 @@ pdns_notify_SOURCES = \
 
 pdns_notify_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS) \
+	$(LIBCRYPTO_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 pdns_notify_LDADD = \
-	$(OPENSSL_LIBS) \
+	$(LIBCRYPTO_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 dnsscope_SOURCES = \
@@ -1939,11 +1940,11 @@ dnsscope_SOURCES = \
 
 dnsscope_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS) \
+	$(LIBCRYPTO_LDFLAGS) \
 	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 dnsscope_LDADD = \
-	$(OPENSSL_LIBS) \
+	$(LIBCRYPTO_LIBS) \
 	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 dnsgram_SOURCES = \
@@ -1968,10 +1969,10 @@ dnsgram_SOURCES = \
 
 dnsgram_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS)
+	$(LIBCRYPTO_LDFLAGS)
 
 dnsgram_LDADD = \
-	$(OPENSSL_LIBS)
+	$(LIBCRYPTO_LIBS)
 
 dnsdemog_SOURCES = \
 	base32.cc \
@@ -1995,10 +1996,10 @@ dnsdemog_SOURCES = \
 
 dnsdemog_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS)
+	$(LIBCRYPTO_LDFLAGS)
 
 dnsdemog_LDADD = \
-	$(OPENSSL_LIBS)
+	$(LIBCRYPTO_LIBS)
 
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@dnspcap2protobuf_SOURCES = \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	base32.cc \
@@ -2025,11 +2026,11 @@ dnsdemog_LDADD = \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@nodist_dnspcap2protobuf_SOURCES = dnsmessage.pb.cc dnsmessage.pb.h
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@dnspcap2protobuf_LDFLAGS = \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(AM_LDFLAGS) \
-@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(OPENSSL_LDFLAGS) \
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(LIBCRYPTO_LDFLAGS) \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@dnspcap2protobuf_LDADD = \
-@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(OPENSSL_LIBS) \
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(LIBCRYPTO_LIBS) \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(PROTOBUF_LIBS) \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
@@ -2055,10 +2056,10 @@ testrunner_SOURCES = arguments.cc base32.cc base64.cc bindlexer.l \
 	$(am__append_51)
 testrunner_LDFLAGS = \
 	$(AM_LDFLAGS) \
-	$(OPENSSL_LDFLAGS) \
+	$(LIBCRYPTO_LDFLAGS) \
 	$(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS) 
 
-testrunner_LDADD = $(OPENSSL_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIBS) \
+testrunner_LDADD = $(LIBCRYPTO_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIBS) \
 	$(RT_LIBS) $(LIBDL) $(am__append_50) $(am__append_52)
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@nodist_testrunner_SOURCES = \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	dnsmessage.pb.cc dnsmessage.pb.h

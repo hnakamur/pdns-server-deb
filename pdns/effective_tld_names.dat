@@ -2,6 +2,11 @@
 // License, v. 2.0. If a copy of the MPL was not distributed with this
 // file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
+// Please pull this list from, and only from https://publicsuffix.org/list/public_suffix_list.dat , 
+// rather than any other VCS sites. Pulling from any other URL is not guaranteed to be supported.
+
+// Instructions on pulling and using this list can be found at https://publicsuffix.org/list/ .
+
 // ===BEGIN ICANN DOMAINS===
 
 // ac : https://en.wikipedia.org/wiki/.ac
@@ -10703,6 +10708,10 @@ sweetpepper.org
 // Submitted by Andreas Weise <a.weise@avm.de>
 myfritz.net
 
+// backplane : https://www.backplane.io
+// Submitted by Anthony Voutas <anthony@backplane.io>
+backplaneapp.io
+
 // BetaInABox
 // Submitted by Adrian <adrian@betainabox.com>
 betainabox.com
@@ -11269,6 +11278,10 @@ githubcloud.com
 *.ext.githubcloud.com
 gist.githubcloud.com
 *.githubcloudusercontent.com
+
+// GitLab, Inc.
+// Submitted by Alex Hanselka <alex@gitlab.com>
+gitlab.io
 
 // GlobeHosting, Inc.
 // Submitted by Zoltan Egresi <egresi@globehosting.com>
