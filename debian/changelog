@@ -1,3 +1,16 @@
+pdns (3.4.1-4+deb8u6) jessie-security; urgency=high
+
+  * Non-maintainer upload by the Security Team.
+  * Reject qname's wirelength > 255, `chopOff()` handle dot inside labels.
+    CVE-2016-5426: PowerDNS Authoritative Server accepts queries with a
+    qname's length larger than 255 bytes.
+    CVE-2016-5427: PowerDNS Authoritative Server does not properly handle
+    dot inside labels.
+  * Limit size of receivable AXFR data.
+    CVE-2016-6172: Improper restriction of zone size limit (Closes: #830808)
+
+ -- Salvatore Bonaccorso <carnil@debian.org>  Fri, 02 Sep 2016 21:43:01 +0200
+
 pdns (3.4.1-4+deb8u5) jessie-security; urgency=high
 
   * Non-maintainer upload.
