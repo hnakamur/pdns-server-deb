@@ -1,3 +1,10 @@
+pdns (4.0.1-2) unstable; urgency=medium
+
+  * Add patches from upstream to fix build with OpenSSL 1.1.0 final (again)
+    (Closes: #828490)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 05 Sep 2016 18:43:49 +0000
+
 pdns (4.0.1-1) unstable; urgency=medium
 
   * New upstream release, drop upstream applied patch. (Closes: #828490,
