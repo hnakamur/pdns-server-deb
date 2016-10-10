@@ -1,4 +1,6 @@
 #!/usr/bin/make -f
+DEB_HOST_ARCH_OS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
+DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 # Vendor and version
 version := $(shell dpkg-parsechangelog -SVersion).$(shell dpkg-vendor --query Vendor)
@@ -7,7 +9,13 @@ CXXFLAGS += -DPACKAGEVERSION='"$(version)"'
 # Backends
 backends := bind ldap pipe gmysql godbc gpgsql gsqlite3 geoip lua mydns remote random opendbx tinydns
 
-DEB_HOST_MULTIARCH  ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+# Disable systemd integration on non-linux archs
+ifeq ($(DEB_HOST_ARCH_OS),linux)
+CONFIGURE_ARGS += --enable-systemd --with-systemd=/lib/systemd/system
+else
+CONFIGURE_ARGS += --disable-systemd
+endif
+
 
 # Use new build system
 %:
@@ -28,8 +36,7 @@ override_dh_auto_configure:
 		--without-protobuf \
 		--enable-unit-tests \
 		--enable-reproducible \
-		--enable-systemd \
-		--with-systemd=/lib/systemd/system
+		$(CONFIGURE_ARGS)
 
 override_dh_strip:
 	dh_strip --ddeb-migration='pdns-server-dbg (<< 4.0.0-0)'
