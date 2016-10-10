@@ -1,0 +1,27 @@
+From 3b5b0d5a89d2b163b146e74ad629dd18ae5193f8 Mon Sep 17 00:00:00 2001
+From: Christian Hofstaedtler <christian.hofstaedtler@deduktiva.com>
+Date: Thu, 6 Oct 2016 16:18:09 +0200
+Subject: [PATCH] API: search should not return ENTs
+
+This should also fix #4534, when backported.
+---
+ pdns/ws-auth.cc                     |  3 +++
+ regression-tests.api/runtests.py    | 11 +++++++++--
+ regression-tests.api/test_Zones.py  | 22 ++++++++++++++++++++--
+ regression-tests.api/test_helper.py |  7 +++++++
+ 4 files changed, 39 insertions(+), 4 deletions(-)
+
+diff --git a/pdns/ws-auth.cc b/pdns/ws-auth.cc
+index 5934a3b..33f2968 100644
+--- a/pdns/ws-auth.cc
++++ b/pdns/ws-auth.cc
+@@ -1151,6 +1151,9 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp) {
+   {
+     for(const DNSResourceRecord& rr: result_rr)
+     {
++      if (!rr.qtype.getCode())
++        continue; // skip empty non-terminals
++
+       auto object = Json::object {
+         { "object_type", "record" },
+         { "name", rr.qname.toString() },
