@@ -129,10 +129,10 @@ case "$1" in
 	;;
   status)
 	if isrunning; then
-		log_success_msg "$NAME is running: $(doPC status)"
+		echo "$NAME is running: $(doPC status)"
 		exit 0
 	else
-		log_failure_msg "$NAME is not running"
+		echo "$NAME is not running"
 		exit 3
 	fi
 	;;
