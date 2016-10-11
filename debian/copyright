@@ -8,11 +8,6 @@ License: GPL-2 with OpenSSL Exception
 Comment: Sometimes, Netherlabs BV is credited, which is a precursor
  to todays PowerDNS.COM BV.
 
-Files: m4/ax_check_openssl.m4
-Copyright: 2009,2010 Zmanda Inc. <http://www.zmanda.com/>
- 2009,2010 Dustin J. Mitchell <dustin@zmanda.com>
-License: free-generic
-
 Files: m4/ax_cxx_compile_stdcxx_11.m4
 Copyright: 2008 Benjamin Kosnik <bkoz@redhat.com>
  2012 Zack Weinberg <zackw@panix.com>
