@@ -11,6 +11,7 @@ Build-Depends: autoconf,
                bison,
                curl,
                debhelper (>= 9.20160114~),
+               default-libmysqlclient-dev,
                dh-autoreconf,
                dh-systemd,
                dpkg-dev (>= 1.17.0~),
@@ -24,7 +25,6 @@ Build-Depends: autoconf,
                libgeoip-dev,
                libldap2-dev,
                liblua5.3-dev,
-               default-libmysqlclient-dev,
                libopendbx1-dev,
                libpq-dev,
                libsqlite3-dev,
@@ -43,7 +43,6 @@ Homepage: https://www.powerdns.com/
 Package: pdns-server
 Architecture: any
 Depends: adduser,
-         lsb-base,
          ${misc:Depends},
          ${shlibs:Depends}
 Recommends: pdns-backend-bind
