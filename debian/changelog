@@ -1,3 +1,10 @@
+pdns (4.0.1-5) unstable; urgency=medium
+
+  * Remove our lsb-base dependency
+  * Update Suggest mysql-server to default-mysql-server
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Tue, 11 Oct 2016 02:45:15 +0000
+
 pdns (4.0.1-4) unstable; urgency=medium
 
   * Apply patches to fix API, PostgreSQL issues
