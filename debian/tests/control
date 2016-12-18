@@ -3,7 +3,7 @@ Depends: pdns-server, pdns-backend-bind, dnsutils
 Restrictions: needs-root
 
 Tests: smoke-mysql
-Depends: mysql-server, pdns-server, pdns-backend-mysql, dnsutils
+Depends: default-mysql-server, pdns-server, pdns-backend-mysql, dnsutils
 Restrictions: needs-root, isolation-container
 
 Tests: smoke-pgsql
