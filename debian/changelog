@@ -1,3 +1,10 @@
+pdns (4.0.1-6) unstable; urgency=medium
+
+  * Fix init script "status" command without lsb library
+  * Make mysql schema compatible with MariaDB
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sun, 18 Dec 2016 22:07:18 +0000
+
 pdns (4.0.1-5) unstable; urgency=medium
 
   * Remove our lsb-base dependency
