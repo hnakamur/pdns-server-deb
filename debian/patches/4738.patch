@@ -1,0 +1,105 @@
+From a4d607be77ab505a7c0460575271b4cb4db69f2e Mon Sep 17 00:00:00 2001
+From: Remi Gacogne <remi.gacogne@powerdns.com>
+Date: Thu, 1 Dec 2016 13:00:13 +0100
+Subject: [PATCH] Fix incorrect length check in `DNSName` when extracting qtype
+ or qclass
+
+In `DNSName::packetParser()`, the length check might have been incorrect
+when the caller asked for the `qtype` and/or the `qclass` to be extracted.
+The `pos + labellen + 2 > end` check was wrong because `pos` might have already
+been incremented by `labellen`. There are 3 ways to exit the main loop:
+
+* `labellen` is 0, the most common case, and in that case the check is valid
+* `pos >= end`, meaning that `pos + labellen + 2 > end` will be true regardless
+of the value of `labellen` since it cannot be negative
+* if `uncompress` is set and a compressed label is found, the main loop is
+broken out of, and `labellen` still holds a now irrelevant, possibly non-zero value
+corresponding to the first byte of the compressed label length & ~0xc0.
+
+In that last case, if the compressed label points to a position > 255 the check
+is wrong and might have rejected a valid packet.
+A quick look throught the code didn't show any place where we request decompression
+and ask for `qtype` and/or `qclass` in a response, but I might have missed one.
+
+Reported by Houssam El Hajoui (thanks!).
+
+(cherry picked from commit 7b9c052c617d02e1870195d0f216732047d56e22)
+---
+ pdns/dnsname.cc         |  8 ++++----
+ pdns/test-dnsname_cc.cc | 39 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 43 insertions(+), 4 deletions(-)
+
+Index: pdns/pdns/dnsname.cc
+===================================================================
+--- pdns.orig/pdns/dnsname.cc
++++ pdns/pdns/dnsname.cc
+@@ -120,15 +120,15 @@ void DNSName::packetParser(const char* q
+   if(consumed)
+     *consumed = pos - opos - offset;
+   if(qtype) {
+-    if (pos + labellen + 2 > end) {
+-      throw std::range_error("Trying to read qtype past the end of the buffer ("+std::to_string((pos - opos) + labellen + 2)+ " > "+std::to_string(len)+")");
++    if (pos + 2 > end) {
++      throw std::range_error("Trying to read qtype past the end of the buffer ("+std::to_string((pos - opos) + 2)+ " > "+std::to_string(len)+")");
+     }
+     *qtype=(*(const unsigned char*)pos)*256 + *((const unsigned char*)pos+1);
+   }
+   pos+=2;
+   if(qclass) {
+-    if (pos + labellen + 2 > end) {
+-      throw std::range_error("Trying to read qclass past the end of the buffer ("+std::to_string((pos - opos) + labellen + 2)+ " > "+std::to_string(len)+")");
++    if (pos + 2 > end) {
++      throw std::range_error("Trying to read qclass past the end of the buffer ("+std::to_string((pos - opos) + 2)+ " > "+std::to_string(len)+")");
+     }
+     *qclass=(*(const unsigned char*)pos)*256 + *((const unsigned char*)pos+1);
+   }
+Index: pdns/pdns/test-dnsname_cc.cc
+===================================================================
+--- pdns.orig/pdns/test-dnsname_cc.cc
++++ pdns/pdns/test-dnsname_cc.cc
+@@ -598,6 +598,45 @@ BOOST_AUTO_TEST_CASE(test_compression) {
+   BOOST_CHECK_EQUAL(dn.toString(), "www.example.com.");
+ }
+ 
++BOOST_AUTO_TEST_CASE(test_compression_qtype_qclass) { // Compression test with QClass and QType extraction
++
++  uint16_t qtype = 0;
++  uint16_t qclass = 0;
++
++  {
++    string name("\x03""com\x00""\x07""example\xc0""\x00""\x03""www\xc0""\x05""\x00""\x01""\x00""\x01", 25);
++    DNSName dn(name.c_str(), name.size(), 15, true, &qtype, &qclass);
++    BOOST_CHECK_EQUAL(dn.toString(), "www.example.com.");
++    BOOST_CHECK_EQUAL(qtype, 1);
++    BOOST_CHECK_EQUAL(qclass, 1);
++  }
++
++  {
++    /* same but this time we are one byte short for the qclass */
++    string name("\x03""com\x00""\x07""example\xc0""\x00""\x03""www\xc0""\x05""\x00""\x01""\x00""", 24);
++    BOOST_CHECK_THROW(DNSName dn(name.c_str(), name.size(), 15, true, &qtype, &qclass), std::range_error);
++  }
++
++  {
++    /* this time with a compression pointer such as (labellen << 8) != 0, see #4718 */
++    string name("\x03""com\x00""\x07""example\xc1""\x00""\x03""www\xc1""\x05""\x00""\x01""\x00""\x01", 25);
++    name.insert(0, 256, '0');
++
++    DNSName dn(name.c_str(), name.size(), 271, true, &qtype, &qclass);
++    BOOST_CHECK_EQUAL(dn.toString(), "www.example.com.");
++    BOOST_CHECK_EQUAL(qtype, 1);
++    BOOST_CHECK_EQUAL(qclass, 1);
++  }
++
++  {
++    /* same but this time we are one byte short for the qclass */
++    string name("\x03""com\x00""\x07""example\xc1""\x00""\x03""www\xc1""\x05""\x00""\x01""\x00", 24);
++    name.insert(0, 256, '0');
++
++    BOOST_CHECK_THROW(DNSName dn(name.c_str(), name.size(), 271, true, &qtype, &qclass), std::range_error);;
++  }
++}
++
+ BOOST_AUTO_TEST_CASE(test_pointer_pointer_root) { // Pointer to pointer to root
+ 
+   string name("\x00""\xc0""\x00""\x03""com\xc0""\x01",9);

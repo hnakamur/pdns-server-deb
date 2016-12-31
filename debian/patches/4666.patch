@@ -1,0 +1,22 @@
+From 7483999aca3c4f4d53d2f4c50a0b7ca85df81a1b Mon Sep 17 00:00:00 2001
+From: Donatas Abraitis <donatas.abraitis@gmail.com>
+Date: Mon, 7 Nov 2016 18:28:52 +0200
+Subject: [PATCH] Do not thrown an error for get() if zone was not found
+
+---
+ modules/mydnsbackend/mydnsbackend.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+Index: pdns/modules/mydnsbackend/mydnsbackend.cc
+===================================================================
+--- pdns.orig/modules/mydnsbackend/mydnsbackend.cc
++++ pdns/modules/mydnsbackend/mydnsbackend.cc
+@@ -285,7 +285,7 @@ void MyDNSBackend::lookup(const QType &q
+     }
+ 
+     if(d_result.empty()) {
+-      throw PDNSException("lookup() passed zoneId = "+itoa(zoneId)+" but no such zone!");
++      return; // just return if zone was not found instead of throwing an error
+     }
+ 
+     rrow = d_result[0];

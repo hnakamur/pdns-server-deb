@@ -1,0 +1,105 @@
+From f376259e6721b7068cef7b36e51df8546c21dd6a Mon Sep 17 00:00:00 2001
+From: Remi Gacogne <remi.gacogne@powerdns.com>
+Date: Mon, 29 Aug 2016 17:28:35 +0200
+Subject: [PATCH] auth: Unify usage of randomness source by using
+ `dns_random()`
+
+`Utility::random()` is not impossible to predict, so even if we are not
+using it for anything sensitive it's better to just use `dns_random()`
+instead.
+Reported by mongo (thanks!).
+
+(cherry picked from commit d2116c15dbf1e0cef93e478678d1f9d403d87f90)
+---
+ pdns/common_startup.cc | 2 +-
+ pdns/communicator.hh   | 3 ++-
+ pdns/dnspacket.cc      | 3 ++-
+ pdns/dnsproxy.cc       | 6 +++---
+ 4 files changed, 8 insertions(+), 6 deletions(-)
+
+Index: pdns/pdns/common_startup.cc
+===================================================================
+--- pdns.orig/pdns/common_startup.cc
++++ pdns/pdns/common_startup.cc
+@@ -470,7 +470,7 @@ static void triggerLoadOfLibraries()
+ 
+ void mainthread()
+ {
+-  Utility::srandom(time(0));
++   Utility::srandom(time(0) ^ getpid());
+ 
+    int newgid=0;      
+    if(!::arg()["setgid"].empty()) 
+Index: pdns/pdns/communicator.hh
+===================================================================
+--- pdns.orig/pdns/communicator.hh
++++ pdns/pdns/communicator.hh
+@@ -42,6 +42,7 @@ using namespace boost::multi_index;
+ #include "packethandler.hh"
+ 
+ #include "namespaces.hh"
++#include "dns_random.hh"
+ 
+ struct SuckRequest
+ {
+@@ -75,7 +76,7 @@ public:
+     nr.domain   = domain;
+     nr.ip       = caIp.toStringWithPort();
+     nr.attempts = 0;
+-    nr.id       = Utility::random()%0xffff;
++    nr.id       = dns_random(0xffff);
+     nr.next     = time(0);
+ 
+     d_nqueue.push_back(nr);
+Index: pdns/pdns/dnspacket.cc
+===================================================================
+--- pdns.orig/pdns/dnspacket.cc
++++ pdns/pdns/dnspacket.cc
+@@ -48,6 +48,7 @@
+ #include "base64.hh"
+ #include "ednssubnet.hh"
+ #include "gss_context.hh"
++#include "dns_random.hh"
+ 
+ bool DNSPacket::s_doEDNSSubnetProcessing;
+ uint16_t DNSPacket::s_udpTruncationThreshold;
+@@ -380,7 +381,7 @@ void DNSPacket::wrapup()
+ void DNSPacket::setQuestion(int op, const DNSName &qd, int newqtype)
+ {
+   memset(&d,0,sizeof(d));
+-  d.id=Utility::random();
++  d.id=dns_random(0xffff);
+   d.rd=d.tc=d.aa=false;
+   d.qr=false;
+   d.qdcount=1; // is htons'ed later on
+Index: pdns/pdns/dnsproxy.cc
+===================================================================
+--- pdns.orig/pdns/dnsproxy.cc
++++ pdns/pdns/dnsproxy.cc
+@@ -31,7 +31,7 @@
+ #include "dns.hh"
+ #include "logger.hh"
+ #include "statbag.hh"
+-
++#include "dns_random.hh"
+ 
+ extern StatBag S;
+ extern PacketCache PC;
+@@ -55,7 +55,7 @@ DNSProxy::DNSProxy(const string &remote)
+     
+   int n=0;
+   for(;n<10;n++) {
+-    local.sin4.sin_port = htons(10000+( Utility::random()%50000));
++    local.sin4.sin_port = htons(10000+dns_random(50000));
+     
+     if(::bind(d_sock, (struct sockaddr *)&local, local.getSocklen()) >= 0) 
+       break;
+@@ -69,7 +69,7 @@ DNSProxy::DNSProxy(const string &remote)
+   if(connect(d_sock, (sockaddr *)&remaddr, remaddr.getSocklen())<0) 
+     throw PDNSException("Unable to UDP connect to remote nameserver "+remaddr.toStringWithPort()+": "+stringerror());
+ 
+-  d_xor=Utility::random()&0xffff;
++  d_xor=dns_random(0xffff);
+   L<<Logger::Error<<"DNS Proxy launched, local port "<<ntohs(local.sin4.sin_port)<<", remote "<<remaddr.toStringWithPort()<<endl;
+ } 
+ 
