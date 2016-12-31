@@ -1,5 +1,6 @@
 #!/usr/bin/make -f
 DEB_HOST_ARCH_OS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_OS)
+DEB_HOST_ARCH_BITS ?= $(shell dpkg-architecture -qDEB_HOST_ARCH_BITS)
 DEB_HOST_MULTIARCH ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
 
 # Vendor and version
@@ -60,6 +61,10 @@ override_dh_install:
 	  -e 's!# setuid=.*!setuid=pdns!' \
 	  -e 's!# security-poll-suffix=.*!&\nsecurity-poll-suffix=!' \
 	  > debian/pdns-server/etc/powerdns/pdns.conf
+ifeq ($(DEB_HOST_ARCH_BITS),32)
+	echo RestrictAddressFamilies is broken on 32bit, removing it from service file
+	perl -ni -e 'print unless /RestrictAddressFamilies/' debian/pdns-server/lib/systemd/system/*.service
+endif
 
 # Verbose tests (shows used compiler/linker and their flags)
 override_dh_auto_test:
