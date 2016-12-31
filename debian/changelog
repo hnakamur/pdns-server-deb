@@ -1,3 +1,14 @@
+pdns (4.0.1-7) unstable; urgency=medium
+
+  * Drop RestrictAddressFamilies from .service file on 32bit.
+    This feature is broken in systemd before v233. (See also #849817)
+  * Add 4.0-series patches from upstream:
+    Fixing issues in remotebackend http, mydnsbackend, a DNSName
+    issue in core, a cleanup on randomness, and a performance
+    improvement in bindbackend.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sat, 31 Dec 2016 15:23:27 +0000
+
 pdns (4.0.1-6) unstable; urgency=medium
 
   * Fix init script "status" command without lsb library
