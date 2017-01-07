@@ -1,0 +1,34 @@
+From b0c04ba2cfc3fcb758230041008ce7f189b528ed Mon Sep 17 00:00:00 2001
+From: Christian Hofstaedtler <christian.hofstaedtler@deduktiva.com>
+Date: Mon, 12 Oct 2015 12:44:33 +0200
+Subject: [PATCH] Ignore invalid/empty TKEY and TSIG records
+
+[zeha@d.o: removed second half which patches getTKEYRecord, which does not exist in 3.4.1 yet]
+
+---
+ pdns/dnspacket.cc | 19 +++++++++++++++----
+ 1 file changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/pdns/dnspacket.cc b/pdns/dnspacket.cc
+index 09ea0b7..ba77265 100644
+--- a/pdns/dnspacket.cc
++++ b/pdns/dnspacket.cc
+@@ -464,10 +464,15 @@ bool DNSPacket::getTSIGDetails(TSIGRecordContent* trc, string* keyname, string*
+   bool gotit=false;
+   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i!=mdp.d_answers.end(); ++i) {          
+     if(i->first.d_type == QType::TSIG) {
+-      *trc = *boost::dynamic_pointer_cast<TSIGRecordContent>(i->first.d_content);
+-      
+-      gotit=true;
++      // cast can fail, f.e. if d_content is an UnknownRecordContent.
++      shared_ptr<TSIGRecordContent> content = boost::dynamic_pointer_cast<TSIGRecordContent>(i->first.d_content);
++      if (!content) {
++        L<<Logger::Error<<"TSIG record has no or invalid content (invalid packet)"<<endl;
++        return false;
++      }
++      *trc = *content;
+       *keyname = i->first.d_label;
++      gotit=true;
+       if(!keyname->empty())
+         keyname->resize(keyname->size()-1); // drop the trailing dot
+     }

@@ -1,3 +1,20 @@
+pdns (3.4.1-4+deb8u7) jessie-security; urgency=high
+
+  * Security upload.
+  * Improve TSIG signature check to avoid MITM attacks on AXFR inbound
+    AXFR transfers. CVE-2016-7073 and CVE-2016-7074.
+  * Handle all possible exceptions in webserver thread, avoiding crash
+    of main process when an attacker exhausts file descriptors on the
+    webserver thread. CVE-2016-7072
+  * Drop incoming queries that contain more than one record, avoiding
+    extra CPU usage. CVE-2016-7068
+  * Improve validation of unhandled record types, avoiding a crash
+    on outbound query processing. CVE-2016-2120
+  * Improve handling of invalid TSIG records in packets. (Required
+    prerequisite patch for the above.)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sat, 07 Jan 2017 00:45:53 +0000
+
 pdns (3.4.1-4+deb8u6) jessie-security; urgency=high
 
   * Non-maintainer upload by the Security Team.
