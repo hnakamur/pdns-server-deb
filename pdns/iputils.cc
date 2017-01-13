@@ -1,3 +1,24 @@
+/*
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -27,6 +48,47 @@ int SConnect(int sockfd, const ComboAddress& remote)
     int savederrno = errno;
     RuntimeError(boost::format("connecting socket to %s: %s") % remote.toStringWithPort() % strerror(savederrno));
   }
+  return ret;
+}
+
+int SConnectWithTimeout(int sockfd, const ComboAddress& remote, int timeout)
+{
+  int ret = connect(sockfd, (struct sockaddr*)&remote, remote.getSocklen());
+  if(ret < 0) {
+    int savederrno = errno;
+    if (savederrno == EINPROGRESS) {
+      /* we wait until the connection has been established */
+      bool error = false;
+      bool disconnected = false;
+      int res = waitForRWData(sockfd, false, timeout, 0, &error, &disconnected);
+      if (res == 1) {
+        if (error) {
+          savederrno = 0;
+          socklen_t errlen = sizeof(savederrno);
+          if (getsockopt(sockfd, SOL_SOCKET, SO_ERROR, (void *)&savederrno, &errlen) == 0) {
+            RuntimeError(boost::format("connecting to %s failed: %s") % remote.toStringWithPort() % string(strerror(savederrno)));
+          }
+          else {
+            RuntimeError(boost::format("connecting to %s failed") % remote.toStringWithPort());
+          }
+        }
+        if (disconnected) {
+          RuntimeError(boost::format("%s closed the connection") % remote.toStringWithPort());
+        }
+        return 0;
+      }
+      else if (res == 0) {
+        RuntimeError(boost::format("timeout while connecting to %s") % remote.toStringWithPort());
+      } else if (res < 0) {
+        savederrno = errno;
+        RuntimeError(boost::format("waiting to connect to %s: %s") % remote.toStringWithPort() % string(strerror(savederrno)));
+      }
+    }
+    else {
+      RuntimeError(boost::format("connecting to %s: %s") % remote.toStringWithPort() % string(strerror(savederrno)));
+    }
+  }
+
   return ret;
 }
 

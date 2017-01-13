@@ -232,6 +232,15 @@ This setting can be used to expand or reduce the limitations.
 This is the value set for the EDNS0 buffer size in outgoing packets.
 Lower this if you experience timeouts.
 
+## `edns-subnet-whitelist`
+* Comma separated list of domain names and netmasks
+* Default: (none)
+
+List of netmasks and domains that [EDNS Client Subnet](https://tools.ietf.org/html/rfc7871) should be enabled for in outgoing queries.
+For example, an EDNS Client Subnet option containing the address of the initial requestor will be added to an outgoing query sent to server 192.0.2.1 for domain X if 192.0.2.1 matches one of the supplied netmasks, or if X matches one of the supplied domains.
+The initial requestor address will be truncated to 24 bits for IPv4 and to 56 bits for IPv6, as recommended in the privacy section of RFC 7871.
+By default, this option is empty, meaning no EDNS Client Subnet information is sent.
+
 ## `entropy-source`
 * Path
 * Default: /dev/urandom
@@ -368,11 +377,12 @@ This feature is intended to facilitate ip-failover setups, but it may also
 mask configuration issues and for this reason it is disabled by default.
 
 ## `loglevel`
-* Integer between 0 and 
+* Integer between 0 and 9
 * Default: 4
 * Available since: 3.6
 
 Amount of logging. Higher is more, more logging may destroy performance.
+It is recommended not to set this below 3.
 
 ## `log-common-errors`
 * Boolean
@@ -481,6 +491,7 @@ In addition to those, `rpzMaster` accepts:
 * refresh = an integer describing the interval between checks for updates. By default, the RPZ zone's default is used
 * maxReceivedMBytes = the maximum size in megabytes of an AXFR/IXFR update, to prevent resource exhaustion.
 The default value of 0 means no restriction.
+* localAddress = The source IP address to use when transferring the RPZ. When unset, [`query-local-address(6)`](#query-local-address) is used.
 
 If no settings are included, the RPZ is taken literally with no overrides applied.
 
@@ -511,7 +522,7 @@ to detect and act on infected hosts.
 Protobuf export to a server is enabled using the `protobufServer()` directive:
 
 ```
-protobufServer("192.0.2.1:4242" [[[[[, timeout], maxQueuedEntries], reconnectWaitTime], maskV4], maskV6])
+protobufServer("192.0.2.1:4242" [[[[[[, timeout], maxQueuedEntries], reconnectWaitTime], maskV4], maskV6], asynConnect])
 ```
 
 The optional parameters are:
@@ -521,6 +532,8 @@ The optional parameters are:
 * reconnectWaitTime = how long to wait, in seconds, between two reconnection attempts, default to 1
 * maskV4 = network mask to apply to the client IPv4 addresses, for anonymization purpose. The default of 32 means no anonymization
 * maskV6 = same as maskV4, but for IPv6. Default to 128
+* asyncConnect = if set to false (default) the first connection to the server during startup will block up to `timeout` seconds,
+otherwise the connection is done in a separate thread.
 
 The protocol buffers message types can be found in the [`dnsmessage.proto`](https://github.com/PowerDNS/pdns/blob/master/pdns/dnsmessage.proto) file.
 

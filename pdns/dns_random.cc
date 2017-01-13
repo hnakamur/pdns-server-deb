@@ -1,8 +1,30 @@
+/*
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 #include <openssl/aes.h>
-#if OPENSSL_VERSION_NUMBER > 0x1000100fL
+#include <openssl/opensslv.h>
+#if OPENSSL_VERSION_NUMBER > 0x1010000fL && !defined LIBRESSL_VERSION_NUMBER
 // Older OpenSSL does not have CRYPTO_ctr128_encrypt. Before 1.1.0 the header
 // file did not have the necessary extern "C" wrapper. In 1.1.0, AES_ctr128_encrypt
 // was removed.
@@ -53,7 +75,7 @@ unsigned int dns_random(unsigned int n)
   if(!g_initialized)
     abort();
   uint32_t out;
-#if OPENSSL_VERSION_NUMBER > 0x1000100fL
+#if OPENSSL_VERSION_NUMBER > 0x1010000fL && !defined LIBRESSL_VERSION_NUMBER
   CRYPTO_ctr128_encrypt((const unsigned char*)&g_in, (unsigned char*) &out, sizeof(g_in), &aes_key, g_counter, g_stream, &g_offset, (block128_f) AES_encrypt);
 #else
   AES_ctr128_encrypt((const unsigned char*)&g_in, (unsigned char*) &out, sizeof(g_in), &aes_key, g_counter, g_stream, &g_offset);

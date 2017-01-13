@@ -1,25 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2014  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2
-    as published by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
-
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -303,7 +302,7 @@ int waitForData(int fd, int seconds, int useconds)
   return waitForRWData(fd, true, seconds, useconds);
 }
 
-int waitForRWData(int fd, bool waitForRead, int seconds, int useconds)
+int waitForRWData(int fd, bool waitForRead, int seconds, int useconds, bool* error, bool* disconnected)
 {
   int ret;
 
@@ -317,8 +316,17 @@ int waitForRWData(int fd, bool waitForRead, int seconds, int useconds)
     pfd.events=POLLOUT;
 
   ret = poll(&pfd, 1, seconds * 1000 + useconds/1000);
-  if ( ret == -1 )
+  if ( ret == -1 ) {
     errno = ETIMEDOUT; // ???
+  }
+  else if (ret > 0) {
+    if (error && (pfd.revents & POLLERR)) {
+      *error = true;
+    }
+    if (disconnected && (pfd.revents & POLLHUP)) {
+      *disconnected = true;
+    }
+  }
 
   return ret;
 }
@@ -561,7 +569,7 @@ void shuffle(vector<DNSRecord>& rrs)
     if(first->d_place==DNSResourceRecord::ANSWER && first->d_type != QType::CNAME) // CNAME must come first
       break;
   for(second=first;second!=rrs.end();++second)
-    if(second->d_place!=DNSResourceRecord::ANSWER)
+    if(second->d_place!=DNSResourceRecord::ANSWER || second->d_type == QType::RRSIG) // leave RRSIGs at the end
       break;
 
   if(second-first>1)
@@ -581,12 +589,22 @@ void shuffle(vector<DNSRecord>& rrs)
   // we don't shuffle the rest
 }
 
+static uint16_t mapTypesToOrder(uint16_t type)
+{
+  if(type == QType::CNAME)
+    return 0;
+  if(type == QType::RRSIG)
+    return 65535;
+  else
+    return 1;
+}
+
 // make sure rrs is sorted in d_place order to avoid surprises later
 // then shuffle the parts that desire shuffling
 void orderAndShuffle(vector<DNSRecord>& rrs)
 {
   std::stable_sort(rrs.begin(), rrs.end(), [](const DNSRecord&a, const DNSRecord& b) { 
-      return a.d_place < b.d_place;
+      return std::make_tuple(a.d_place, mapTypesToOrder(a.d_type)) < std::make_tuple(b.d_place, mapTypesToOrder(b.d_type));
     });
   shuffle(rrs);
 }
@@ -721,7 +739,12 @@ int makeIPv6sockaddr(const std::string& addr, struct sockaddr_in6* ret)
     if(pos == string::npos || pos + 2 > addr.size() || addr[pos+1]!=':')
       return -1;
     ourAddr.assign(addr.c_str() + 1, pos-1);
-    port = pdns_stou(addr.substr(pos+2));
+    try {
+      port = pdns_stou(addr.substr(pos+2));
+    }
+    catch(std::out_of_range) {
+      return -1;
+    }
   }
   ret->sin6_scope_id=0;
   ret->sin6_family=AF_INET6;
@@ -742,6 +765,10 @@ int makeIPv6sockaddr(const std::string& addr, struct sockaddr_in6* ret)
     memcpy(ret, res->ai_addr, res->ai_addrlen);
     freeaddrinfo(res);
   }
+
+  if(port > 65535)
+    // negative ports are found with the pdns_stou above
+    return -1;
 
   if(port >= 0)
     ret->sin6_port = htons(port);
@@ -769,6 +796,9 @@ int makeIPv4sockaddr(const std::string& str, struct sockaddr_in* ret)
 
   char *eptr = (char*)str.c_str() + str.size();
   int port = strtol(str.c_str() + pos + 1, &eptr, 10);
+  if (port < 0 || port > 65535)
+    return -1;
+
   if(*eptr)
     return -1;
 

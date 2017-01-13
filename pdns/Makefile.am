@@ -197,6 +197,7 @@ pdns_server_SOURCES = \
 	statbag.cc statbag.hh \
 	stubresolver.cc stubresolver.hh \
 	tcpreceiver.cc tcpreceiver.hh \
+	tsigverifier.cc tsigverifier.hh \
 	tkey.cc \
 	ueberbackend.cc ueberbackend.hh \
 	unix_semaphore.cc \
@@ -583,6 +584,7 @@ ixplore_SOURCES = \
 	sillyrecords.cc \
 	sstuff.hh \
 	statbag.cc \
+	tsigverifier.cc tsigverifier.hh \
 	unix_utility.cc zoneparser-tng.cc
 
 ixplore_LDADD = $(LIBCRYPTO_LIBS)
@@ -678,6 +680,7 @@ toysdig_SOURCES = \
 	opensslsigners.cc opensslsigners.hh \
 	qtype.cc \
 	randomhelper.cc \
+	root-dnssec.hh \
 	rcpgenerator.cc rcpgenerator.hh \
 	rec-lua-conf.hh \
 	recursor_cache.hh \
@@ -733,6 +736,7 @@ tsig_tests_SOURCES = \
 	sstuff.hh \
 	statbag.cc \
 	tsig-tests.cc \
+	tsigverifier.cc tsigverifier.hh \
 	unix_utility.cc
 
 tsig_tests_LDADD = $(LIBCRYPTO_LIBS)
@@ -1065,6 +1069,7 @@ dnspcap2protobuf_SOURCES = \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
 	gettime.cc gettime.hh \
+	iputils.cc \
 	logger.cc \
 	misc.cc \
 	nsecrecords.cc \

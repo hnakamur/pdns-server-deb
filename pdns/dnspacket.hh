@@ -1,24 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2012  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify it
-    under the terms of the GNU General Public License version 2 as published
-    by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifndef DNSPACKET_HH
 
 #if __GNUC__ == 2
@@ -64,7 +64,7 @@ class DNSSECKeeper;
 class DNSPacket
 {
 public:
-  DNSPacket();
+  DNSPacket(bool isQuery);
   DNSPacket(const DNSPacket &orig);
 
   int noparse(const char *mesg, size_t len); //!< just suck the data inward
@@ -186,13 +186,13 @@ private:
   uint8_t d_ednsversion;
   // WARNING! This is really 12 bits
   uint16_t d_ednsrcode;
-  uint16_t d_qlen; // length of the question (including class & type) in this packet 2
 
   bool d_compress; // 1
   bool d_tsigtimersonly;
   bool d_wantsnsid;
   bool d_haveednssubnet;
   bool d_haveednssection;
+  bool d_isQuery;
 };
 
 

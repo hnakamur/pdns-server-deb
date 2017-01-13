@@ -1,9 +1,30 @@
+/*
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #include "ixfr.hh"
 #include "sstuff.hh"
 #include "dns_random.hh"
 #include "dnsrecords.hh"
 #include "dnssecinfra.hh"
-
+#include "tsigverifier.hh"
 
 // Returns pairs of "remove & add" vectors. If you get an empty remove, it means you got an AXFR!
 vector<pair<vector<DNSRecord>, vector<DNSRecord> > > getIXFRDeltas(const ComboAddress& master, const DNSName& zone, const DNSRecord& oursr, 
@@ -19,10 +40,11 @@ vector<pair<vector<DNSRecord>, vector<DNSRecord> > > getIXFRDeltas(const ComboAd
   oursr.d_content->toPacket(pw);
 
   pw.commit();
+  TSIGRecordContent trc;
+  TSIGTCPVerifier tsigVerifier(tt, master, trc);
   if(!tt.algo.empty()) {
     TSIGHashEnum the;
     getTSIGHashEnum(tt.algo, the);
-    TSIGRecordContent trc;
     try {
       trc.d_algoName = getTSIGAlgoName(the);
     } catch(PDNSException& pe) {
@@ -56,6 +78,7 @@ vector<pair<vector<DNSRecord>, vector<DNSRecord> > > getIXFRDeltas(const ComboAd
   shared_ptr<SOARecordContent> masterSOA;
   vector<DNSRecord> records;
   size_t receivedBytes = 0;
+
   for(;;) {
     if(s.read((char*)&len, 2)!=2)
       break;
@@ -70,11 +93,16 @@ vector<pair<vector<DNSRecord>, vector<DNSRecord> > > getIXFRDeltas(const ComboAd
     char reply[len]; 
     readn2(s.getHandle(), reply, len);
     receivedBytes += len;
-    MOADNSParser mdp(string(reply, len));
+    MOADNSParser mdp(false, string(reply, len));
     if(mdp.d_header.rcode) 
       throw std::runtime_error("Got an error trying to IXFR zone '"+zone.toString()+"' from master '"+master.toStringWithPort()+"': "+RCode::to_s(mdp.d_header.rcode));
 
     //    cout<<"Got a response, rcode: "<<mdp.d_header.rcode<<", got "<<mdp.d_answers.size()<<" answers"<<endl;
+
+    if(!tt.algo.empty()) { // TSIG verify message
+      tsigVerifier.check(std::string(reply, len), mdp);
+    }
+
     for(auto& r: mdp.d_answers) {
       if(r.first.d_type == QType::TSIG) 
         continue;

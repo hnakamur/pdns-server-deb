@@ -1,3 +1,24 @@
+/*
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 /**
 Replay all recursion-desired DNS questions to a specified IP address.
 
@@ -400,7 +421,7 @@ try
   while(s_socket->recvFromAsync(packet, remote)) {
     try {
       s_weanswers++;
-      MOADNSParser mdp(packet.c_str(), packet.length());
+      MOADNSParser mdp(false, packet.c_str(), packet.length());
       if(!mdp.d_header.qr) {
         cout<<"Received a question from our reference nameserver!"<<endl;
         continue;
@@ -607,7 +628,7 @@ bool sendPacketFromPR(PcapPacketReader& pr, const ComboAddress& remote, int stam
       sent=true;
       dh->id=tmp;
     }
-    MOADNSParser mdp((const char*)pr.d_payload, pr.d_len);
+    MOADNSParser mdp(false, (const char*)pr.d_payload, pr.d_len);
     QuestionIdentifier qi=QuestionIdentifier::create(pr.getSource(), pr.getDest(), mdp);
 
     if(!mdp.d_header.qr) {

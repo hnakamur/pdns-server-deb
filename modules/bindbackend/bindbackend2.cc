@@ -1,24 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2014  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
-    published by the Free Software Foundation; 
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 
 #ifdef HAVE_CONFIG_H
 #include "config.h"
@@ -439,7 +439,7 @@ void Bind2Backend::alsoNotifies(const DNSName& domain, set<string> *ips)
 }
 
 // only parses, does NOT add to s_state!
-void Bind2Backend::parseZoneFile(BB2DomainInfo *bbd) 
+void Bind2Backend::parseZoneFile(BB2DomainInfo *bbd)
 {
   NSEC3PARAMRecordContent ns3pr;
   bool nsec3zone;
@@ -515,10 +515,12 @@ string Bind2Backend::DLReloadNowHandler(const vector<string>&parts, Utility::pid
 
   for(vector<string>::const_iterator i=parts.begin()+1;i<parts.end();++i) {
     BB2DomainInfo bbd;
-    if(safeGetBBDomainInfo(DNSName(*i), &bbd)) {
+    DNSName zone(*i);
+    if(safeGetBBDomainInfo(zone, &bbd)) {
       Bind2Backend bb2;
       bb2.queueReloadAndStore(bbd.d_id);
-      ret<< *i << ": "<< (bbd.d_loaded ? "": "[rejected]") <<"\t"<<bbd.d_status<<"\n";      
+      safeGetBBDomainInfo(zone, &bbd); // Read the *new* domain status
+      ret<< *i << ": "<< (bbd.d_wasRejectedLastReload ? "[rejected]": "") <<"\t"<<bbd.d_status<<"\n";
     }
     else
       ret<< *i << " no such domain\n";
@@ -897,21 +899,27 @@ void Bind2Backend::queueReloadAndStore(unsigned int id)
   try {
     if(!safeGetBBDomainInfo(id, &bbold))
       return;
-    parseZoneFile(&bbold);
-    bbold.d_checknow=false;
-    safePutBBDomainInfo(bbold);
-    L<<Logger::Warning<<"Zone '"<<bbold.d_name<<"' ("<<bbold.d_filename<<") reloaded"<<endl;
+    BB2DomainInfo bbnew(bbold);
+    parseZoneFile(&bbnew);
+    bbnew.d_checknow=false;
+    bbnew.d_wasRejectedLastReload=false;
+    safePutBBDomainInfo(bbnew);
+    L<<Logger::Warning<<"Zone '"<<bbnew.d_name<<"' ("<<bbnew.d_filename<<") reloaded"<<endl;
   }
   catch(PDNSException &ae) {
     ostringstream msg;
     msg<<" error at "+nowTime()+" parsing '"<<bbold.d_name<<"' from file '"<<bbold.d_filename<<"': "<<ae.reason;
+    L<<Logger::Warning<<" error parsing '"<<bbold.d_name<<"' from file '"<<bbold.d_filename<<"': "<<ae.reason<<endl;
     bbold.d_status=msg.str();
+    bbold.d_wasRejectedLastReload=true;
     safePutBBDomainInfo(bbold);
   }
   catch(std::exception &ae) {
     ostringstream msg;
     msg<<" error at "+nowTime()+" parsing '"<<bbold.d_name<<"' from file '"<<bbold.d_filename<<"': "<<ae.what();
+    L<<Logger::Warning<<" error parsing '"<<bbold.d_name<<"' from file '"<<bbold.d_filename<<"': "<<ae.what()<<endl;
     bbold.d_status=msg.str();
+    bbold.d_wasRejectedLastReload=true;
     safePutBBDomainInfo(bbold);
   }
 }
@@ -1024,13 +1032,21 @@ void Bind2Backend::lookup(const QType &qtype, const DNSName &qname, DNSPacket *p
 
   static bool mustlog=::arg().mustDo("query-logging");
   if(mustlog) 
-    L<<Logger::Warning<<"Lookup for '"<<qtype.getName()<<"' of '"<<domain<<"'"<<endl;
+    L<<Logger::Warning<<"Lookup for '"<<qtype.getName()<<"' of '"<<domain<<"' within zoneID "<<zoneId<<endl;
   bool found=false;
   BB2DomainInfo bbd;
 
-  do {
-    found = safeGetBBDomainInfo(domain, &bbd);
-  } while ((!found || (zoneId != (int)bbd.d_id && zoneId != -1)) && domain.chopOff());
+  if (zoneId != -1) {
+    found = safeGetBBDomainInfo(zoneId, &bbd);
+    if (found) {
+      domain = bbd.d_name;
+    }
+  }
+  else {
+    do {
+      found = safeGetBBDomainInfo(domain, &bbd);
+    } while (!found && domain.chopOff());
+  }
 
   if(!found) {
     if(mustlog)

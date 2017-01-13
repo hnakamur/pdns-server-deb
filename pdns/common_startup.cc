@@ -1,24 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2005 - 2016  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2
-    as published by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -128,7 +128,7 @@ void declareArguments()
   ::arg().setSwitch("webserver","Start a webserver for monitoring")="no"; 
   ::arg().setSwitch("webserver-print-arguments","If the webserver should print arguments")="no"; 
   ::arg().setSwitch("edns-subnet-processing","If we should act on EDNS Subnet options")="no"; 
-  ::arg().setSwitch("any-to-tcp","Answer ANY queries with tc=1, shunting to TCP")="no"; 
+  ::arg().setSwitch("any-to-tcp","Answer ANY queries with tc=1, shunting to TCP")="yes"; 
   ::arg().set("webserver-address","IP Address of webserver to listen on")="127.0.0.1";
   ::arg().set("webserver-port","Port of webserver to listen on")="8081";
   ::arg().set("webserver-password","Password required for accessing the webserver")="";
@@ -250,6 +250,7 @@ void declareStats(void)
   S.declare("udp4-queries","Number of IPv4 UDP queries received");
   S.declare("udp6-answers","Number of IPv6 answers sent out over UDP");
   S.declare("udp6-queries","Number of IPv6 UDP queries received");
+  S.declare("overload-drops","Queries dropped because backends overloaded");
 
   S.declare("rd-queries", "Number of recursion desired questions");
   S.declare("recursion-unanswered", "Number of packets unanswered by configured recursor");
@@ -342,8 +343,8 @@ void *qthread(void *number)
   DNSDistributor *distributor = DNSDistributor::Create(::arg().asNum("distributor-threads", 1)); // the big dispatcher!
   int num = (int)(unsigned long)number;
   g_distributors[num] = distributor;
-  DNSPacket question;
-  DNSPacket cached;
+  DNSPacket question(true);
+  DNSPacket cached(false);
 
   AtomicCounter &numreceived=*S.getPointer("udp-queries");
   AtomicCounter &numreceiveddo=*S.getPointer("udp-do-queries");
@@ -351,6 +352,7 @@ void *qthread(void *number)
   AtomicCounter &numreceived4=*S.getPointer("udp4-queries");
 
   AtomicCounter &numreceived6=*S.getPointer("udp6-queries");
+  AtomicCounter &overloadDrops=*S.getPointer("overload-drops");
 
   int diff;
   bool logDNSQueries = ::arg().mustDo("log-dns-queries");
@@ -437,7 +439,8 @@ void *qthread(void *number)
     
     if(distributor->isOverloaded()) {
       if(logDNSQueries) 
-        L<<"Dropped query, db is overloaded"<<endl;
+        L<<"Dropped query, backends are overloaded"<<endl;
+      overloadDrops++;
       continue;
     }
         
@@ -470,7 +473,7 @@ static void triggerLoadOfLibraries()
 
 void mainthread()
 {
-  Utility::srandom(time(0));
+   Utility::srandom(time(0) ^ getpid());
 
    int newgid=0;      
    if(!::arg()["setgid"].empty()) 

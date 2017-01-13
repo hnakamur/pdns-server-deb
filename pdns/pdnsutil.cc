@@ -622,17 +622,6 @@ int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vect
       }
     }
 
-    // if (rr.qname[rr.qname.size()-1] == '.') {
-    //   cout<<"[Error] Record '"<<rr.qname<<"' has a trailing dot. PowerDNS will ignore this record!"<<endl;
-    //   numerrors++;
-    // }
-
-    if ( (rr.qtype.getCode() == QType::NS || rr.qtype.getCode() == QType::SRV || rr.qtype.getCode() == QType::MX || rr.qtype.getCode() == QType::CNAME || rr.qtype.getCode() == QType::DNAME) &&
-         rr.content[rr.content.size()-1] == '.') {
-      cout<<"[Warning] The record "<<rr.qname<<" with type "<<rr.qtype.getName()<<" has a trailing dot in the content ("<<rr.content<<"). Your backend might not work well with this."<<endl;
-      numwarnings++;
-    }
-
     if(rr.auth == 0 && rr.qtype.getCode()!=QType::NS && rr.qtype.getCode()!=QType::A && rr.qtype.getCode()!=QType::AAAA)
     {
       cout<<"[Error] Following record is auth=0, run pdnsutil rectify-zone?: "<<rr.qname<<" IN " <<rr.qtype.getName()<< " " << rr.content<<endl;
@@ -649,7 +638,7 @@ int checkZone(DNSSECKeeper &dk, UeberBackend &B, const DNSName& zone, const vect
 
   for(const auto &i: tlsas) {
     DNSName name = DNSName(i);
-    name.trimToLabels(name.getRawLabels().size()-2);
+    name.trimToLabels(name.countLabels()-2);
     if (cnames.find(name) == cnames.end() && noncnames.find(name) == noncnames.end()) {
       // No specific record for the name in the TLSA record exists, this
       // is already worth emitting a warning. Let's see if a wildcard exist.
@@ -1196,15 +1185,19 @@ int createSlaveZone(const vector<string>& cmds) {
     cerr<<"Domain '"<<zone<<"' exists already"<<endl;
     return EXIT_FAILURE;
   }
-  ComboAddress master(cmds[2], 53);
-  cerr<<"Creating slave zone '"<<zone<<"', master is "<<master.toStringWithPort()<<endl;
+  vector<string> masters;
+  for (unsigned i=2; i < cmds.size(); i++) {
+    ComboAddress master(cmds[2], 53);
+    masters.push_back(master.toStringWithPort());
+  }
+  cerr<<"Creating slave zone '"<<zone<<"', with master(s) '"<<boost::join(masters, ",")<<"'"<<endl;
   B.createDomain(zone);
   if(!B.getDomainInfo(zone, di)) {
     cerr<<"Domain '"<<zone<<"' was not created!"<<endl;
     return EXIT_FAILURE;
   }
   di.backend->setKind(zone, DomainInfo::Slave);
-  di.backend->setMaster(zone, master.toStringWithPort());
+  di.backend->setMaster(zone, boost::join(masters, ","));
   return EXIT_SUCCESS;
 }
 
@@ -2800,7 +2793,7 @@ loadMainConfig(g_vm["config-dir"].as<string>());
      std::vector<struct TSIGKey> keys;
      UeberBackend B("default");
      if (B.getTSIGKeys(keys)) {
-        for(const struct TSIGKey &key :  keys) {
+        for(const TSIGKey &key :  keys) {
            cout << key.name.toString() << " " << key.algorithm.toString() << " " << key.key << endl;
         }
      }
@@ -3157,7 +3150,7 @@ loadMainConfig(g_vm["config-dir"].as<string>());
     // move tsig keys
     std::vector<struct TSIGKey> tkeys;
     if (src->getTSIGKeys(tkeys)) {
-      for(const struct TSIGKey& tk: tkeys) {
+      for(auto& tk: tkeys) {
         if (!tgt->setTSIGKey(tk.name, tk.algorithm, tk.key)) throw PDNSException("Failed to feed TSIG key");
         ntk++;
       }

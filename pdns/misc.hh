@@ -1,24 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002-2015  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2
-    as published by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #pragma once
 #include <errno.h>
 #include <inttypes.h>
@@ -36,6 +36,7 @@
 using namespace ::boost::multi_index;
 
 #include "dns.hh"
+#include <atomic>
 #include <sys/time.h>
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -61,7 +62,7 @@ string getHostname();
 string urlEncode(const string &text);
 int waitForData(int fd, int seconds, int useconds=0);
 int waitFor2Data(int fd1, int fd2, int seconds, int useconds, int* fd);
-int waitForRWData(int fd, bool waitForRead, int seconds, int useconds);
+int waitForRWData(int fd, bool waitForRead, int seconds, int useconds, bool* error=nullptr, bool* disconnected=nullptr);
 uint16_t getShort(const unsigned char *p);
 uint16_t getShort(const char *p);
 uint32_t getLong(const unsigned char *p);
@@ -368,57 +369,10 @@ inline bool pdns_iequals_ch(const char a, const char b)
   return true;
 }
 
-// lifted from boost, with thanks
-class AtomicCounter
-{
-public:
-    typedef unsigned long native_t;
-    explicit AtomicCounter( native_t v = 0) : value_( v ) {}
 
-    native_t operator++()
-    {
-      return atomic_exchange_and_add( &value_, +1 ) + 1;
-    }
+typedef std::atomic<unsigned long> AtomicCounter ;
 
-    native_t operator++(int)
-    {
-      return atomic_exchange_and_add( &value_, +1 );
-    }
-
-    native_t operator+=(native_t val)
-    {
-      return atomic_exchange_and_add( &value_, val );
-    }
-
-    native_t operator-=(native_t val)
-    {
-      return atomic_exchange_and_add( &value_, -val );
-    }
-
-    native_t operator--()
-    {
-      return atomic_exchange_and_add( &value_, -1 ) - 1;
-    }
-
-    operator native_t() const
-    {
-      return atomic_exchange_and_add( &value_, 0);
-    }
-
-    AtomicCounter(AtomicCounter const &rhs) : value_(rhs)
-    {
-    }
-
-private:
-    mutable native_t value_;
-
-    static native_t atomic_exchange_and_add( native_t * pw, native_t dv )
-    {
-      return __sync_fetch_and_add(pw, dv);
-    }
-};
-
-// FIXME400 this should probably go?
+// FIXME400 this should probably go? 
 struct CIStringCompare: public std::binary_function<string, string, bool>
 {
   bool operator()(const string& a, const string& b) const
@@ -657,3 +611,4 @@ uid_t strToUID(const string &str);
 gid_t strToGID(const string &str);
 
 unsigned int pdns_stou(const std::string& str, size_t * idx = 0, int base = 10);
+

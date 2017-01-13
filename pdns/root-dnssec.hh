@@ -19,13 +19,7 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
  */
-#ifndef PDNS_SECPOLL_AUTH_HH
-#define PDNS_SECPOLL_AUTH_HH
-#include <time.h>
-#include "namespaces.hh"
-#include "stubresolver.hh"
 
-void doSecPoll(bool first);
-extern std::string g_security_message;
+#pragma once
 
-#endif
+static const char*rootDSs[]={"19036 8 2 49aac11d7b6f6446702e54a1607371607a1a41855200fd2ce1cdde32f24e8fb5"};
