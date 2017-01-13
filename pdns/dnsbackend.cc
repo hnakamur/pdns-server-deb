@@ -1,24 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2005  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2
-    as published by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -337,20 +337,24 @@ void fillSOAData(const string &content, SOAData &data)
   if(pleft>1) 
     data.hostmaster=DNSName(attodot(parts[1])); // ahu@ds9a.nl -> ahu.ds9a.nl, piet.puk@ds9a.nl -> piet\.puk.ds9a.nl
 
-  data.serial = pleft > 2 ? pdns_stou(parts[2]) : 0;
-  if (data.serial == UINT_MAX && errno == ERANGE) throw PDNSException("serial number too large in '"+parts[2]+"'");
+  try {
+    data.serial = pleft > 2 ? pdns_stou(parts[2]) : 0;
 
-  data.refresh = pleft > 3 ? pdns_stou(parts[3])
-        : ::arg().asNum("soa-refresh-default");
+    data.refresh = pleft > 3 ? pdns_stou(parts[3])
+      : ::arg().asNum("soa-refresh-default");
 
-  data.retry = pleft > 4 ? pdns_stou(parts[4].c_str())
-        : ::arg().asNum("soa-retry-default");
+    data.retry = pleft > 4 ? pdns_stou(parts[4].c_str())
+      : ::arg().asNum("soa-retry-default");
 
-  data.expire = pleft > 5 ? pdns_stou(parts[5].c_str())
-        : ::arg().asNum("soa-expire-default");
+    data.expire = pleft > 5 ? pdns_stou(parts[5].c_str())
+      : ::arg().asNum("soa-expire-default");
 
-  data.default_ttl = pleft > 6 ? pdns_stou(parts[6].c_str())
-        : ::arg().asNum("soa-minimum-ttl");
+    data.default_ttl = pleft > 6 ? pdns_stou(parts[6].c_str())
+      : ::arg().asNum("soa-minimum-ttl");
+  }
+  catch(const std::out_of_range& oor) {
+    throw PDNSException("Out of range exception parsing "+content);
+  }
 }
 
 string serializeSOAData(const SOAData &d)

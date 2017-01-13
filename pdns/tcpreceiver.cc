@@ -297,7 +297,7 @@ void *TCPNameserver::doConnection(void *data)
       else
         S.inc("tcp4-queries");
 
-      packet=shared_ptr<DNSPacket>(new DNSPacket);
+      packet=shared_ptr<DNSPacket>(new DNSPacket(true));
       packet->setRemote(&remote);
       packet->d_tcp=true;
       packet->setSocket(fd);
@@ -317,7 +317,7 @@ void *TCPNameserver::doConnection(void *data)
       }
 
       shared_ptr<DNSPacket> reply; 
-      shared_ptr<DNSPacket> cached= shared_ptr<DNSPacket>(new DNSPacket);
+      shared_ptr<DNSPacket> cached= shared_ptr<DNSPacket>(new DNSPacket(false));
       if(logDNSQueries)  {
         string remote;
         if(packet->hasEDNSSubnet()) 
@@ -606,9 +606,9 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
   DNSName tsigkeyname;
   string tsigsecret;
 
-  q->getTSIGDetails(&trc, &tsigkeyname, 0);
+  bool haveTSIGDetails = q->getTSIGDetails(&trc, &tsigkeyname, 0);
 
-  if(!tsigkeyname.empty()) {
+  if(haveTSIGDetails && !tsigkeyname.empty()) {
     string tsig64;
     DNSName algorithm=trc.d_algoName; // FIXME400: check
     if (algorithm == DNSName("hmac-md5.sig-alg.reg.int"))
@@ -634,7 +634,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
     addRRSigs(dk, signatureDB, authSet, outpacket->getRRS());
   }
   
-  if(!tsigkeyname.empty())
+  if(haveTSIGDetails && !tsigkeyname.empty())
     outpacket->setTSIGDetails(trc, tsigkeyname, tsigsecret, trc.d_mac); // first answer is 'normal'
   
   sendPacket(outpacket, outsock);
@@ -890,7 +890,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
       for(;;) {
         outpacket->getRRS() = csp.getChunk();
         if(!outpacket->getRRS().empty()) {
-          if(!tsigkeyname.empty()) 
+          if(haveTSIGDetails && !tsigkeyname.empty())
             outpacket->setTSIGDetails(trc, tsigkeyname, tsigsecret, trc.d_mac, true);
           sendPacket(outpacket, outsock);
           trc.d_mac=outpacket->d_trc.d_mac;
@@ -941,7 +941,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
             for(;;) {
               outpacket->getRRS() = csp.getChunk();
               if(!outpacket->getRRS().empty()) {
-                if(!tsigkeyname.empty())
+                if(haveTSIGDetails && !tsigkeyname.empty())
                   outpacket->setTSIGDetails(trc, tsigkeyname, tsigsecret, trc.d_mac, true);
                 sendPacket(outpacket, outsock);
                 trc.d_mac=outpacket->d_trc.d_mac;
@@ -976,7 +976,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
         for(;;) {
           outpacket->getRRS() = csp.getChunk();
           if(!outpacket->getRRS().empty()) {
-            if(!tsigkeyname.empty())
+            if(haveTSIGDetails && !tsigkeyname.empty())
               outpacket->setTSIGDetails(trc, tsigkeyname, tsigsecret, trc.d_mac, true); 
             sendPacket(outpacket, outsock);
             trc.d_mac=outpacket->d_trc.d_mac;
@@ -997,7 +997,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
   for(;;) { 
     outpacket->getRRS() = csp.getChunk(true); // flush the pipe
     if(!outpacket->getRRS().empty()) {
-      if(!tsigkeyname.empty())
+      if(haveTSIGDetails && !tsigkeyname.empty())
         outpacket->setTSIGDetails(trc, tsigkeyname, tsigsecret, trc.d_mac, true); // first answer is 'normal'
       sendPacket(outpacket, outsock);
       trc.d_mac=outpacket->d_trc.d_mac;
@@ -1016,7 +1016,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
   outpacket=getFreshAXFRPacket(q);
   outpacket->addRecord(soa);
   editSOA(dk, sd.qname, outpacket.get());
-  if(!tsigkeyname.empty())
+  if(haveTSIGDetails && !tsigkeyname.empty())
     outpacket->setTSIGDetails(trc, tsigkeyname, tsigsecret, trc.d_mac, true); 
   
   sendPacket(outpacket, outsock);
@@ -1034,14 +1034,22 @@ int TCPNameserver::doIXFR(shared_ptr<DNSPacket> q, int outsock)
     outpacket->d_dnssecOk=true; // RFC 5936, 2.2.5 'SHOULD'
 
   uint32_t serial = 0;
-  MOADNSParser mdp(q->getString());
+  MOADNSParser mdp(false, q->getString());
   for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
     const DNSRecord *rr = &i->first;
     if (rr->d_type == QType::SOA && rr->d_place == DNSResourceRecord::AUTHORITY) {
       vector<string>parts;
       stringtok(parts, rr->d_content->getZoneRepresentation());
       if (parts.size() >= 3) {
-        serial=pdns_stou(parts[2]);
+        try {
+          serial=pdns_stou(parts[2]);
+        }
+        catch(const std::out_of_range& oor) {
+          L<<Logger::Error<<"Invalid serial in IXFR query"<<endl;
+          outpacket->setRcode(RCode::FormErr);
+          sendPacket(outpacket,outsock);
+          return 0;
+        }
       } else {
         L<<Logger::Error<<"No serial in IXFR query"<<endl;
         outpacket->setRcode(RCode::FormErr);
@@ -1110,9 +1118,9 @@ int TCPNameserver::doIXFR(shared_ptr<DNSPacket> q, int outsock)
     DNSName tsigkeyname;
     string tsigsecret;
 
-    q->getTSIGDetails(&trc, &tsigkeyname, 0);
+    bool haveTSIGDetails = q->getTSIGDetails(&trc, &tsigkeyname, 0);
 
-    if(!tsigkeyname.empty()) {
+    if(haveTSIGDetails && !tsigkeyname.empty()) {
       string tsig64;
       DNSName algorithm=trc.d_algoName; // FIXME400: was toLowerCanonic, compare output
       if (algorithm == DNSName("hmac-md5.sig-alg.reg.int"))
@@ -1135,7 +1143,7 @@ int TCPNameserver::doIXFR(shared_ptr<DNSPacket> q, int outsock)
       addRRSigs(dk, signatureDB, authSet, outpacket->getRRS());
     }
 
-    if(!tsigkeyname.empty())
+    if(haveTSIGDetails && !tsigkeyname.empty())
       outpacket->setTSIGDetails(trc, tsigkeyname, tsigsecret, trc.d_mac); // first answer is 'normal'
 
     sendPacket(outpacket, outsock);
@@ -1272,7 +1280,7 @@ void TCPNameserver::thread()
         continue;
 
       int sock=-1;
-      for(const struct pollfd& pfd :  d_prfds) {
+      for(const pollfd& pfd :  d_prfds) {
         if(pfd.revents == POLLIN) {
           sock = pfd.fd;
           addrlen=sizeof(remote);

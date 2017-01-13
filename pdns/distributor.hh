@@ -1,25 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2015  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2
-    as published by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
-
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifndef DISTRIBUTOR_HH
 #define DISTRIBUTOR_HH
 
@@ -102,13 +101,13 @@ public:
 
   bool isOverloaded() override
   {
-    return d_overloaded;
+    return d_overloadQueueLength && (d_queued > d_overloadQueueLength);
   }
   
 private:
-  bool d_overloaded;
   int nextid;
   time_t d_last_started;
+  unsigned int d_overloadQueueLength, d_maxQueueLength;
   int d_num_threads;
   std::atomic<unsigned int> d_queued{0}, d_running{0};
   std::vector<std::pair<int,int>> d_pipes;
@@ -142,8 +141,8 @@ template<class Answer, class Question, class Backend>SingleThreadDistributor<Ans
 template<class Answer, class Question, class Backend>MultiThreadDistributor<Answer,Question,Backend>::MultiThreadDistributor(int n)
 {
   d_num_threads=n;
-  d_overloaded = false;
-
+  d_overloadQueueLength=::arg().asNum("overload-queue-length");
+  d_maxQueueLength=::arg().asNum("max-queue-length");
   nextid=0;
   d_last_started=time(0);
 
@@ -322,14 +321,10 @@ template<class Answer, class Question, class Backend>int MultiThreadDistributor<
     unixDie("write");
 
   d_queued++;
-  
-  static unsigned int overloadQueueLength=::arg().asNum("overload-queue-length");
-  static unsigned int maxQueueLength=::arg().asNum("max-queue-length");
 
-  if(overloadQueueLength) 
-    d_overloaded= d_queued > overloadQueueLength;
 
-  if(d_queued > maxQueueLength) {
+
+  if(d_queued > d_maxQueueLength) {
     L<<Logger::Error<< d_queued <<" questions waiting for database/backend attention. Limit is "<<::arg().asNum("max-queue-length")<<", respawning"<<endl;
     // this will leak the entire contents of all pipes, nothing will be freed. Respawn when this happens!
     throw DistributorFatal();

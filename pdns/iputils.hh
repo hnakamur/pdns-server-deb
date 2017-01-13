@@ -1,24 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2016  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2
-    as published by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifndef PDNS_IPUTILSHH
 #define PDNS_IPUTILSHH
 
@@ -216,6 +216,15 @@ union ComboAddress {
     }
     if(!sin4.sin_port) // 'str' overrides port!
       sin4.sin_port=htons(port);
+  }
+
+  bool isIPv6() const
+  {
+    return sin4.sin_family == AF_INET6;
+  }
+  bool isIPv4() const
+  {
+    return sin4.sin_family == AF_INET;
   }
 
   bool isMappedIPv4()  const
@@ -863,6 +872,11 @@ struct SComboAddress
 
 int SSocket(int family, int type, int flags);
 int SConnect(int sockfd, const ComboAddress& remote);
+/* tries to connect to remote for a maximum of timeout seconds.
+   sockfd should be set to non-blocking beforehand.
+   returns 0 on success (the socket is writable), throw a
+   runtime_error otherwise */
+int SConnectWithTimeout(int sockfd, const ComboAddress& remote, int timeout);
 int SBind(int sockfd, const ComboAddress& local);
 int SAccept(int sockfd, ComboAddress& remote);
 int SListen(int sockfd, int limit);

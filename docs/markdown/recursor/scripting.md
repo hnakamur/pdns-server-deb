@@ -22,6 +22,7 @@ For extra performance, a Just In Time compiled version of Lua called
 Queries can be intercepted in many places:
 
 * before any packet parsing begins (`ipfilter`)
+* before any filtering policy have been applied (`prerpz`)
 * before the resolving logic starts to work (`preresolve`)
 * after the resolving process failed to find a correct answer for a domain (`nodata`, `nxdomain`)
 * after the whole process is done and an answer is ready for the client (`postresolve`)
@@ -92,12 +93,22 @@ The DNSQuestion object contains at least the following fields:
   * getFakeAAAARecords: Get a fake AAAA record, see [DNS64](#dns64)
   * getFakePTRRecords: Get a fake PTR record, see [DNS64](#dns64)
   * udpQueryResponse: Do a UDP query and call a handler, see [`udpQueryResponse`](#udpqueryresponse)
+* appliedPolicy - The decision that was made by the policy engine, see [Modifying policy decisions](#modifying-policy-decisions). It has the following fields:
+  * policyName: The name of the policy (used in e.g. protobuf logging)
+  * policyAction: The action taken by the engine
+  * policyCustom: The CNAME content for the `pdns.policyactions.Custom` response, a string
+  * policyTTL: The TTL in seconds for the `pdns.policyactions.Custom` response
+* wantsRPZ - A boolean that indicates the use of the Policy Engine, can be set to `false` in `preresolve` to disable RPZ for this query
 
 It also supports the following methods:
 
 * `addAnswer(type, content, [ttl, name])`: add an answer to the record of `type` with `content`. Optionally supply TTL and the name of
   the answer too, which defaults to the name of the question
+* `addPolicyTag(tag)`: add a policy tag.
+* `discardPolicy(policyname)`: skip the filtering policy (for example RPZ) named `policyname` for this query. This is mostly useful in the `prerpz` hook.
+* `getPolicyTags()`: get the current policy tags as a table of strings.
 * `getRecords()`: get a table of DNS Records in this DNS Question (or answer by now)
+* `setPolicyTags(tags)`: update the policy tags, taking a table of strings.
 * `setRecords(records)`: after your edits, update the answers of this question
 * `getEDNSOption(num)`: get the EDNS Option with number `num`
 * `getEDNSOptions()`: get a map of all EDNS Options
@@ -135,16 +146,38 @@ This hook does not get the full DNSQuestion object, since filling out the fields
 would require packet parsing, which is what we are trying to prevent with `ipfilter`.
 
 ### `function gettag(remote, ednssubnet, local, qname, qtype)`
-The `gettag` function is invoked when `dq.tag` is called on a dq object or when
-the Recursor attempts to discover in which packetcache an answer is available.
+The `gettag` function is invoked when the Recursor attempts to discover in which
+packetcache an answer is available.
 This function must return an integer, which is the tag number of the packetcache.
 In addition to this integer, this function can return a table of policy tags.
+
+The resulting tag number can be accessed via `dq.tag` in the `preresolve` hook,
+and the policy tags via `dq:getPolicyTags()` in every hook.
 
 The tagged packetcache can e.g. be used to answer queries from cache that have
 e.g. been filtered for certain IPs (this logic should be implemented in the
 `gettag` function). This ensure that queries are answered quickly compared to
 setting dq.variable to `true`. In the latter case, repeated queries will pass
 through the entire Lua script.
+
+### `function prerpz(dq)`
+
+This hook is called before any filtering policy have been applied, making it
+possible to completely disable filtering by setting `wantsRPZ` to false.
+Using the `discardPolicy()` function, it is also possible to selectively disable
+one or more filtering policy, for example RPZ zones, based on the content of the
+`dq` object.
+
+As an example, to disable the `malware` policy for `example.com` queries:
+
+```
+function prerpz(dq)
+  -- disable the RPZ policy named 'malware' for example.com
+  if dq.qname:equal('example.com') then
+    dq:discardPolicy('malware')
+  end
+end
+```
 
 ### `function preresolve(dq)`
 is called before any DNS resolution is attempted, and if this function
@@ -224,8 +257,8 @@ nmg:addMask("127.0.0.0/8")
 nmg:addMasks({"213.244.168.0/24", "130.161.0.0/16"})
 nmg:addMasks(dofile("bad.ips")) -- contains return {"ip1","ip2"..}
 
-if nmg:match(dq.remote) then
-	print("Intercepting query from ", dq.remote)
+if nmg:match(dq.remoteaddr) then
+	print("Intercepting query from ", dq.remoteaddr)
 end
 ```
 
@@ -241,17 +274,40 @@ To convert an address to human-friendly representation, use `:toString()` or
 `:toStringWithPort()`. To get only the port number, use `:getPort()`.
 
 Other functions that can be called on a ComboAddress are:
+
+ * `isIPv4` - true if the address is an IPv4 address
+ * `isIPv6` - true if the address is an IPv6 address
+ * `getRaw` - returns the bytestring representing the address
+ * `isMappedIPv4` - true if the address is an IPv4 address mapped into an IPv6 one
+ * `mapToIPv4` - if the address is an IPv4 mapped into an IPv6 one, return the corresponding IPv4
+ * `truncate(bits)` - truncate to the supplied number of bits
+
+### Netmask
+IP addresses can be matched against a Netmask object, which can be created with
+`newNetmask("192.0.2.1/24")` and supports the following methods:
+
+ * `empty` - true if the netmask doesn't contain a valid address
+ * `getBits` - the number of bits in the address
+ * `getNetwork` - return a ComboAddress representing the network (no mask applied)
+ * `getMaskedNetwork` - return a ComboAddress representing the network (truncating according to the mask)
  * `isIpv4` - true if the address is an IPv4 address
  * `isIpv6` - true if the address is an IPv6 address
- * `getBits` - the number of bits in the address
+ * `match(str)` - true if the address passed in str matches
+ * `toString` - human-friendly representation
 
 ### DNSName
 DNSNames are passed to various functions, and they sport the following methods:
 
 * `:equal`: use this to compare two DNSNames in DNS native fashion. So 'PoWeRdNs.COM' matches 'powerdns.com'
 * `:isPartOf`: returns true if a is a part of b. So: `newDN("www.powerdns.com"):isPartOf(newDN("CoM."))` returns true
+* `:toString` and `:toStringNoDot`: return a string representation of the name, with or without trailing dot.
+* `:chopOff`: removes the leftmost label from the name, returns true if this succeeded.
+* `:countLabels`: returns the number of labels
+* `:wirelength`: returns the length on the wire
 
-To make your own DNSName, use `newDN("domain.name")`.
+You can compare DNSNames using `:equal` or the `==` operator.
+
+To make your own DNSName, use `newDN("domain.name")`. To copy an existing DNSName (please remember to do this before using `chopOff`), use `newDN(mydn)`.
 
 ### DNS Suffix Match groups
 The `newDS` function creates a "Suffix Match group" that allows fast checking if
@@ -263,6 +319,8 @@ To check e.g. the dq.qname against this list, use `:check(dq.qname)`. This will
 be `true` if dq.qname is part of any of the Suffix Match group domains.
 
 This could e.g. be used to answer questions for known malware domains.
+
+To see the set of suffixes matched by a Suffix Match Group, use `:toString()`.
 
 ### Metrics
 You can custom metrics which will be shown in the output of 'rec_control get-all'
@@ -364,20 +422,80 @@ The following script will add a requestor's IP address to a blocking set if they
 sent a query that caused PowerDNS to attempt to talk to a certain subnet.
 
 This specific script is, as of January 2015, useful to prevent traffic to ezdns.it related
-traffic from creating CPU load. This script requires PowerDNS Recursor 3.7 or later.
+traffic from creating CPU load. This script requires PowerDNS Recursor 4.x or later.
 
 ```
 lethalgroup=newNMG()
 lethalgroup:addMask("192.121.121.0/24") -- touch these nameservers and you die
 
 function preoutquery(dq)
---	print("pdns wants to ask "..remoteip:tostring().." about "..domain.." "..qtype.." on behalf of requestor "..getlocaladdress())
+	print("pdns wants to ask "..dq.remoteaddr:toString().." about "..dq.qname:toString().." "..dq.qtype.." on behalf of requestor "..dq.localaddr:toString())
 	if(lethalgroup:match(dq.remoteaddr))
 	then
---		print("We matched the group "..lethalgroup:tostring().."!", "killing query dead & adding requestor "..getlocaladdress().." to block list")
+		print("We matched the group "..lethalgroup:tostring().."!", "killing query dead & adding requestor "..dq.localaddr:toString().." to block list")
 		dq.rcode = -3 -- "kill"	
 		return true
 	end
 	return false
 end
 ```
+
+## Modifying Policy Decisions
+The PowerDNS Recursor has a [policy engine based on Response Policy Zones (RPZ)](settings.md#response-policy-zone-rpz).
+Starting with version 4.0.1 of the recursor, it is possible to alter this decision inside the Lua hooks.
+If the decision is modified in a Lua hook, `false` should be returned, as the query is not actually handled by Lua so the decision is picked up by the Recursor.
+The result of the policy decision is checked after `preresolve` and `postresolve`.
+
+For example, if a decision is set to `pdns.policykinds.NODATA` by the policy engine and is unchanged in `preresolve`, the query is replied to with a NODATA response immediately after `preresolve`.
+
+### Example script
+```
+-- Dont ever block my own domain and IPs
+myDomain = newDN("example.com")
+
+myNetblock = newNMG()
+myNetblock:addMasks("192.0.2.0/24")
+
+function preresolve(dq)
+  if dq.qname:isPartOf(myDomain) and dq.appliedPolicy.policyKind != pdns.policykinds.NoAction then
+    pdnslog("Not blocking our own domain!")
+    dq.appliedPolicy.policyKind = pdns.policykinds.NoAction
+  end
+end
+
+function postresolve(dq)
+  if dq.appliedPolicy.policyKind != pdns.policykinds.NoAction then
+    local records = dq:getRecords()
+    for k,v in pairs(records) do
+      if v.type == pdns.A then
+        local blockedIP = newCA(v:getContent())
+        if myNetblock:match(blockedIP) then
+          pdnslog("Not blocking our IP space")
+          dq.appliedPolicy.policyKind = pdns.policykinds.NoAction
+        end
+      end
+    end
+  end
+end
+```
+
+The decision is contained in the `dq` object under `dq.appliedPolicy` and features 4 fields:
+
+### `dq.appliedPolicy.policyName`
+A string with the name of the policy (set by `polName=` in the `rpzFile` and `rpzMaster` configuration items).
+It is advised to overwrite this when modifying the `policyKind`
+
+### `dq.appliedPolicy.policyKind`
+The kind of policy response, there are several policy kinds:
+
+ * `pdns.policykinds.Custom` will return a NoError, CNAME answer with the value specified in `dq.appliedPolicy.policyCustom`
+ * `pdns.policykinds.Drop` will simply cause the query to be dropped
+ * `pdns.policykinds.NoAction` will continue normal processing of the query
+ * `pdns.policykinds.NODATA` will return a NoError response with no value in the answer section
+ * `pdns.policykinds.NXDOMAIN` will return a response with a NXDomain rcode
+ * `pdns.policykinds.Truncate` will return a NoError, no answer, truncated response over UDP. Normal processing will continue over TCP
+
+### `dq.appliedPolicy.policyCustom` and `dq.appliedPolicy.policyTTL`
+These fields are only used when `dq.appliedPolicy.policyKind` is set to `pdns.policykinds.Custom`.
+`dq.appliedPolicy.policyCustom` contains the name for the CNAME target as a string.
+And `dq.appliedPolicy.policyTTL` is the TTL field (in seconds) for the CNAME response.

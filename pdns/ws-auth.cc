@@ -277,7 +277,7 @@ void AuthWebServer::indexfunction(HttpRequest* req, HttpResponse* resp)
     if(arg().mustDo("webserver-print-arguments"))
       printargs(ret);
   }
-  else
+  else if(S.ringExists(req->getvars["ring"]))
     printtable(ret,req->getvars["ring"],S.getRingTitle(req->getvars["ring"]),100);
 
   ret<<"</div></div>"<<endl;
@@ -475,7 +475,7 @@ static void gatherRecords(const Json container, const DNSName& qname, const QTyp
       makePtr(rr, &ptr);
 
       // verify that there's a zone for the PTR
-      DNSPacket fakePacket;
+      DNSPacket fakePacket(false);
       SOAData sd;
       fakePacket.qtype = QType::PTR;
       if (!B.getAuth(&fakePacket, &sd, ptr.qname))
@@ -932,7 +932,7 @@ static void makePtr(const DNSResourceRecord& rr, DNSResourceRecord* ptr) {
 
 static void storeChangedPTRs(UeberBackend& B, vector<DNSResourceRecord>& new_ptrs) {
   for(const DNSResourceRecord& rr :  new_ptrs) {
-    DNSPacket fakePacket;
+    DNSPacket fakePacket(false);
     SOAData sd;
     sd.db = (DNSBackend *)-1;  // getAuth() cache bypass
     fakePacket.qtype = QType::PTR;
@@ -1151,6 +1151,9 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp) {
   {
     for(const DNSResourceRecord& rr: result_rr)
     {
+      if (!rr.qtype.getCode())
+        continue; // skip empty non-terminals
+
       auto object = Json::object {
         { "object_type", "record" },
         { "name", rr.qname.toString() },

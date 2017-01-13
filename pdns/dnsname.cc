@@ -1,3 +1,24 @@
+/*
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #include "dnsname.hh"
 #include <boost/format.hpp>
 #include <string>
@@ -90,7 +111,7 @@ void DNSName::packetParser(const char* qpos, int len, int offset, bool uncompres
   const unsigned char* end = pos + len;
   pos += offset;
   while((labellen=*pos++) && pos < end) { // "scan and copy"
-    if(labellen & 0xc0) {
+    if(labellen >= 0xc0) {
       if(!uncompress)
         throw std::range_error("Found compressed label, instructed not to follow");
 
@@ -107,6 +128,8 @@ void DNSName::packetParser(const char* qpos, int len, int offset, bool uncompres
         throw std::range_error("Found a forward reference during label decompression");
       pos++;
       break;
+    } else if(labellen & 0xc0) {
+      throw std::range_error("Found an invalid label length in qname (only one of the first two bits is set)");
     }
     if (pos + labellen < end) {
       appendRawLabel((const char*)pos, labellen);
@@ -120,15 +143,15 @@ void DNSName::packetParser(const char* qpos, int len, int offset, bool uncompres
   if(consumed)
     *consumed = pos - opos - offset;
   if(qtype) {
-    if (pos + labellen + 2 > end) {
-      throw std::range_error("Trying to read qtype past the end of the buffer ("+std::to_string((pos - opos) + labellen + 2)+ " > "+std::to_string(len)+")");
+    if (pos + 2 > end) {
+      throw std::range_error("Trying to read qtype past the end of the buffer ("+std::to_string((pos - opos) + 2)+ " > "+std::to_string(len)+")");
     }
     *qtype=(*(const unsigned char*)pos)*256 + *((const unsigned char*)pos+1);
   }
   pos+=2;
   if(qclass) {
-    if (pos + labellen + 2 > end) {
-      throw std::range_error("Trying to read qclass past the end of the buffer ("+std::to_string((pos - opos) + labellen + 2)+ " > "+std::to_string(len)+")");
+    if (pos + 2 > end) {
+      throw std::range_error("Trying to read qclass past the end of the buffer ("+std::to_string((pos - opos) + 2)+ " > "+std::to_string(len)+")");
     }
     *qclass=(*(const unsigned char*)pos)*256 + *((const unsigned char*)pos+1);
   }

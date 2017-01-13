@@ -312,9 +312,9 @@ am__dnspcap2protobuf_SOURCES_DIST = base32.cc base64.cc base64.hh \
 	dnslabeltext.cc dnsname.cc dnsname.hh dnsparser.cc \
 	dnsparser.hh dnspcap.cc dnspcap.hh dnspcap2protobuf.cc \
 	dnsrecords.cc dnswriter.cc dnswriter.hh gettime.cc gettime.hh \
-	logger.cc misc.cc nsecrecords.cc protobuf.cc protobuf.hh \
-	qtype.cc rcpgenerator.cc rcpgenerator.hh sillyrecords.cc \
-	statbag.cc unix_utility.cc utility.hh
+	iputils.cc logger.cc misc.cc nsecrecords.cc protobuf.cc \
+	protobuf.hh qtype.cc rcpgenerator.cc rcpgenerator.hh \
+	sillyrecords.cc statbag.cc unix_utility.cc utility.hh
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am_dnspcap2protobuf_OBJECTS =  \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	base32.$(OBJEXT) \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	base64.$(OBJEXT) \
@@ -326,6 +326,7 @@ am__dnspcap2protobuf_SOURCES_DIST = base32.cc base64.cc base64.hh \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	dnsrecords.$(OBJEXT) \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	dnswriter.$(OBJEXT) \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	gettime.$(OBJEXT) \
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	iputils.$(OBJEXT) \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	logger.$(OBJEXT) \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	misc.$(OBJEXT) \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	nsecrecords.$(OBJEXT) \
@@ -412,8 +413,8 @@ am__ixplore_SOURCES_DIST = arguments.cc base32.cc base64.cc base64.hh \
 	gss_context.hh logger.cc misc.cc misc.hh nsecrecords.cc \
 	qtype.cc rcpgenerator.cc rcpgenerator.hh resolver.cc ixfr.cc \
 	ixfr.hh ixplore.cc sillyrecords.cc sstuff.hh statbag.cc \
-	unix_utility.cc zoneparser-tng.cc pkcs11signers.cc \
-	pkcs11signers.hh
+	tsigverifier.cc tsigverifier.hh unix_utility.cc \
+	zoneparser-tng.cc pkcs11signers.cc pkcs11signers.hh
 @PKCS11_TRUE@am__objects_1 = pkcs11signers.$(OBJEXT)
 am_ixplore_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) dns.$(OBJEXT) dns_random.$(OBJEXT) \
@@ -423,8 +424,8 @@ am_ixplore_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	nsecrecords.$(OBJEXT) qtype.$(OBJEXT) rcpgenerator.$(OBJEXT) \
 	resolver.$(OBJEXT) ixfr.$(OBJEXT) ixplore.$(OBJEXT) \
 	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
-	unix_utility.$(OBJEXT) zoneparser-tng.$(OBJEXT) \
-	$(am__objects_1)
+	tsigverifier.$(OBJEXT) unix_utility.$(OBJEXT) \
+	zoneparser-tng.$(OBJEXT) $(am__objects_1)
 ixplore_OBJECTS = $(am_ixplore_OBJECTS)
 @PKCS11_TRUE@am__DEPENDENCIES_2 = $(am__DEPENDENCIES_1)
 @GSS_TSIG_TRUE@am__DEPENDENCIES_3 = $(am__DEPENDENCIES_1)
@@ -516,12 +517,12 @@ am__pdns_server_SOURCES_DIST = arguments.cc arguments.hh \
 	secpoll-auth.hh serialtweaker.cc sha.hh signingpipe.cc \
 	signingpipe.hh sillyrecords.cc slavecommunicator.cc statbag.cc \
 	statbag.hh stubresolver.cc stubresolver.hh tcpreceiver.cc \
-	tcpreceiver.hh tkey.cc ueberbackend.cc ueberbackend.hh \
-	unix_semaphore.cc unix_utility.cc utility.hh version.cc \
-	version.hh webserver.cc webserver.hh ws-api.cc ws-api.hh \
-	ws-auth.cc ws-auth.hh zoneparser-tng.cc botan110signers.cc \
-	sodiumsigners.cc ssqlite3.cc ssqlite3.hh pkcs11signers.cc \
-	pkcs11signers.hh
+	tcpreceiver.hh tsigverifier.cc tsigverifier.hh tkey.cc \
+	ueberbackend.cc ueberbackend.hh unix_semaphore.cc \
+	unix_utility.cc utility.hh version.cc version.hh webserver.cc \
+	webserver.hh ws-api.cc ws-api.hh ws-auth.cc ws-auth.hh \
+	zoneparser-tng.cc botan110signers.cc sodiumsigners.cc \
+	ssqlite3.cc ssqlite3.hh pkcs11signers.cc pkcs11signers.hh
 am__dirstamp = $(am__leading_dot)dirstamp
 @BOTAN110_TRUE@am__objects_2 = botan110signers.$(OBJEXT)
 @LIBSODIUM_TRUE@am__objects_3 = sodiumsigners.$(OBJEXT)
@@ -549,11 +550,11 @@ am_pdns_server_OBJECTS = arguments.$(OBJEXT) auth-carbon.$(OBJEXT) \
 	serialtweaker.$(OBJEXT) signingpipe.$(OBJEXT) \
 	sillyrecords.$(OBJEXT) slavecommunicator.$(OBJEXT) \
 	statbag.$(OBJEXT) stubresolver.$(OBJEXT) tcpreceiver.$(OBJEXT) \
-	tkey.$(OBJEXT) ueberbackend.$(OBJEXT) unix_semaphore.$(OBJEXT) \
-	unix_utility.$(OBJEXT) version.$(OBJEXT) webserver.$(OBJEXT) \
-	ws-api.$(OBJEXT) ws-auth.$(OBJEXT) zoneparser-tng.$(OBJEXT) \
-	$(am__objects_2) $(am__objects_3) $(am__objects_4) \
-	$(am__objects_1)
+	tsigverifier.$(OBJEXT) tkey.$(OBJEXT) ueberbackend.$(OBJEXT) \
+	unix_semaphore.$(OBJEXT) unix_utility.$(OBJEXT) \
+	version.$(OBJEXT) webserver.$(OBJEXT) ws-api.$(OBJEXT) \
+	ws-auth.$(OBJEXT) zoneparser-tng.$(OBJEXT) $(am__objects_2) \
+	$(am__objects_3) $(am__objects_4) $(am__objects_1)
 pdns_server_OBJECTS = $(am_pdns_server_OBJECTS)
 @BOTAN110_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
 @LIBSODIUM_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
@@ -732,7 +733,7 @@ am__toysdig_SOURCES_DIST = base32.cc base64.cc base64.hh dns_random.cc \
 	dnswriter.hh ednssubnet.cc ednssubnet.hh filterpo.hh \
 	gss_context.cc gss_context.hh logger.cc misc.cc misc.hh \
 	nsecrecords.cc opensslsigners.cc opensslsigners.hh qtype.cc \
-	randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
+	randomhelper.cc root-dnssec.hh rcpgenerator.cc rcpgenerator.hh \
 	rec-lua-conf.hh recursor_cache.hh sholder.hh sillyrecords.cc \
 	sortlist.hh sstuff.hh statbag.cc toysdig.cc unix_utility.cc \
 	validate.cc validate.hh botan110signers.cc pkcs11signers.cc \
@@ -760,7 +761,8 @@ am__tsig_tests_SOURCES_DIST = arguments.cc base32.cc base64.cc \
 	gss_context.hh logger.cc misc.cc misc.hh nsecrecords.cc \
 	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
 	resolver.cc sillyrecords.cc sstuff.hh statbag.cc tsig-tests.cc \
-	unix_utility.cc pkcs11signers.cc pkcs11signers.hh
+	tsigverifier.cc tsigverifier.hh unix_utility.cc \
+	pkcs11signers.cc pkcs11signers.hh
 am_tsig_tests_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) dns.$(OBJEXT) dns_random.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnsparser.$(OBJEXT) \
@@ -769,7 +771,7 @@ am_tsig_tests_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	nsecrecords.$(OBJEXT) qtype.$(OBJEXT) randomhelper.$(OBJEXT) \
 	rcpgenerator.$(OBJEXT) resolver.$(OBJEXT) \
 	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) tsig-tests.$(OBJEXT) \
-	unix_utility.$(OBJEXT) $(am__objects_1)
+	tsigverifier.$(OBJEXT) unix_utility.$(OBJEXT) $(am__objects_1)
 tsig_tests_OBJECTS = $(am_tsig_tests_OBJECTS)
 tsig_tests_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_2) \
 	$(am__DEPENDENCIES_3)
@@ -1416,11 +1418,12 @@ pdns_server_SOURCES = arguments.cc arguments.hh auth-carbon.cc \
 	secpoll-auth.hh serialtweaker.cc sha.hh signingpipe.cc \
 	signingpipe.hh sillyrecords.cc slavecommunicator.cc statbag.cc \
 	statbag.hh stubresolver.cc stubresolver.hh tcpreceiver.cc \
-	tcpreceiver.hh tkey.cc ueberbackend.cc ueberbackend.hh \
-	unix_semaphore.cc unix_utility.cc utility.hh version.cc \
-	version.hh webserver.cc webserver.hh ws-api.cc ws-api.hh \
-	ws-auth.cc ws-auth.hh zoneparser-tng.cc $(am__append_9) \
-	$(am__append_11) $(am__append_13) $(am__append_16)
+	tcpreceiver.hh tsigverifier.cc tsigverifier.hh tkey.cc \
+	ueberbackend.cc ueberbackend.hh unix_semaphore.cc \
+	unix_utility.cc utility.hh version.cc version.hh webserver.cc \
+	webserver.hh ws-api.cc ws-api.hh ws-auth.cc ws-auth.hh \
+	zoneparser-tng.cc $(am__append_9) $(am__append_11) \
+	$(am__append_13) $(am__append_16)
 pdns_server_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(DYNLINKFLAGS) \
@@ -1642,7 +1645,8 @@ ixplore_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	gss_context.hh logger.cc misc.cc misc.hh nsecrecords.cc \
 	qtype.cc rcpgenerator.cc rcpgenerator.hh resolver.cc ixfr.cc \
 	ixfr.hh ixplore.cc sillyrecords.cc sstuff.hh statbag.cc \
-	unix_utility.cc zoneparser-tng.cc $(am__append_34)
+	tsigverifier.cc tsigverifier.hh unix_utility.cc \
+	zoneparser-tng.cc $(am__append_34)
 ixplore_LDADD = $(LIBCRYPTO_LIBS) $(am__append_35) $(am__append_36)
 ixplore_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 dnstcpbench_SOURCES = \
@@ -1688,7 +1692,7 @@ toysdig_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	dnswriter.hh ednssubnet.cc ednssubnet.hh filterpo.hh \
 	gss_context.cc gss_context.hh logger.cc misc.cc misc.hh \
 	nsecrecords.cc opensslsigners.cc opensslsigners.hh qtype.cc \
-	randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
+	randomhelper.cc root-dnssec.hh rcpgenerator.cc rcpgenerator.hh \
 	rec-lua-conf.hh recursor_cache.hh sholder.hh sillyrecords.cc \
 	sortlist.hh sstuff.hh statbag.cc toysdig.cc unix_utility.cc \
 	validate.cc validate.hh $(am__append_41) $(am__append_43)
@@ -1704,7 +1708,8 @@ tsig_tests_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	gss_context.hh logger.cc misc.cc misc.hh nsecrecords.cc \
 	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
 	resolver.cc sillyrecords.cc sstuff.hh statbag.cc tsig-tests.cc \
-	unix_utility.cc $(am__append_45)
+	tsigverifier.cc tsigverifier.hh unix_utility.cc \
+	$(am__append_45)
 tsig_tests_LDADD = $(LIBCRYPTO_LIBS) $(am__append_46) $(am__append_47)
 tsig_tests_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 speedtest_SOURCES = \
@@ -2012,6 +2017,7 @@ dnsdemog_LDADD = \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	dnsrecords.cc \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	dnswriter.cc dnswriter.hh \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	gettime.cc gettime.hh \
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	iputils.cc \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	logger.cc \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	misc.cc \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	nsecrecords.cc \
@@ -2475,6 +2481,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tkey.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/toysdig.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsig-tests.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/tsigverifier.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ueberbackend.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unix_semaphore.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/unix_utility.Po@am__quote@

@@ -6,9 +6,6 @@
 /* Define to 1 if you want to enable GSS-TSIG support */
 #undef ENABLE_GSS_TSIG
 
-/* Skip gcc locking */
-#undef GCC_SKIP_LOCKING
-
 /* Defined if the requested minimum BOOST version is satisfied */
 #undef HAVE_BOOST
 
@@ -62,7 +59,7 @@
 /* Define to 1 if you have ldap_sasl_bind */
 #undef HAVE_LDAP_SASL_BIND
 
-/* define to 1 if OpenSSL ecdsa support is avalable. */
+/* define to 1 if OpenSSL ecdsa support is available. */
 #undef HAVE_LIBCRYPTO_ECDSA
 
 /* Have -lldap */

@@ -1,25 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2005 - 2011 PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
-    published by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
-
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifndef DNSPARSER_HH
 #define DNSPARSER_HH
 
@@ -338,15 +337,15 @@ class MOADNSParser : public boost::noncopyable
 {
 public:
   //! Parse from a string
-  MOADNSParser(const string& buffer)  : d_tsigPos(0)
+  MOADNSParser(bool query, const string& buffer)  : d_tsigPos(0)
   {
-    init(buffer.c_str(), (unsigned int)buffer.size());
+    init(query, buffer.c_str(), (unsigned int)buffer.size());
   }
 
   //! Parse from a pointer and length
-  MOADNSParser(const char *packet, unsigned int len) : d_tsigPos(0)
+  MOADNSParser(bool query, const char *packet, unsigned int len) : d_tsigPos(0)
   {
-    init(packet, len);
+    init(query, packet, len);
   }
 
   DNSName d_qname;
@@ -366,13 +365,13 @@ public:
     return pr;
   }
 
-  uint16_t getTSIGPos()
+  uint16_t getTSIGPos() const
   {
     return d_tsigPos;
   }
 private:
   void getDnsrecordheader(struct dnsrecordheader &ah);
-  void init(const char *packet, unsigned int len);
+  void init(bool query, const char *packet, unsigned int len);
   vector<uint8_t> d_content;
   uint16_t d_tsigPos;
 };

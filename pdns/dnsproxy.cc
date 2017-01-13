@@ -1,24 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2004 - 2008 PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
-    published by the Free Software Foundation; 
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -31,7 +31,7 @@
 #include "dns.hh"
 #include "logger.hh"
 #include "statbag.hh"
-
+#include "dns_random.hh"
 
 extern StatBag S;
 extern PacketCache PC;
@@ -55,7 +55,7 @@ DNSProxy::DNSProxy(const string &remote)
     
   int n=0;
   for(;n<10;n++) {
-    local.sin4.sin_port = htons(10000+( Utility::random()%50000));
+    local.sin4.sin_port = htons(10000+dns_random(50000));
     
     if(::bind(d_sock, (struct sockaddr *)&local, local.getSocklen()) >= 0) 
       break;
@@ -69,7 +69,7 @@ DNSProxy::DNSProxy(const string &remote)
   if(connect(d_sock, (sockaddr *)&remaddr, remaddr.getSocklen())<0) 
     throw PDNSException("Unable to UDP connect to remote nameserver "+remaddr.toStringWithPort()+": "+stringerror());
 
-  d_xor=Utility::random()&0xffff;
+  d_xor=dns_random(0xffff);
   L<<Logger::Error<<"DNS Proxy launched, local port "<<ntohs(local.sin4.sin_port)<<", remote "<<remaddr.toStringWithPort()<<endl;
 } 
 
@@ -228,7 +228,7 @@ void DNSProxy::mainloop(void)
         d.id=i->second.id;
         memcpy(buffer,&d,sizeof(d));  // commit spoofed id
 
-        DNSPacket p,q;
+        DNSPacket p(false),q(false);
         p.parse(buffer,(size_t)len);
         q.parse(buffer,(size_t)len);
 
@@ -243,7 +243,7 @@ void DNSProxy::mainloop(void)
 	string reply; // needs to be alive at time of sendmsg!
 	if(i->second.complete) {
 
-	  MOADNSParser mdp(p.getString());
+	  MOADNSParser mdp(false, p.getString());
 	  //	  cerr<<"Got completion, "<<mdp.d_answers.size()<<" answers, rcode: "<<mdp.d_header.rcode<<endl;
 	  for(MOADNSParser::answers_t::const_iterator j=mdp.d_answers.begin(); j!=mdp.d_answers.end(); ++j) {        
 	    //	    cerr<<"comp: "<<(int)j->first.d_place-1<<" "<<j->first.d_label<<" " << DNSRecordContent::NumberToType(j->first.d_type)<<" "<<j->first.d_content->getZoneRepresentation()<<endl;
