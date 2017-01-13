@@ -1,3 +1,12 @@
+pdns (4.0.2-1) UNRELEASED; urgency=medium
+
+  * New upstream version, fixing security issues: CVE-2016-7068 CVE-2016-7072
+    CVE-2016-7073 CVE-2016-7074 CVE-2016-2120.
+  * Also includes previous patches applied in Debian, esp. the libssl
+    1.1 fixes.
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Fri, 13 Jan 2017 14:03:51 +0000
+
 pdns (4.0.1-7) unstable; urgency=medium
 
   * Drop RestrictAddressFamilies from .service file on 32bit.
