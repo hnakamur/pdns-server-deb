@@ -1,3 +1,11 @@
+pdns (4.0.3-1) unstable; urgency=medium
+
+  * New upstream version 4.0.3, fixing bug when running bindbackend
+    mixed with other backends.
+  * Fix mysql-5.6 schema incompatibility (Closes: #851586)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Thu, 19 Jan 2017 23:05:09 +0000
+
 pdns (4.0.2-1) unstable; urgency=medium
 
   * New upstream version, fixing security issues: CVE-2016-7068 CVE-2016-7072
