@@ -43,10 +43,11 @@ PacketCache PC; //!< This is the main PacketCache, shared across all threads
 DNSProxy *DP;
 DynListener *dl;
 CommunicatorClass Communicator;
-UDPNameserver *N;
+shared_ptr<UDPNameserver> N;
 int avg_latency;
 TCPNameserver *TN;
-vector<DNSDistributor*> g_distributors;
+static vector<DNSDistributor*> g_distributors;
+vector<std::shared_ptr<UDPNameserver> > g_udpReceivers;
 AuthLua *LPE;
 
 ArgvMap &arg()
@@ -139,7 +140,7 @@ void declareArguments()
   ::arg().setSwitch("query-logging","Hint backends that queries should be logged")="no";
 
   ::arg().set("carbon-ourname", "If set, overrides our reported hostname for carbon stats")="";
-  ::arg().set("carbon-server", "If set, send metrics in carbon (graphite) format to this server")="";
+  ::arg().set("carbon-server", "If set, send metrics in carbon (graphite) format to this server IP address")="";
   ::arg().set("carbon-interval", "Number of seconds between carbon (graphite) updates")="30";
 
   ::arg().set("cache-ttl","Seconds to store packets in the PacketCache")="20";
@@ -187,7 +188,9 @@ void declareArguments()
 
   ::arg().setSwitch("outgoing-axfr-expand-alias", "Expand ALIAS records during outgoing AXFR")="no";
   ::arg().setSwitch("8bit-dns", "Allow 8bit dns queries")="no";
+  ::arg().setSwitch("axfr-lower-serial", "Also AXFR a zone from a master with a lower serial")="no";
 
+  ::arg().set("lua-axfr-script", "Script to be used to edit incoming AXFRs")="";
   ::arg().set("xfr-max-received-mbytes", "Maximum number of megabytes received from an incoming XFR")="100";
 }
 
@@ -357,18 +360,17 @@ void *qthread(void *number)
   int diff;
   bool logDNSQueries = ::arg().mustDo("log-dns-queries");
   bool doRecursion = ::arg().mustDo("recursor");
-  UDPNameserver *NS = N;
+  shared_ptr<UDPNameserver> NS;
 
   // If we have SO_REUSEPORT then create a new port for all receiver threads
   // other than the first one.
-  if( number != NULL && NS->canReusePort() ) {
-    L<<Logger::Notice<<"Starting new listen thread on the same IPs/ports using SO_REUSEPORT"<<endl;
-    try {
-      NS = new UDPNameserver( true );
-    } catch(PDNSException &e) {
-      L<<Logger::Error<<"Unable to reuse port, falling back to original bind"<<endl;
+  if( number != NULL && N->canReusePort() ) {
+    NS = g_udpReceivers[num];
+    if (NS == nullptr) {
       NS = N;
     }
+  } else {
+    NS = N;
   }
 
   for(;;) {

@@ -161,10 +161,10 @@ bool rectifyZone(DNSSECKeeper& dk, const DNSName& zone)
   DNSResourceRecord rr;
   set<DNSName> qnames, nsset, dsnames, insnonterm, delnonterm;
   map<DNSName,bool> nonterm;
-  bool doent=true;
   vector<DNSResourceRecord> rrs;
 
   while(sd.db->get(rr)) {
+    rr.qname.makeUsLowerCase();
     if (rr.qtype.getCode())
     {
       rrs.push_back(rr);
@@ -175,8 +175,7 @@ bool rectifyZone(DNSSECKeeper& dk, const DNSName& zone)
         dsnames.insert(rr.qname);
     }
     else
-      if(doent)
-        delnonterm.insert(rr.qname);
+      delnonterm.insert(rr.qname);
   }
 
   NSEC3PARAMRecordContent ns3pr;
@@ -227,6 +226,7 @@ bool rectifyZone(DNSSECKeeper& dk, const DNSName& zone)
     sd.db->startTransaction(zone, -1);
 
   bool realrr=true;
+  bool doent=true;
   uint32_t maxent = ::arg().asNum("max-ent-entries");
 
   dononterm:;
@@ -1437,7 +1437,7 @@ void verifyCrypto(const string& zone)
     cerr<<"Original DS:   "<<apex.toString()<<" IN DS "<<dsrc.getZoneRepresentation()<<endl;
   }
 #if 0
-  DNSCryptoKeyEngine*key=DNSCryptoKeyEngine::makeFromISCString(drc, "Private-key-format: v1.2\n"
+  std::shared_ptr<DNSCryptoKeyEngine> key=DNSCryptoKeyEngine::makeFromISCString(drc, "Private-key-format: v1.2\n"
       "Algorithm: 12 (ECC-GOST)\n"
       "GostAsn1: MEUCAQAwHAYGKoUDAgITMBIGByqFAwICIwEGByqFAwICHgEEIgQg/9MiXtXKg9FDXDN/R9CmVhJDyuzRAIgh4tPwCu4NHIs=\n");
   string resign=key->sign(hash);
@@ -1581,7 +1581,7 @@ bool showZone(DNSSECKeeper& dk, const DNSName& zone)
     B.lookup(QType(QType::DNSKEY), zone);
     while(B.get(rr)) {
       if (rr.qtype != QType::DNSKEY) continue;
-      keys.push_back(*dynamic_cast<DNSKEYRecordContent*>(DNSKEYRecordContent::make(rr.getZoneRepresentation())));
+      keys.push_back(DNSKEYRecordContent(rr.getZoneRepresentation()));
     }
 
     if(keys.empty()) {
@@ -1602,7 +1602,7 @@ bool showZone(DNSSECKeeper& dk, const DNSName& zone)
 
       int bits = -1;
       try {
-        std::unique_ptr<DNSCryptoKeyEngine> engine(DNSCryptoKeyEngine::makeFromPublicKeyString(key.d_algorithm, key.d_key)); // throws on unknown algo or bad key
+        std::shared_ptr<DNSCryptoKeyEngine> engine(DNSCryptoKeyEngine::makeFromPublicKeyString(key.d_algorithm, key.d_key)); // throws on unknown algo or bad key
         bits=engine->getBits();
       }
       catch(std::exception& e) {
@@ -1903,14 +1903,17 @@ try
     cout<<"Usage: \npdnsutil [options] <command> [params ..]\n"<<endl;
     cout<<"Commands:"<<endl;
     cout<<"activate-tsig-key ZONE NAME {master|slave}"<<endl;
-    cout<<"                                   Enable TSIG key for a zone"<<endl;
+    cout<<"                                   Enable TSIG authenticated AXFR using the key NAME for ZONE"<<endl;
     cout<<"activate-zone-key ZONE KEY-ID      Activate the key with key id KEY-ID in ZONE"<<endl;
     cout<<"add-record ZONE NAME TYPE [ttl] content"<<endl;
     cout<<"             [content..]           Add one or more records to ZONE"<<endl;
     cout<<"add-zone-key ZONE {zsk|ksk} [BITS] [active|inactive]"<<endl;
     cout<<"             [rsasha1|rsasha256|rsasha512|gost|ecdsa256|ecdsa384";
-#ifdef HAVE_LIBSODIUM
-    cout<<"|experimental-ed25519";
+#if defined(HAVE_LIBSODIUM) || defined(HAVE_LIBDECAF)
+    cout<<"|ed25519";
+#endif
+#ifdef HAVE_LIBDECAF
+    cout<<"|ed448";
 #endif
     cout<<"]"<<endl;
     cout<<"                                   Add a ZSK or KSK to zone and specify algo&bits"<<endl;
@@ -1926,7 +1929,7 @@ try
     cout<<"                                   Create slave zone ZONE with master IP address master-ip"<<endl;
     cout<<"create-zone ZONE [nsname]          Create empty zone ZONE"<<endl;
     cout<<"deactivate-tsig-key ZONE NAME {master|slave}"<<endl;
-    cout<<"                                   Disable TSIG key for a zone"<<endl;
+    cout<<"                                   Disable TSIG authenticated AXFR using the key NAME for ZONE"<<endl;
     cout<<"deactivate-zone-key ZONE KEY-ID    Deactivate the key with key id KEY-ID in ZONE"<<endl;
     cout<<"delete-rrset ZONE NAME TYPE        Delete named RRSET from zone"<<endl;
     cout<<"delete-tsig-key NAME               Delete TSIG key (warning! will not unmap key!)"<<endl;
@@ -2698,10 +2701,12 @@ loadMainConfig(g_vm["config-dir"].as<string>());
       if(algorithm <= 10)
         bits = keyOrZone ? 2048 : 1024;
       else {
-        if(algorithm == 12 || algorithm == 13 || algorithm == 250) // ECDSA, GOST, ED25519
+        if(algorithm == 12 || algorithm == 13 || algorithm == 15) // ECDSA, GOST, ED25519
           bits = 256;
         else if(algorithm == 14)
           bits = 384;
+        else if(algorithm == 16) // ED448
+          bits = 456;
         else {
           throw runtime_error("Can't guess key size for algorithm "+std::to_string(algorithm));
         }
@@ -3030,7 +3035,7 @@ loadMainConfig(g_vm["config-dir"].as<string>());
         return 1;
       } 
 
-      DNSCryptoKeyEngine *dke = NULL;
+      std::shared_ptr<DNSCryptoKeyEngine> dke = nullptr;
       // lookup correct key      
       for(DNSBackend::KeyData &kd :  keys) {
         if (kd.id == id) {

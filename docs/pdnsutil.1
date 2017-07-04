@@ -201,12 +201,16 @@ hmac\-sha384
 hmac\-sha512
 .TP
 .B activate\-tsig\-key \f[I]ZONE\f[] \f[I]NAME\f[] {\f[B]master\f[],\f[B]slave\f[]}
-Enable TSIG key \f[I]NAME\f[] for zone \f[I]ZONE\f[].
+Enable TSIG authenticated AXFR using the key \f[I]NAME\f[] for zone
+\f[I]ZONE\f[].
+This sets the \f[C]TSIG\-ALLOW\-AXFR\f[] (master) or
+\f[C]AXFR\-MASTER\-TSIG\f[] (slave) zone metadata.
 .RS
 .RE
 .TP
 .B deactivate\-tsig\-key \f[I]ZONE\f[] \f[I]NAME\f[] {\f[B]master\f[],\f[B]slave\f[]}
-Disable TSIG key \f[I]NAME\f[] for zone \f[I]ZONE\f[].
+Disable TSIG authenticated AXFR using the key \f[I]NAME\f[] for zone
+\f[I]ZONE\f[].
 .RS
 .RE
 .TP

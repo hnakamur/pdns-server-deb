@@ -96,6 +96,13 @@ Static pre-shared authentication key for access to the REST API.
 
 Disallow data modification through the REST API when set.
 
+## `axfr-lower-serial`
+* Boolean
+* Default: no
+* Available since: 4.0.4
+
+Also AXFR a zone from a master with a lower serial.
+
 ## `cache-ttl`
 * Integer
 * Default: 20
@@ -117,7 +124,8 @@ If sending carbon updates, if set, this will override our hostname. Be careful n
 * Available since: 3.3.1
 
 Send all available metrics to this server via the carbon protocol, which is used
-by graphite and metronome. You may specify an alternate port by appending :port, 
+by graphite and metronome. It has to be an address (no hostnames). 
+You may specify an alternate port by appending :port, 
 ex: 127.0.0.1:2004. See 
 ["PowerDNS Metrics"](../common/logging.md#sending-to-carbongraphitemetronome).
 
@@ -397,6 +405,14 @@ options to allow binding to non-local addresses.
 This feature is intended to facilitate ip-failover setups, but it may also
 mask configuration issues and for this reason it is disabled by default.
 
+## `lua-axfr-script`
+
+* String
+* Default: empty
+* Available since: 4.0.4
+
+Script to be used to edit incoming AXFRs, see [Modifying a slave zone using a script](modes-of-operation.md#modifying-a-slave-zone-using-a-script).
+
 ## `local-address-nonexist-fail`
 * Boolean
 * Default: no
@@ -565,9 +581,18 @@ This is the server ID that will be returned on an EDNS NSID query.
 * IP Ranges, separated by commas or whitespace
 * Default: 0.0.0.0/0, ::/0
 
-Only send AXFR NOTIFY to these IP addresses or netmasks. The default is to
-notify the world. The IP addresses or netmasks in [`also-notify`](#also-notify)
-or ALSO-NOTIFY metadata always receive AXFR NOTIFY.
+For type=MASTER zones (or SLAVE zones with slave-renotify enabled) PowerDNS
+automatically sends NOTIFYs to the name servers specified in the NS records.
+By specifying networks/mask as whitelist, the targets can be limited. The default
+is to notify the world. To completely disable these NOTIFYs set only-notify to an
+empty value. Independent of this setting, the IP addresses or netmasks in
+[`also-notify`](#also-notify) or ALSO-NOTIFY metadata always receive AXFR NOTIFY.
+
+Note: Even if NOTIFYs are limited by a netmask, PowerDNS first has to resolve all the
+hostnames to get IP addresses. Thus, PowerDNS relies on DNS. If the respective
+authoritative name servers are slow, PowerDNS becomes slow too. To avoid this, set
+only-notify to an empty value and specify the notification targets with ALSO-NOTIFY
+and also-notify.
 
 ## `out-of-zone-additional-processing`
 * Boolean

@@ -122,52 +122,60 @@ EXTRA_PROGRAMS = calidns$(EXEEXT) comfun$(EXEEXT) dnsbulktest$(EXEEXT) \
 @BOTAN110_TRUE@am__append_10 = $(BOTAN110_LIBS)
 @LIBSODIUM_TRUE@am__append_11 = sodiumsigners.cc
 @LIBSODIUM_TRUE@am__append_12 = $(LIBSODIUM_LIBS)
-@SQLITE3_TRUE@am__append_13 = ssqlite3.cc ssqlite3.hh
-@SQLITE3_TRUE@am__append_14 = $(SQLITE3_LIBS)
-@ORACLE_TRUE@am__append_15 = $(ORACLE_LIBS)
-@PKCS11_TRUE@am__append_16 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_17 = $(P11KIT1_LIBS)
-@LUA_TRUE@am__append_18 = $(LUA_LIBS)
-@GSS_TSIG_TRUE@am__append_19 = $(GSS_LIBS)
-@BOTAN110_TRUE@am__append_20 = botan110signers.cc
-@BOTAN110_TRUE@am__append_21 = $(BOTAN110_LIBS)
-@LIBSODIUM_TRUE@am__append_22 = sodiumsigners.cc
-@LIBSODIUM_TRUE@am__append_23 = $(LIBSODIUM_LIBS)
-@SQLITE3_TRUE@am__append_24 = ssqlite3.cc ssqlite3.hh
-@SQLITE3_TRUE@am__append_25 = $(SQLITE3_LIBS)
-@ORACLE_TRUE@am__append_26 = $(ORACLE_LIBS)
-@PKCS11_TRUE@am__append_27 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_28 = $(P11KIT1_LIBS)
-@GSS_TSIG_TRUE@am__append_29 = $(GSS_LIBS)
+@LIBDECAF_TRUE@am__append_13 = decafsigners.cc
+@LIBDECAF_TRUE@am__append_14 = $(LIBDECAF_LIBS)
+@SQLITE3_TRUE@am__append_15 = ssqlite3.cc ssqlite3.hh
+@SQLITE3_TRUE@am__append_16 = $(SQLITE3_LIBS)
+@ORACLE_TRUE@am__append_17 = $(ORACLE_LIBS)
+@PKCS11_TRUE@am__append_18 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_19 = $(P11KIT1_LIBS)
+@LUA_TRUE@am__append_20 = $(LUA_LIBS)
+@GSS_TSIG_TRUE@am__append_21 = $(GSS_LIBS)
+@BOTAN110_TRUE@am__append_22 = botan110signers.cc
+@BOTAN110_TRUE@am__append_23 = $(BOTAN110_LIBS)
+@LIBSODIUM_TRUE@am__append_24 = sodiumsigners.cc
+@LIBSODIUM_TRUE@am__append_25 = $(LIBSODIUM_LIBS)
+@LIBDECAF_TRUE@am__append_26 = decafsigners.cc
+@LIBDECAF_TRUE@am__append_27 = $(LIBDECAF_LIBS)
+@SQLITE3_TRUE@am__append_28 = ssqlite3.cc ssqlite3.hh
+@SQLITE3_TRUE@am__append_29 = $(SQLITE3_LIBS)
+@ORACLE_TRUE@am__append_30 = $(ORACLE_LIBS)
+@PKCS11_TRUE@am__append_31 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_32 = $(P11KIT1_LIBS)
+@GSS_TSIG_TRUE@am__append_33 = $(GSS_LIBS)
 
 # pkglib_LTLIBRARIES = iputils.la
 # iputils_la_SOURCES = lua-iputils.cc
 # iputils_la_LDFLAGS= -module -avoid-version
-@LDAP_TRUE@am__append_30 = zone2ldap
-@PKCS11_TRUE@am__append_31 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_32 = $(P11KIT1_LIBS)
-@GSS_TSIG_TRUE@am__append_33 = $(GSS_LIBS)
-@PKCS11_TRUE@am__append_34 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_35 = $(P11KIT1_LIBS)
-@GSS_TSIG_TRUE@am__append_36 = $(GSS_LIBS)
-@PKCS11_TRUE@am__append_37 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_38 = $(P11KIT1_LIBS)
-@GSS_TSIG_TRUE@am__append_39 = $(GSS_LIBS)
+@LDAP_TRUE@am__append_34 = zone2ldap
+@PKCS11_TRUE@am__append_35 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_36 = $(P11KIT1_LIBS)
+@GSS_TSIG_TRUE@am__append_37 = $(GSS_LIBS)
+@PKCS11_TRUE@am__append_38 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_39 = $(P11KIT1_LIBS)
 @GSS_TSIG_TRUE@am__append_40 = $(GSS_LIBS)
-@BOTAN110_TRUE@am__append_41 = botan110signers.cc
-@BOTAN110_TRUE@am__append_42 = $(BOTAN110_LIBS)
-@PKCS11_TRUE@am__append_43 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_44 = $(P11KIT1_LIBS)
-@PKCS11_TRUE@am__append_45 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_46 = $(P11KIT1_LIBS)
-@GSS_TSIG_TRUE@am__append_47 = $(GSS_LIBS)
-@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_48 = dnspcap2protobuf
-@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_49 = dnsmessage.pb.cc
-@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_50 = \
+@PKCS11_TRUE@am__append_41 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_42 = $(P11KIT1_LIBS)
+@GSS_TSIG_TRUE@am__append_43 = $(GSS_LIBS)
+@GSS_TSIG_TRUE@am__append_44 = $(GSS_LIBS)
+@BOTAN110_TRUE@am__append_45 = botan110signers.cc
+@BOTAN110_TRUE@am__append_46 = $(BOTAN110_LIBS)
+@PKCS11_TRUE@am__append_47 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_48 = $(P11KIT1_LIBS)
+@PKCS11_TRUE@am__append_49 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_50 = $(P11KIT1_LIBS)
+@GSS_TSIG_TRUE@am__append_51 = $(GSS_LIBS)
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_52 = dnspcap2protobuf
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_53 = dnsmessage.pb.cc
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_54 = \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(PROTOBUF_LIBS)
 
-@PKCS11_TRUE@am__append_51 = pkcs11signers.cc pkcs11signers.hh
-@PKCS11_TRUE@am__append_52 = $(P11KIT1_LIBS)
+@PKCS11_TRUE@am__append_55 = pkcs11signers.cc pkcs11signers.hh
+@PKCS11_TRUE@am__append_56 = $(P11KIT1_LIBS)
+@LIBSODIUM_TRUE@am__append_57 = sodiumsigners.cc
+@LIBSODIUM_TRUE@am__append_58 = $(LIBSODIUM_LIBS)
+@LIBDECAF_TRUE@am__append_59 = decafsigners.cc
+@LIBDECAF_TRUE@am__append_60 = $(LIBDECAF_LIBS)
 @HAVE_BOOST_GE_148_TRUE@@UNIT_TESTS_TRUE@TESTS = testrunner$(EXEEXT)
 subdir = pdns
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -177,6 +185,7 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/ax_arg_default_enable_disable.m4 \
+	$(top_srcdir)/m4/ax_check_link_flag.m4 \
 	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
@@ -189,6 +198,7 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/pdns_check_ldap.m4 \
 	$(top_srcdir)/m4/pdns_check_libcrypto.m4 \
 	$(top_srcdir)/m4/pdns_check_libcrypto_ecdsa.m4 \
+	$(top_srcdir)/m4/pdns_check_libdecaf.m4 \
 	$(top_srcdir)/m4/pdns_check_libsodium.m4 \
 	$(top_srcdir)/m4/pdns_check_lua_hpp.m4 \
 	$(top_srcdir)/m4/pdns_check_network_libs.m4 \
@@ -522,11 +532,13 @@ am__pdns_server_SOURCES_DIST = arguments.cc arguments.hh \
 	unix_utility.cc utility.hh version.cc version.hh webserver.cc \
 	webserver.hh ws-api.cc ws-api.hh ws-auth.cc ws-auth.hh \
 	zoneparser-tng.cc botan110signers.cc sodiumsigners.cc \
-	ssqlite3.cc ssqlite3.hh pkcs11signers.cc pkcs11signers.hh
+	decafsigners.cc ssqlite3.cc ssqlite3.hh pkcs11signers.cc \
+	pkcs11signers.hh
 am__dirstamp = $(am__leading_dot)dirstamp
 @BOTAN110_TRUE@am__objects_2 = botan110signers.$(OBJEXT)
 @LIBSODIUM_TRUE@am__objects_3 = sodiumsigners.$(OBJEXT)
-@SQLITE3_TRUE@am__objects_4 = ssqlite3.$(OBJEXT)
+@LIBDECAF_TRUE@am__objects_4 = decafsigners.$(OBJEXT)
+@SQLITE3_TRUE@am__objects_5 = ssqlite3.$(OBJEXT)
 am_pdns_server_OBJECTS = arguments.$(OBJEXT) auth-carbon.$(OBJEXT) \
 	backends/gsql/gsqlbackend.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
@@ -554,19 +566,21 @@ am_pdns_server_OBJECTS = arguments.$(OBJEXT) auth-carbon.$(OBJEXT) \
 	unix_semaphore.$(OBJEXT) unix_utility.$(OBJEXT) \
 	version.$(OBJEXT) webserver.$(OBJEXT) ws-api.$(OBJEXT) \
 	ws-auth.$(OBJEXT) zoneparser-tng.$(OBJEXT) $(am__objects_2) \
-	$(am__objects_3) $(am__objects_4) $(am__objects_1)
+	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
+	$(am__objects_1)
 pdns_server_OBJECTS = $(am_pdns_server_OBJECTS)
 @BOTAN110_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
 @LIBSODIUM_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
-@SQLITE3_TRUE@am__DEPENDENCIES_6 = $(am__DEPENDENCIES_1)
-@ORACLE_TRUE@am__DEPENDENCIES_7 = $(am__DEPENDENCIES_1)
-@LUA_TRUE@am__DEPENDENCIES_8 = $(am__DEPENDENCIES_1)
+@LIBDECAF_TRUE@am__DEPENDENCIES_6 = $(am__DEPENDENCIES_1)
+@SQLITE3_TRUE@am__DEPENDENCIES_7 = $(am__DEPENDENCIES_1)
+@ORACLE_TRUE@am__DEPENDENCIES_8 = $(am__DEPENDENCIES_1)
+@LUA_TRUE@am__DEPENDENCIES_9 = $(am__DEPENDENCIES_1)
 pdns_server_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(JSON11_LIBS) $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_4) $(am__DEPENDENCIES_5) \
 	$(am__DEPENDENCIES_6) $(am__DEPENDENCIES_7) \
-	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_8) \
-	$(am__DEPENDENCIES_3)
+	$(am__DEPENDENCIES_8) $(am__DEPENDENCIES_2) \
+	$(am__DEPENDENCIES_9) $(am__DEPENDENCIES_3)
 pdns_server_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(pdns_server_LDFLAGS) $(LDFLAGS) -o $@
@@ -583,8 +597,8 @@ am__pdnsutil_SOURCES_DIST = arguments.cc backends/gsql/gsqlbackend.cc \
 	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
 	serialtweaker.cc signingpipe.cc sillyrecords.cc sstuff.hh \
 	statbag.cc ueberbackend.cc unix_utility.cc zoneparser-tng.cc \
-	botan110signers.cc sodiumsigners.cc ssqlite3.cc ssqlite3.hh \
-	pkcs11signers.cc pkcs11signers.hh
+	botan110signers.cc sodiumsigners.cc decafsigners.cc \
+	ssqlite3.cc ssqlite3.hh pkcs11signers.cc pkcs11signers.hh
 am_pdnsutil_OBJECTS = arguments.$(OBJEXT) \
 	backends/gsql/gsqlbackend.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
@@ -601,14 +615,14 @@ am_pdnsutil_OBJECTS = arguments.$(OBJEXT) \
 	signingpipe.$(OBJEXT) sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
 	ueberbackend.$(OBJEXT) unix_utility.$(OBJEXT) \
 	zoneparser-tng.$(OBJEXT) $(am__objects_2) $(am__objects_3) \
-	$(am__objects_4) $(am__objects_1)
+	$(am__objects_4) $(am__objects_5) $(am__objects_1)
 pdnsutil_OBJECTS = $(am_pdnsutil_OBJECTS)
 pdnsutil_DEPENDENCIES = $(am__DEPENDENCIES_1) $(JSON11_LIBS) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_4) \
 	$(am__DEPENDENCIES_5) $(am__DEPENDENCIES_6) \
-	$(am__DEPENDENCIES_7) $(am__DEPENDENCIES_2) \
-	$(am__DEPENDENCIES_3)
+	$(am__DEPENDENCIES_7) $(am__DEPENDENCIES_8) \
+	$(am__DEPENDENCIES_2) $(am__DEPENDENCIES_3)
 pdnsutil_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(pdnsutil_LDFLAGS) $(LDFLAGS) -o $@
@@ -670,13 +684,14 @@ stubquery_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(stubquery_LDFLAGS) $(LDFLAGS) -o $@
 am__testrunner_SOURCES_DIST = arguments.cc base32.cc base64.cc \
-	bindlexer.l bindparser.yy dns.cc dns_random.cc dnsbackend.cc \
-	dnslabeltext.cc dnsname.cc dnsname.hh dnspacket.cc \
-	dnsparser.hh dnsparser.cc dnsrecords.cc dnssecinfra.cc \
-	dnswriter.cc ednsoptions.cc ednsoptions.hh ednssubnet.cc \
-	gettime.cc gettime.hh gss_context.cc gss_context.hh iputils.cc \
-	logger.cc misc.cc nameserver.cc nsecrecords.cc packetcache.cc \
-	qtype.cc rcpgenerator.cc recpacketcache.cc recpacketcache.hh \
+	bindlexer.l bindparser.yy dbdnsseckeeper.cc dns.cc \
+	dns_random.cc dnsbackend.cc dnslabeltext.cc dnsname.cc \
+	dnsname.hh dnspacket.cc dnsparser.hh dnsparser.cc \
+	dnsrecords.cc dnssecinfra.cc dnssecsigner.cc dnswriter.cc \
+	ednsoptions.cc ednsoptions.hh ednssubnet.cc gettime.cc \
+	gettime.hh gss_context.cc gss_context.hh iputils.cc logger.cc \
+	misc.cc nameserver.cc nsecrecords.cc packetcache.cc qtype.cc \
+	rcpgenerator.cc recpacketcache.cc recpacketcache.hh \
 	rec-protobuf.hh responsestats.cc responsestats-auth.cc \
 	sillyrecords.cc statbag.cc test-arguments_cc.cc \
 	test-base32_cc.cc test-base64_cc.cc test-bindparser_cc.cc \
@@ -685,15 +700,17 @@ am__testrunner_SOURCES_DIST = arguments.cc base32.cc base64.cc \
 	test-dnsrecords_cc.cc test-iputils_hh.cc test-md5_hh.cc \
 	test-misc_hh.cc test-nameserver_cc.cc test-nmtree.cc \
 	test-packetcache_cc.cc test-rcpgenerator_cc.cc \
-	test-recpacketcache_cc.cc test-sha_hh.cc test-statbag_cc.cc \
-	test-zoneparser_tng_cc.cc testrunner.cc ueberbackend.cc \
-	unix_utility.cc zoneparser-tng.cc zoneparser-tng.hh \
-	pkcs11signers.cc pkcs11signers.hh
+	test-recpacketcache_cc.cc test-signers.cc test-sha_hh.cc \
+	test-statbag_cc.cc test-zoneparser_tng_cc.cc testrunner.cc \
+	ueberbackend.cc unix_utility.cc zoneparser-tng.cc \
+	zoneparser-tng.hh pkcs11signers.cc pkcs11signers.hh \
+	sodiumsigners.cc decafsigners.cc
 am_testrunner_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
-	dns.$(OBJEXT) dns_random.$(OBJEXT) dnsbackend.$(OBJEXT) \
-	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnspacket.$(OBJEXT) \
-	dnsparser.$(OBJEXT) dnsrecords.$(OBJEXT) dnssecinfra.$(OBJEXT) \
+	dbdnsseckeeper.$(OBJEXT) dns.$(OBJEXT) dns_random.$(OBJEXT) \
+	dnsbackend.$(OBJEXT) dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) \
+	dnspacket.$(OBJEXT) dnsparser.$(OBJEXT) dnsrecords.$(OBJEXT) \
+	dnssecinfra.$(OBJEXT) dnssecsigner.$(OBJEXT) \
 	dnswriter.$(OBJEXT) ednsoptions.$(OBJEXT) ednssubnet.$(OBJEXT) \
 	gettime.$(OBJEXT) gss_context.$(OBJEXT) iputils.$(OBJEXT) \
 	logger.$(OBJEXT) misc.$(OBJEXT) nameserver.$(OBJEXT) \
@@ -710,20 +727,22 @@ am_testrunner_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	test-misc_hh.$(OBJEXT) test-nameserver_cc.$(OBJEXT) \
 	test-nmtree.$(OBJEXT) test-packetcache_cc.$(OBJEXT) \
 	test-rcpgenerator_cc.$(OBJEXT) \
-	test-recpacketcache_cc.$(OBJEXT) test-sha_hh.$(OBJEXT) \
-	test-statbag_cc.$(OBJEXT) test-zoneparser_tng_cc.$(OBJEXT) \
-	testrunner.$(OBJEXT) ueberbackend.$(OBJEXT) \
-	unix_utility.$(OBJEXT) zoneparser-tng.$(OBJEXT) \
-	$(am__objects_1)
+	test-recpacketcache_cc.$(OBJEXT) test-signers.$(OBJEXT) \
+	test-sha_hh.$(OBJEXT) test-statbag_cc.$(OBJEXT) \
+	test-zoneparser_tng_cc.$(OBJEXT) testrunner.$(OBJEXT) \
+	ueberbackend.$(OBJEXT) unix_utility.$(OBJEXT) \
+	zoneparser-tng.$(OBJEXT) $(am__objects_1) $(am__objects_3) \
+	$(am__objects_4)
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@nodist_testrunner_OBJECTS =  \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	dnsmessage.pb.$(OBJEXT)
 testrunner_OBJECTS = $(am_testrunner_OBJECTS) \
 	$(nodist_testrunner_OBJECTS)
-@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__DEPENDENCIES_9 =  \
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__DEPENDENCIES_10 =  \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(am__DEPENDENCIES_1)
 testrunner_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
-	$(am__DEPENDENCIES_9) $(am__DEPENDENCIES_2)
+	$(am__DEPENDENCIES_10) $(am__DEPENDENCIES_2) \
+	$(am__DEPENDENCIES_5) $(am__DEPENDENCIES_6)
 testrunner_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(testrunner_LDFLAGS) $(LDFLAGS) -o $@
@@ -1213,6 +1232,7 @@ LEX_OUTPUT_ROOT = @LEX_OUTPUT_ROOT@
 LIBCRYPTO_INCLUDES = @LIBCRYPTO_INCLUDES@
 LIBCRYPTO_LDFLAGS = @LIBCRYPTO_LDFLAGS@
 LIBCRYPTO_LIBS = @LIBCRYPTO_LIBS@
+LIBDECAF_LIBS = @LIBDECAF_LIBS@
 LIBDL = @LIBDL@
 LIBOBJS = @LIBOBJS@
 LIBS = @LIBS@
@@ -1379,7 +1399,7 @@ EXTRA_DIST = \
 	pdns.service.in
 
 BUILT_SOURCES = bind-dnssec.schema.sqlite3.sql.h bindparser.h \
-	$(am__append_49)
+	$(am__append_53)
 CLEANFILES = \
 	*.gcda \
 	*.gcno \
@@ -1423,7 +1443,7 @@ pdns_server_SOURCES = arguments.cc arguments.hh auth-carbon.cc \
 	unix_utility.cc utility.hh version.cc version.hh webserver.cc \
 	webserver.hh ws-api.cc ws-api.hh ws-auth.cc ws-auth.hh \
 	zoneparser-tng.cc $(am__append_9) $(am__append_11) \
-	$(am__append_13) $(am__append_16)
+	$(am__append_13) $(am__append_15) $(am__append_18)
 pdns_server_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(DYNLINKFLAGS) \
@@ -1432,8 +1452,8 @@ pdns_server_LDFLAGS = \
 pdns_server_LDADD = @moduleobjects@ @modulelibs@ $(LIBDL) \
 	$(YAHTTP_LIBS) $(JSON11_LIBS) $(LIBCRYPTO_LIBS) \
 	$(SYSTEMD_LIBS) $(am__append_10) $(am__append_12) \
-	$(am__append_14) $(am__append_15) $(am__append_17) \
-	$(am__append_18) $(am__append_19)
+	$(am__append_14) $(am__append_16) $(am__append_17) \
+	$(am__append_19) $(am__append_20) $(am__append_21)
 pdnsutil_SOURCES = arguments.cc backends/gsql/gsqlbackend.cc \
 	backends/gsql/gsqlbackend.hh backends/gsql/ssql.hh base32.cc \
 	base64.cc base64.hh bindlexer.l bindparser.yy cachecleaner.hh \
@@ -1447,8 +1467,8 @@ pdnsutil_SOURCES = arguments.cc backends/gsql/gsqlbackend.cc \
 	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
 	serialtweaker.cc signingpipe.cc sillyrecords.cc sstuff.hh \
 	statbag.cc ueberbackend.cc unix_utility.cc zoneparser-tng.cc \
-	$(am__append_20) $(am__append_22) $(am__append_24) \
-	$(am__append_27)
+	$(am__append_22) $(am__append_24) $(am__append_26) \
+	$(am__append_28) $(am__append_31)
 pdnsutil_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(DYNLINKFLAGS) \
@@ -1457,9 +1477,9 @@ pdnsutil_LDFLAGS = \
 
 pdnsutil_LDADD = @moduleobjects@ @modulelibs@ $(YAHTTP_LIBS) \
 	$(JSON11_LIBS) $(LIBDL) $(BOOST_PROGRAM_OPTIONS_LIBS) \
-	$(LIBCRYPTO_LIBS) $(am__append_21) $(am__append_23) \
-	$(am__append_25) $(am__append_26) $(am__append_28) \
-	$(am__append_29)
+	$(LIBCRYPTO_LIBS) $(am__append_23) $(am__append_25) \
+	$(am__append_27) $(am__append_29) $(am__append_30) \
+	$(am__append_32) $(am__append_33)
 zone2sql_SOURCES = \
 	arguments.cc \
 	base32.cc \
@@ -1635,8 +1655,8 @@ saxfr_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	dnswriter.cc dnswriter.hh gss_context.cc gss_context.hh \
 	logger.cc misc.cc misc.hh nsecrecords.cc qtype.cc \
 	rcpgenerator.cc rcpgenerator.hh saxfr.cc sillyrecords.cc \
-	sstuff.hh statbag.cc unix_utility.cc $(am__append_31)
-saxfr_LDADD = $(LIBCRYPTO_LIBS) $(am__append_32) $(am__append_33)
+	sstuff.hh statbag.cc unix_utility.cc $(am__append_35)
+saxfr_LDADD = $(LIBCRYPTO_LIBS) $(am__append_36) $(am__append_37)
 saxfr_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 ixplore_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	dns_random.cc dns_random.hh dnslabeltext.cc dnsname.cc \
@@ -1646,8 +1666,8 @@ ixplore_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	qtype.cc rcpgenerator.cc rcpgenerator.hh resolver.cc ixfr.cc \
 	ixfr.hh ixplore.cc sillyrecords.cc sstuff.hh statbag.cc \
 	tsigverifier.cc tsigverifier.hh unix_utility.cc \
-	zoneparser-tng.cc $(am__append_34)
-ixplore_LDADD = $(LIBCRYPTO_LIBS) $(am__append_35) $(am__append_36)
+	zoneparser-tng.cc $(am__append_38)
+ixplore_LDADD = $(LIBCRYPTO_LIBS) $(am__append_39) $(am__append_40)
 ixplore_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 dnstcpbench_SOURCES = \
 	base32.cc \
@@ -1683,8 +1703,8 @@ nsec3dig_SOURCES = base32.cc base64.cc base64.hh dnsname.cc dnsname.hh \
 	gss_context.hh logger.cc misc.cc misc.hh nsec3dig.cc \
 	nsecrecords.cc qtype.cc rcpgenerator.cc rcpgenerator.hh \
 	sillyrecords.cc sstuff.hh statbag.cc unix_utility.cc \
-	$(am__append_37)
-nsec3dig_LDADD = $(LIBCRYPTO_LIBS) $(am__append_38) $(am__append_39)
+	$(am__append_41)
+nsec3dig_LDADD = $(LIBCRYPTO_LIBS) $(am__append_42) $(am__append_43)
 nsec3dig_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 toysdig_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	dnsname.cc dnsname.hh dnslabeltext.cc dnsparser.cc \
@@ -1695,12 +1715,12 @@ toysdig_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	randomhelper.cc root-dnssec.hh rcpgenerator.cc rcpgenerator.hh \
 	rec-lua-conf.hh recursor_cache.hh sholder.hh sillyrecords.cc \
 	sortlist.hh sstuff.hh statbag.cc toysdig.cc unix_utility.cc \
-	validate.cc validate.hh $(am__append_41) $(am__append_43)
+	validate.cc validate.hh $(am__append_45) $(am__append_47)
 toysdig_LDFLAGS = $(AM_LDFLAGS) \
 	$(LIBCRYPTO_LDFLAGS)
 
-toysdig_LDADD = $(LIBCRYPTO_LIBS) $(am__append_40) $(am__append_42) \
-	$(am__append_44)
+toysdig_LDADD = $(LIBCRYPTO_LIBS) $(am__append_44) $(am__append_46) \
+	$(am__append_48)
 tsig_tests_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	dns_random.cc dns_random.hh dnslabeltext.cc dnsname.cc \
 	dnsname.hh dnsparser.cc dnsparser.hh dnsrecords.cc \
@@ -1709,8 +1729,8 @@ tsig_tests_SOURCES = arguments.cc base32.cc base64.cc base64.hh dns.cc \
 	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
 	resolver.cc sillyrecords.cc sstuff.hh statbag.cc tsig-tests.cc \
 	tsigverifier.cc tsigverifier.hh unix_utility.cc \
-	$(am__append_45)
-tsig_tests_LDADD = $(LIBCRYPTO_LIBS) $(am__append_46) $(am__append_47)
+	$(am__append_49)
+tsig_tests_LDADD = $(LIBCRYPTO_LIBS) $(am__append_50) $(am__append_51)
 tsig_tests_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 speedtest_SOURCES = \
 	base32.cc \
@@ -2041,13 +2061,14 @@ dnsdemog_LDADD = \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	$(BOOST_PROGRAM_OPTIONS_LIBS)
 
 testrunner_SOURCES = arguments.cc base32.cc base64.cc bindlexer.l \
-	bindparser.yy dns.cc dns_random.cc dnsbackend.cc \
-	dnslabeltext.cc dnsname.cc dnsname.hh dnspacket.cc \
-	dnsparser.hh dnsparser.cc dnsrecords.cc dnssecinfra.cc \
-	dnswriter.cc ednsoptions.cc ednsoptions.hh ednssubnet.cc \
-	gettime.cc gettime.hh gss_context.cc gss_context.hh iputils.cc \
-	logger.cc misc.cc nameserver.cc nsecrecords.cc packetcache.cc \
-	qtype.cc rcpgenerator.cc recpacketcache.cc recpacketcache.hh \
+	bindparser.yy dbdnsseckeeper.cc dns.cc dns_random.cc \
+	dnsbackend.cc dnslabeltext.cc dnsname.cc dnsname.hh \
+	dnspacket.cc dnsparser.hh dnsparser.cc dnsrecords.cc \
+	dnssecinfra.cc dnssecsigner.cc dnswriter.cc ednsoptions.cc \
+	ednsoptions.hh ednssubnet.cc gettime.cc gettime.hh \
+	gss_context.cc gss_context.hh iputils.cc logger.cc misc.cc \
+	nameserver.cc nsecrecords.cc packetcache.cc qtype.cc \
+	rcpgenerator.cc recpacketcache.cc recpacketcache.hh \
 	rec-protobuf.hh responsestats.cc responsestats-auth.cc \
 	sillyrecords.cc statbag.cc test-arguments_cc.cc \
 	test-base32_cc.cc test-base64_cc.cc test-bindparser_cc.cc \
@@ -2056,17 +2077,19 @@ testrunner_SOURCES = arguments.cc base32.cc base64.cc bindlexer.l \
 	test-dnsrecords_cc.cc test-iputils_hh.cc test-md5_hh.cc \
 	test-misc_hh.cc test-nameserver_cc.cc test-nmtree.cc \
 	test-packetcache_cc.cc test-rcpgenerator_cc.cc \
-	test-recpacketcache_cc.cc test-sha_hh.cc test-statbag_cc.cc \
-	test-zoneparser_tng_cc.cc testrunner.cc ueberbackend.cc \
-	unix_utility.cc zoneparser-tng.cc zoneparser-tng.hh \
-	$(am__append_51)
+	test-recpacketcache_cc.cc test-signers.cc test-sha_hh.cc \
+	test-statbag_cc.cc test-zoneparser_tng_cc.cc testrunner.cc \
+	ueberbackend.cc unix_utility.cc zoneparser-tng.cc \
+	zoneparser-tng.hh $(am__append_55) $(am__append_57) \
+	$(am__append_59)
 testrunner_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(LIBCRYPTO_LDFLAGS) \
 	$(BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS) 
 
 testrunner_LDADD = $(LIBCRYPTO_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIBS) \
-	$(RT_LIBS) $(LIBDL) $(am__append_50) $(am__append_52)
+	$(RT_LIBS) $(LIBDL) $(am__append_54) $(am__append_56) \
+	$(am__append_58) $(am__append_60)
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@nodist_testrunner_SOURCES = \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	dnsmessage.pb.cc dnsmessage.pb.h
 
@@ -2377,6 +2400,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/common_startup.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/communicator.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dbdnsseckeeper.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/decafsigners.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dns_random.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dnsbackend.Po@am__quote@
@@ -2475,6 +2499,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-rcpgenerator_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-recpacketcache_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-sha_hh.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-signers.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-statbag_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-zoneparser_tng_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testrunner.Po@am__quote@
