@@ -1,7 +1,7 @@
 Source: pdns
 Section: net
 Priority: extra
-Standards-Version: 3.9.8
+Standards-Version: 4.0.0
 Maintainer: Debian DNS Packaging <pkg-dns-devel@lists.alioth.debian.org>
 Uploaders: Christian Hofstaedtler <zeha@debian.org>,
            Marc Haber <mh+debian-packages@zugschlus.de>
