@@ -14,9 +14,11 @@
 #include "resolver.hh"
 #include "dns_random.hh"
 #include "backends/gsql/ssql.hh"
+#include "communicator.hh"
 
 extern PacketCache PC;
 extern StatBag S;
+extern CommunicatorClass Communicator;
 
 pthread_mutex_t PacketHandler::s_rfc2136lock=PTHREAD_MUTEX_INITIALIZER;
 
@@ -603,7 +605,12 @@ int PacketHandler::forwardPacket(const string &msgPrefix, DNSPacket *p, DomainIn
 
     if( connect(sock, (struct sockaddr*)&remote, remote.getSocklen()) < 0 ) {
       L<<Logger::Error<<msgPrefix<<"Failed to connect to "<<remote.toStringWithPort()<<": "<<stringerror()<<endl;
-      closesocket(sock);
+      try {
+        closesocket(sock);
+      }
+      catch(const PDNSException& e) {
+        L<<Logger::Error<<"Error closing master forwarding socket after connect() failed: "<<e.reason<<endl;
+      }
       continue;
     }
 
@@ -615,44 +622,73 @@ int PacketHandler::forwardPacket(const string &msgPrefix, DNSPacket *p, DomainIn
     buffer.append(forwardPacket.getString());
     if(write(sock, buffer.c_str(), buffer.length()) < 0) {
       L<<Logger::Error<<msgPrefix<<"Unable to forward update message to "<<remote.toStringWithPort()<<", error:"<<stringerror()<<endl;
-      closesocket(sock);
+      try {
+        closesocket(sock);
+      }
+      catch(const PDNSException& e) {
+        L<<Logger::Error<<"Error closing master forwarding socket after write() failed: "<<e.reason<<endl;
+      }
       continue;
     }
 
     int res = waitForData(sock, 10, 0);
     if (!res) {
       L<<Logger::Error<<msgPrefix<<"Timeout waiting for reply from master at "<<remote.toStringWithPort()<<endl;
-      closesocket(sock);
+      try {
+        closesocket(sock);
+      }
+      catch(const PDNSException& e) {
+        L<<Logger::Error<<"Error closing master forwarding socket after a timeout occured: "<<e.reason<<endl;
+      }
       continue;
     }
     if (res < 0) {
       L<<Logger::Error<<msgPrefix<<"Error waiting for answer from master at "<<remote.toStringWithPort()<<", error:"<<stringerror()<<endl;
-      closesocket(sock);
+      try {
+        closesocket(sock);
+      }
+      catch(const PDNSException& e) {
+        L<<Logger::Error<<"Error closing master forwarding socket after an error occured: "<<e.reason<<endl;
+      }
       continue;
     }
 
-    char lenBuf[2];
-    int recvRes;
+    unsigned char lenBuf[2];
+    ssize_t recvRes;
     recvRes = recv(sock, &lenBuf, sizeof(lenBuf), 0);
-    if (recvRes < 0) {
+    if (recvRes < 0 || static_cast<size_t>(recvRes) < sizeof(lenBuf)) {
       L<<Logger::Error<<msgPrefix<<"Could not receive data (length) from master at "<<remote.toStringWithPort()<<", error:"<<stringerror()<<endl;
-      closesocket(sock);
+      try {
+        closesocket(sock);
+      }
+      catch(const PDNSException& e) {
+        L<<Logger::Error<<"Error closing master forwarding socket after recv() failed: "<<e.reason<<endl;
+      }
       continue;
     }
-    int packetLen = lenBuf[0]*256+lenBuf[1];
-
+    size_t packetLen = lenBuf[0]*256+lenBuf[1];
 
     char buf[packetLen];
     recvRes = recv(sock, &buf, packetLen, 0);
     if (recvRes < 0) {
       L<<Logger::Error<<msgPrefix<<"Could not receive data (dnspacket) from master at "<<remote.toStringWithPort()<<", error:"<<stringerror()<<endl;
-      closesocket(sock);
+      try {
+        closesocket(sock);
+      }
+      catch(const PDNSException& e) {
+        L<<Logger::Error<<"Error closing master forwarding socket after recv() failed: "<<e.reason<<endl;
+      }
       continue;
     }
-    closesocket(sock);
+    try {
+      closesocket(sock);
+    }
+    catch(const PDNSException& e) {
+      L<<Logger::Error<<"Error closing master forwarding socket: "<<e.reason<<endl;
+    }
 
     try {
-      MOADNSParser mdp(false, buf, recvRes);
+      MOADNSParser mdp(false, buf, static_cast<unsigned int>(recvRes));
       L<<Logger::Info<<msgPrefix<<"Forward update message to "<<remote.toStringWithPort()<<", result was RCode "<<mdp.d_header.rcode<<endl;
       return mdp.d_header.rcode;
     }
@@ -912,6 +948,15 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       string zone(di.zone.toString());
       zone.append("$");
       PC.purge(zone);
+
+      // Notify slaves
+      if (di.kind == DomainInfo::Master) {
+        vector<string> notify;
+        B.getDomainMetadata(p->qdomain, "NOTIFY-DNSUPDATE", notify);
+        if (!notify.empty() && notify.front() == "1") {
+          Communicator.notifyDomain(di.zone);
+        }
+      }
 
       L<<Logger::Info<<msgPrefix<<"Update completed, "<<changedRecords<<" changed records committed."<<endl;
     } else {

@@ -259,7 +259,12 @@ void *TCPNameserver::doConnection(void *data)
   if(getpeername(fd, (struct sockaddr *)&remote, &remotelen) < 0) {
     L<<Logger::Warning<<"Received question from socket which had no remote address, dropping ("<<stringerror()<<")"<<endl;
     d_connectionroom_sem->post();
-    closesocket(fd);
+    try {
+      closesocket(fd);
+    }
+    catch(const PDNSException& e) {
+      L<<Logger::Error<<"Error closing TCP socket: "<<e.reason<<endl;
+    }
     return 0;
   }
 
@@ -386,7 +391,13 @@ void *TCPNameserver::doConnection(void *data)
     L << Logger::Error << "TCP Connection Thread caught unknown exception." << endl;
   }
   d_connectionroom_sem->post();
-  closesocket(fd);
+
+  try {
+    closesocket(fd);
+  }
+  catch(const PDNSException& e) {
+    L<<Logger::Error<<"Error closing TCP socket: "<<e.reason<<endl;
+  }
 
   return 0;
 }
@@ -586,7 +597,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
   NSEC3PARAMRecordContent ns3pr;
   bool narrow;
   bool NSEC3Zone=false;
-  if(dk.getNSEC3PARAM(target, &ns3pr, &narrow)) {
+  if(securedZone && dk.getNSEC3PARAM(target, &ns3pr, &narrow)) {
     NSEC3Zone=true;
     if(narrow) {
       L<<Logger::Error<<"Not doing AXFR of an NSEC3 narrow zone '"<<target<<"' for "<<q->getRemote()<<endl;
@@ -740,6 +751,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
     rrs.push_back(rr);
 
   while(sd.db->get(rr)) {
+    rr.qname.makeUsLowerCase();
     if(rr.qname.isPartOf(target)) {
       if (rr.qtype.getCode() == QType::ALIAS && ::arg().mustDo("outgoing-axfr-expand-alias")) {
         vector<DNSResourceRecord> ips;
@@ -756,9 +768,7 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
           rr.content = ip.content;
           rrs.push_back(rr);
         }
-      }
-      else {
-        rrs.push_back(rr);
+        continue;
       }
 
       if (rectify) {
@@ -771,12 +781,17 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
           continue;
         }
       }
+      rrs.push_back(rr);
     } else {
       if (rr.qtype.getCode())
         L<<Logger::Warning<<"Zone '"<<target<<"' contains out-of-zone data '"<<rr.qname<<"|"<<rr.qtype.getName()<<"', ignoring"<<endl;
-      continue;
     }
   }
+
+  // Group records by name and type, signpipe stumbles over interrupted rrsets
+  sort(rrs.begin(), rrs.end(), [](const DNSResourceRecord& a, const DNSResourceRecord& b) {
+    return tie(a.qname, a.qtype) < tie(b.qname, b.qtype);
+  });
 
   if(rectify) {
     // set auth
@@ -786,12 +801,13 @@ int TCPNameserver::doAXFR(const DNSName &target, shared_ptr<DNSPacket> q, int ou
         DNSName shorter(rr.qname);
         do {
           if (shorter==target) // apex is always auth
-            continue;
-          if(nsset.count(shorter) && !(rr.qname==shorter && rr.qtype.getCode() == QType::DS))
+            break;
+          if(nsset.count(shorter) && !(rr.qname==shorter && rr.qtype.getCode() == QType::DS)) {
             rr.auth=false;
+            break;
+          }
         } while(shorter.chopOff());
-      } else
-        continue;
+      }
     }
 
     if(NSEC3Zone) {

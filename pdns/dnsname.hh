@@ -86,12 +86,15 @@ public:
   DNSName makeRelative(const DNSName& zone) const;
   DNSName makeLowerCase() const
   {
-    DNSName ret;
-    ret.d_storage = d_storage;
-    for(auto & c : ret.d_storage) {
+    DNSName ret(*this);
+    ret.makeUsLowerCase();
+    return ret;
+  }
+  void makeUsLowerCase()
+  {
+    for(auto & c : d_storage) {
       c=dns2_tolower(c);
     }
-    return ret;
   }
   void makeUsRelative(const DNSName& zone);
   DNSName labelReverse() const;
@@ -254,7 +257,12 @@ struct SuffixMatchNode
       endNode=true;
     }
     else if(labels.size()==1) {
-      children.insert(SuffixMatchNode(*labels.begin(), true));
+      auto res=children.insert(SuffixMatchNode(*labels.begin(), true));
+      if(!res.second) {
+        if(!res.first->endNode) {
+          res.first->endNode = true;
+        }
+      }
     }
     else {
       auto res=children.insert(SuffixMatchNode(*labels.rbegin(), false));
