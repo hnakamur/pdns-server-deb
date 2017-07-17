@@ -9,3 +9,7 @@ Restrictions: needs-root, isolation-container
 Tests: smoke-pgsql
 Depends: postgresql, pdns-server, pdns-backend-pgsql, dnsutils
 Restrictions: needs-root, isolation-container
+
+Tests: supported-algos
+Depends: pdns-server
+Restrictions: isolation-container
