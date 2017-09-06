@@ -157,7 +157,7 @@ public:
 private:
   uint16_t d_startrecordpos; // needed for getBlob later on
   uint16_t d_recordlen;      // ditto
-  uint16_t not_used; // Alighns the whole class on 8-byte boundries
+  uint16_t not_used; // Aligns the whole class on 8-byte boundries
   const vector<uint8_t>& d_content;
 };
 
@@ -166,9 +166,9 @@ struct DNSRecord;
 class DNSRecordContent
 {
 public:
-  static DNSRecordContent* mastermake(const DNSRecord &dr, PacketReader& pr);
-  static DNSRecordContent* mastermake(const DNSRecord &dr, PacketReader& pr, uint16_t opcode);
-  static DNSRecordContent* mastermake(uint16_t qtype, uint16_t qclass, const string& zone);
+  static std::shared_ptr<DNSRecordContent> mastermake(const DNSRecord &dr, PacketReader& pr);
+  static std::shared_ptr<DNSRecordContent> mastermake(const DNSRecord &dr, PacketReader& pr, uint16_t opcode);
+  static std::shared_ptr<DNSRecordContent> mastermake(uint16_t qtype, uint16_t qclass, const string& zone);
   static std::unique_ptr<DNSRecordContent> makeunique(uint16_t qtype, uint16_t qclass, const string& content);
 
   virtual std::string getZoneRepresentation(bool noDot=false) const = 0;
@@ -177,8 +177,7 @@ public:
   virtual string serialize(const DNSName& qname, bool canonic=false, bool lowerCase=false) // it would rock if this were const, but it is too hard
   {
     vector<uint8_t> packet;
-    DNSName empty;
-    DNSPacketWriter pw(packet, empty, 1);
+    DNSPacketWriter pw(packet, g_rootdnsname, 1);
     if(canonic)
       pw.setCanonic(true);
 
@@ -187,13 +186,17 @@ public:
 
     pw.startRecord(qname, this->getType());
     this->toPacket(pw);
-    pw.commit();
     
     string record;
-    pw.getRecords(record);
+    pw.getRecordPayload(record); // needs to be called before commit()
     return record;
   }
 
+  virtual bool operator==(const DNSRecordContent& rhs) const
+  {
+    return typeid(*this)==typeid(rhs) && this->getZoneRepresentation() == rhs.getZoneRepresentation();
+  }
+  
   static shared_ptr<DNSRecordContent> unserialize(const DNSName& qname, uint16_t qtype, const string& serialized);
 
   void doRecordCheck(const struct DNSRecord&){}
@@ -317,20 +320,23 @@ struct DNSRecord
 
   bool operator==(const DNSRecord& rhs) const
   {
-    string lzrp, rzrp;
-    if(d_content)
-      lzrp=toLower(d_content->getZoneRepresentation());
-    if(rhs.d_content)
-      rzrp=toLower(rhs.d_content->getZoneRepresentation());
+    if(d_type != rhs.d_type || d_class != rhs.d_class || d_name != rhs.d_name)
+      return false;
     
-    string llabel=toLower(d_name.toString()); 
-    string rlabel=toLower(rhs.d_name.toString()); 
-    
-    return 
-      tie(llabel,     d_type,     d_class, lzrp) ==
-      tie(rlabel, rhs.d_type, rhs.d_class, rzrp);
+    return *d_content == *rhs.d_content;
   }
 };
+
+struct DNSZoneRecord
+{
+  int domain_id{-1};
+  uint8_t scopeMask{0};
+  int signttl{0};
+  DNSName wildcardname;
+  bool auth{true};
+  DNSRecord dr;
+};
+
 
 //! This class can be used to parse incoming packets, and is copyable
 class MOADNSParser : public boost::noncopyable
@@ -355,7 +361,7 @@ public:
 
   typedef vector<pair<DNSRecord, uint16_t > > answers_t;
   
-  //! All answers contained in this packet
+  //! All answers contained in this packet (everything *but* the question section)
   answers_t d_answers;
 
   shared_ptr<PacketReader> getPacketReader(uint16_t offset)
@@ -379,6 +385,7 @@ private:
 string simpleCompress(const string& label, const string& root="");
 void ageDNSPacket(char* packet, size_t length, uint32_t seconds);
 void ageDNSPacket(std::string& packet, uint32_t seconds);
+void editDNSPacketTTL(char* packet, size_t length, std::function<uint32_t(uint8_t, uint16_t, uint16_t, uint32_t)> visitor);
 uint32_t getDNSPacketMinTTL(const char* packet, size_t length);
 uint32_t getDNSPacketLength(const char* packet, size_t length);
 uint16_t getRecordsOfTypeCount(const char* packet, size_t length, uint8_t section, uint16_t type);

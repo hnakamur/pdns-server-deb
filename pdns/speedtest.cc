@@ -1,10 +1,13 @@
 #include "config.h"
+#include <boost/format.hpp>
+#include <boost/container/string.hpp>
 #include "dnsparser.hh"
 #include "sstuff.hh"
 #include "misc.hh"
 #include "dnswriter.hh"
 #include "dnsrecords.hh"
-#include <boost/format.hpp>
+#include <fstream>
+
 #ifndef RECURSOR
 #include "statbag.hh"
 #include "base64.hh"
@@ -13,7 +16,6 @@ StatBag S;
 
 volatile bool g_ret; // make sure the optimizer does not get too smart
 uint64_t g_totalRuns;
-
 volatile bool g_stop;
 
 void alarmHandler(int)
@@ -182,6 +184,25 @@ struct StringAppendTest
 };
 
 
+struct BoostStringAppendTest
+{
+  string getName() const
+  {
+    return "booststringappend";
+  }
+  
+  void operator()() const 
+  {
+    boost::container::string str;
+    static char i;
+    for(int n=0; n < 1000; ++n)
+      str.append(1, i);
+    i++; 
+  }
+};
+
+
+
 struct MakeARecordTest
 {
   string getName() const
@@ -198,6 +219,90 @@ struct MakeARecordTest
   }
 };
 
+vector<uint8_t> makeBigReferral()
+{
+
+  vector<uint8_t> packet;
+  DNSPacketWriter pw(packet, DNSName("www.google.com"), QType::A);
+
+  string gtld="x.gtld-servers.net";
+  for(char c='a'; c<= 'm';++c) {
+    pw.startRecord(DNSName("com"), QType::NS, 3600, 1, DNSResourceRecord::AUTHORITY);
+    gtld[0]=c;
+    auto drc = DNSRecordContent::makeunique(QType::NS, 1, gtld);
+    drc->toPacket(pw);
+  }
+
+  for(char c='a'; c<= 'k';++c) {
+    gtld[0]=c;
+    pw.startRecord(DNSName(gtld), QType::A, 3600, 1, DNSResourceRecord::ADDITIONAL);
+    auto drc = DNSRecordContent::makeunique(QType::A, 1, "1.2.3.4");
+    drc->toPacket(pw);
+  }
+
+
+  pw.startRecord(DNSName("a.gtld-servers.net"), QType::AAAA, 3600, 1, DNSResourceRecord::ADDITIONAL);
+  auto aaaarc = DNSRecordContent::makeunique(QType::AAAA, 1, "2001:503:a83e::2:30");
+  aaaarc->toPacket(pw);
+
+  pw.startRecord(DNSName("b.gtld-servers.net"), QType::AAAA, 3600, 1, DNSResourceRecord::ADDITIONAL);
+  aaaarc = DNSRecordContent::makeunique(QType::AAAA, 1, "2001:503:231d::2:30");
+  aaaarc->toPacket(pw);
+
+
+  pw.commit();
+  return  packet;
+}
+
+vector<uint8_t> makeBigDNSPacketReferral()
+{
+  vector<DNSResourceRecord> records;
+  DNSResourceRecord rr;
+  rr.qtype = QType::NS;
+  rr.ttl=3600;
+  rr.qname=DNSName("com");
+
+  string gtld="x.gtld-servers.net";
+  for(char c='a'; c<= 'm';++c) {
+    gtld[0]=c;
+    rr.content = gtld;
+    records.push_back(rr);
+  }
+
+  rr.qtype = QType::A;
+  for(char c='a'; c<= 'k';++c) {
+    gtld[0]=c;
+    rr.qname=DNSName(gtld);
+    rr.content="1.2.3.4";
+    records.push_back(rr);
+  }
+
+  rr.qname=DNSName("a.gtld-servers.net");
+  rr.qtype=QType::AAAA;
+  rr.content="2001:503:a83e::2:30";
+  records.push_back(rr);
+
+  rr.qname=DNSName("b.gtld-servers.net");
+  rr.qtype=QType::AAAA;
+  rr.content="2001:503:231d::2:30";
+  records.push_back(rr);
+
+
+  vector<uint8_t> packet;
+  DNSPacketWriter pw(packet, DNSName("www.google.com"), QType::A);
+  //  shuffle(records);
+  for(const auto& rec : records) {
+    pw.startRecord(rec.qname, rec.qtype.getCode(), rec.ttl, 1, DNSResourceRecord::ADDITIONAL);
+    auto drc = DNSRecordContent::makeunique(rec.qtype.getCode(), 1, rec.content);
+    drc->toPacket(pw);
+  }
+
+  pw.commit();
+  return  packet;
+}
+
+
+
 struct MakeARecordTestMM
 {
   string getName() const
@@ -207,9 +312,8 @@ struct MakeARecordTestMM
 
   void operator()() const
   {
-      DNSRecordContent*drc = DNSRecordContent::mastermake(QType::A, 1, 
-                                                          "1.2.3.4");
-      delete drc;
+      auto drc = DNSRecordContent::makeunique(QType::A, 1,
+                                              "1.2.3.4");
   }
 };
 
@@ -281,10 +385,9 @@ struct GenericRecordTest
     DNSPacketWriter pw(packet, DNSName("outpost.ds9a.nl"), d_type);
     for(int records = 0; records < d_records; records++) {
       pw.startRecord(DNSName("outpost.ds9a.nl"), d_type);
-      DNSRecordContent*drc = DNSRecordContent::mastermake(d_type, 1, 
-                                                          d_content);
+      auto drc = DNSRecordContent::makeunique(d_type, 1,
+                                              d_content);
       drc->toPacket(pw);
-      delete drc;
     }
     pw.commit();
   }
@@ -309,9 +412,8 @@ struct AAAARecordTest
     DNSPacketWriter pw(packet, DNSName("outpost.ds9a.nl"), QType::AAAA);
     for(int records = 0; records < d_records; records++) {
       pw.startRecord(DNSName("outpost.ds9a.nl"), QType::AAAA);
-      DNSRecordContent*drc = DNSRecordContent::mastermake(QType::AAAA, 1, "fe80::21d:92ff:fe6d:8441");
+      auto drc = DNSRecordContent::makeunique(QType::AAAA, 1, "fe80::21d:92ff:fe6d:8441");
       drc->toPacket(pw);
-      delete drc;
     }
     pw.commit();
   }
@@ -334,9 +436,8 @@ struct SOARecordTest
 
     for(int records = 0; records < d_records; records++) {
       pw.startRecord(DNSName("outpost.ds9a.nl"), QType::SOA);
-      DNSRecordContent*drc = DNSRecordContent::mastermake(QType::SOA, 1, "a0.org.afilias-nst.info. noc.afilias-nst.info. 2008758137 1800 900 604800 86400");
+      auto drc = DNSRecordContent::makeunique(QType::SOA, 1, "a0.org.afilias-nst.info. noc.afilias-nst.info. 2008758137 1800 900 604800 86400");
       drc->toPacket(pw);
-      delete drc;
     }
     pw.commit();
   }
@@ -356,25 +457,21 @@ vector<uint8_t> makeTypicalReferral()
   DNSPacketWriter pw(packet, DNSName("outpost.ds9a.nl"), QType::A);
 
   pw.startRecord(DNSName("ds9a.nl"), QType::NS, 3600, 1, DNSResourceRecord::AUTHORITY);
-  DNSRecordContent* drc = DNSRecordContent::mastermake(QType::NS, 1, "ns1.ds9a.nl");
+  auto drc = DNSRecordContent::makeunique(QType::NS, 1, "ns1.ds9a.nl");
   drc->toPacket(pw);
-  delete drc;
 
   pw.startRecord(DNSName("ds9a.nl"), QType::NS, 3600, 1, DNSResourceRecord::AUTHORITY);
-  drc = DNSRecordContent::mastermake(QType::NS, 1, "ns2.ds9a.nl");
+  drc = DNSRecordContent::makeunique(QType::NS, 1, "ns2.ds9a.nl");
   drc->toPacket(pw);
-  delete drc;
 
 
   pw.startRecord(DNSName("ns1.ds9a.nl"), QType::A, 3600, 1, DNSResourceRecord::ADDITIONAL);
-  drc = DNSRecordContent::mastermake(QType::A, 1, "1.2.3.4");
+  drc = DNSRecordContent::makeunique(QType::A, 1, "1.2.3.4");
   drc->toPacket(pw);
-  delete drc;
 
   pw.startRecord(DNSName("ns2.ds9a.nl"), QType::A, 3600, 1, DNSResourceRecord::ADDITIONAL);
-  drc = DNSRecordContent::mastermake(QType::A, 1, "4.3.2.1");
+  drc = DNSRecordContent::makeunique(QType::A, 1, "4.3.2.1");
   drc->toPacket(pw);
-  delete drc;
 
   pw.commit();
   return  packet;
@@ -423,6 +520,35 @@ struct TypicalRefTest
   }
 
 };
+
+struct BigRefTest
+{
+  string getName() const
+  {
+    return "write big referral";
+  }
+
+  void operator()() const
+  {
+    vector<uint8_t> packet=makeBigReferral();
+  }
+
+};
+
+struct BigDNSPacketRefTest
+{
+  string getName() const
+  {
+    return "write big dnspacket referral";
+  }
+
+  void operator()() const
+  {
+    vector<uint8_t> packet=makeBigDNSPacketReferral();
+  }
+
+};
+
 
 struct TCacheComp
 {
@@ -480,7 +606,6 @@ struct ParsePacketTest
     
       rr.ttl=i->first.d_ttl;
       rr.content=i->first.d_content->getZoneRepresentation();  // this should be the serialised form
-      rr.d_place=(DNSResourceRecord::Place) i->first.d_place;
       lwr.d_result.push_back(rr);
     }
 
@@ -686,7 +811,8 @@ try
 
   doRun(EmptyQueryTest());
   doRun(TypicalRefTest());
-
+  doRun(BigRefTest());
+  doRun(BigDNSPacketRefTest());
 
   auto packet = makeEmptyQuery();
   doRun(ParsePacketTest(packet, "empty-query"));
@@ -746,6 +872,7 @@ try
   doRun(StringtokTest());
   doRun(VStringtokTest());  
   doRun(StringAppendTest());  
+  doRun(BoostStringAppendTest());  
 
   doRun(DNSNameParseTest());
   doRun(DNSNameRootTest());

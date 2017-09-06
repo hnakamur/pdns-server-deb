@@ -83,8 +83,8 @@ static void callback_simple( unsigned int domain_id, const DNSName &domain, cons
                 cout << "changetype: modify" << endl;
                 cout << "add: " << qtype << "Record" << endl;
         }
-
-        cout << qtype << "Record: " << stripDot( content ) << endl << endl;
+        string stripped=stripDot(content);
+        cout << qtype << "Record: " << stripped << ((stripped.empty() || stripped[stripped.size()-1]==' ') ? "." : "") << endl << endl;
 }
 
 
@@ -136,8 +136,8 @@ static void callback_tree( unsigned int domain_id, const DNSName &domain, const 
                 cout << "changetype: modify" << endl;
                 cout << "add: " << qtype << "Record" << endl;
         }
-
-        cout << qtype << "Record: " << stripDot( content ) << endl << endl;
+        string stripped=stripDot(content);
+        cout << qtype << "Record: " << stripped << ((stripped.empty() || stripped[stripped.size()-1]==' ') ? "." : "") << endl << endl;
 }
 
 
@@ -210,7 +210,7 @@ int main( int argc, char* argv[] )
                                         }
                                 try
                                 {
-				  if( i->name != DNSName(".") && i->name != DNSName("localhost") && i->name != DNSName("0.0.127.in-addr.arpa") )
+				  if( i->name != g_rootdnsname && i->name != DNSName("localhost") && i->name != DNSName("0.0.127.in-addr.arpa") )
                                         {
                                                 cerr << "Parsing file: " << i->filename << ", domain: " << i->name << endl;
                                                 g_zonename = i->name;

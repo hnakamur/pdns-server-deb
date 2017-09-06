@@ -78,11 +78,11 @@ bool DNSSECKeeper::isPresigned(const DNSName& name)
   return meta=="1";
 }
 
-bool DNSSECKeeper::addKey(const DNSName& name, bool setSEPBit, int algorithm, int bits, bool active)
+bool DNSSECKeeper::addKey(const DNSName& name, bool setSEPBit, int algorithm, int64_t& id, int bits, bool active)
 {
   if(!bits) {
     if(algorithm <= 10)
-      throw runtime_error("Creating an algorithm " +std::to_string(algorithm)+" ("+algorithm2name(algorithm)+") key requires the size (in bits) to be passed");
+      throw runtime_error("Creating an algorithm " +std::to_string(algorithm)+" ("+algorithm2name(algorithm)+") key requires the size (in bits) to be passed.");
     else {
       if(algorithm == 12 || algorithm == 13 || algorithm == 15) // GOST, ECDSAP256SHA256, ED25519
         bits = 256;
@@ -91,17 +91,21 @@ bool DNSSECKeeper::addKey(const DNSName& name, bool setSEPBit, int algorithm, in
       else if(algorithm == 16) // ED448
         bits = 456;
       else {
-        throw runtime_error("Can't guess key size for algorithm "+std::to_string(algorithm));
+        throw runtime_error("Can not guess key size for algorithm "+std::to_string(algorithm));
       }
     }
   }
   DNSSECPrivateKey dspk;
   shared_ptr<DNSCryptoKeyEngine> dpk(DNSCryptoKeyEngine::make(algorithm));
-  dpk->create(bits);
+  try{
+    dpk->create(bits);
+  } catch (std::runtime_error error){
+    throw runtime_error("The algorithm does not support the given bit size.");
+  }
   dspk.setKey(dpk);
   dspk.d_algorithm = algorithm;
   dspk.d_flags = setSEPBit ? 257 : 256;
-  return addKey(name, dspk, active);
+  return addKey(name, dspk, id, active);
 }
 
 void DNSSECKeeper::clearAllCaches() {
@@ -126,7 +130,7 @@ void DNSSECKeeper::clearCaches(const DNSName& name)
 }
 
 
-bool DNSSECKeeper::addKey(const DNSName& name, const DNSSECPrivateKey& dpk, bool active)
+bool DNSSECKeeper::addKey(const DNSName& name, const DNSSECPrivateKey& dpk, int64_t& id, bool active)
 {
   clearCaches(name);
   DNSBackend::KeyData kd;
@@ -134,7 +138,7 @@ bool DNSSECKeeper::addKey(const DNSName& name, const DNSSECPrivateKey& dpk, bool
   kd.active = active;
   kd.content = dpk.getKey()->convertToISC();
  // now store it
-  return d_keymetadb->addDomainKey(name, kd) >= 0; // >= 0 == s
+  return d_keymetadb->addDomainKey(name, kd, id);
 }
 
 
@@ -147,7 +151,7 @@ static bool keyCompareByKindAndID(const DNSSECKeeper::keyset_t::value_type& a, c
 DNSSECPrivateKey DNSSECKeeper::getKeyById(const DNSName& zname, unsigned int id)
 {  
   vector<DNSBackend::KeyData> keys;
-  d_keymetadb->getDomainKeys(zname, 0, keys);
+  d_keymetadb->getDomainKeys(zname, keys);
   for(const DNSBackend::KeyData& kd :  keys) {
     if(kd.id != id) 
       continue;
@@ -423,7 +427,7 @@ DNSSECKeeper::keyset_t DNSSECKeeper::getKeys(const DNSName& zone, bool useCache)
   keyset_t retkeyset;
   vector<DNSBackend::KeyData> dbkeyset;
 
-  d_keymetadb->getDomainKeys(zone, 0, dbkeyset);
+  d_keymetadb->getDomainKeys(zone, dbkeyset);
 
   // Determine the algorithms that have a KSK/ZSK split
   set<uint8_t> algoSEP, algoNoSEP;
@@ -489,7 +493,7 @@ DNSSECKeeper::keyset_t DNSSECKeeper::getKeys(const DNSName& zone, bool useCache)
 bool DNSSECKeeper::checkKeys(const DNSName& zone)
 {
   vector<DNSBackend::KeyData> dbkeyset;
-  d_keymetadb->getDomainKeys(zone, 0, dbkeyset);
+  d_keymetadb->getDomainKeys(zone, dbkeyset);
 
   for(const DNSBackend::KeyData &keydata : dbkeyset) {
     DNSKEYRecordContent dkrc;
@@ -504,7 +508,7 @@ bool DNSSECKeeper::checkKeys(const DNSName& zone)
 
 bool DNSSECKeeper::getPreRRSIGs(UeberBackend& db, const DNSName& signer, const DNSName& qname,
         const DNSName& wildcardname, const QType& qtype,
-        DNSResourceRecord::Place signPlace, vector<DNSResourceRecord>& rrsigs, uint32_t signTTL)
+        DNSResourceRecord::Place signPlace, vector<DNSZoneRecord>& rrsigs, uint32_t signTTL)
 {
   // cerr<<"Doing DB lookup for precomputed RRSIGs for '"<<(wildcardname.empty() ? qname : wildcardname)<<"'"<<endl;
         SOAData sd;
@@ -513,20 +517,16 @@ bool DNSSECKeeper::getPreRRSIGs(UeberBackend& db, const DNSName& signer, const D
                 return false;
         }
         db.lookup(QType(QType::RRSIG), wildcardname.countLabels() ? wildcardname : qname, NULL, sd.domain_id);
-        DNSResourceRecord rr;
-        while(db.get(rr)) { 
-                // cerr<<"Considering for '"<<qtype.getName()<<"' RRSIG '"<<rr.content<<"'\n";
-                vector<string> parts;
-                stringtok(parts, rr.content);
-                if(parts[0] == qtype.getName() && DNSName(parts[7])==signer) {
-                        // cerr<<"Got it"<<endl;
-                        if (wildcardname.countLabels())
-                                rr.qname = qname;
-                        rr.d_place = signPlace;
-                        rr.ttl = signTTL;
-                        rrsigs.push_back(rr);
-                }
-                // else cerr<<"Skipping!"<<endl;
+        DNSZoneRecord rr;
+        while(db.get(rr)) {
+          auto rrsig = getRR<RRSIGRecordContent>(rr.dr);
+          if(rrsig->d_type == qtype.getCode() && rrsig->d_signer==signer) {
+            if (wildcardname.countLabels())
+              rr.dr.d_name = qname;
+            rr.dr.d_place = signPlace;
+            rr.dr.d_ttl = signTTL;
+            rrsigs.push_back(rr);
+          }
         }
         return true;
 }
@@ -566,11 +566,11 @@ void DNSSECKeeper::cleanup()
   if(now.tv_sec - s_last_prune > (time_t)(30)) {
     {
         WriteLock l(&s_metacachelock);
-        pruneCollection(s_metacache, ::arg().asNum("max-cache-entries"));
+        pruneCollection(*this, s_metacache, ::arg().asNum("max-cache-entries"));
     }
     {
         WriteLock l(&s_keycachelock);
-        pruneCollection(s_keycache, ::arg().asNum("max-cache-entries"));
+        pruneCollection(*this, s_keycache, ::arg().asNum("max-cache-entries"));
     }
     s_last_prune=time(0);
   }

@@ -30,11 +30,13 @@
 #include <boost/version.hpp>
 
 // it crashes on OSX and doesn't compile on OpenBSD
-#if BOOST_VERSION >= 104800 && ! defined( __APPLE__ ) && ! defined(__OpenBSD__)
+#if BOOST_VERSION >= 105300 && ! defined( __APPLE__ ) && ! defined(__OpenBSD__)
 #include <boost/container/string.hpp>
 #endif
 
-uint32_t burtleCI(const unsigned char* k, uint32_t lengh, uint32_t init);
+#include "ascii.hh"
+
+uint32_t burtleCI(const unsigned char* k, uint32_t length, uint32_t init);
 
 // #include "dns.hh"
 // #include "logger.hh"
@@ -53,13 +55,6 @@ uint32_t burtleCI(const unsigned char* k, uint32_t lengh, uint32_t init);
    NOTE: For now, everything MUST be . terminated, otherwise it is an error
 */
 
-inline char dns2_tolower(char c)
-{
-  if(c>='A' && c<='Z')
-    c+='a'-'A';
-  return c;
-}
-
 class DNSName
 {
 public:
@@ -69,7 +64,7 @@ public:
   DNSName(const char* p, int len, int offset, bool uncompress, uint16_t* qtype=0, uint16_t* qclass=0, unsigned int* consumed=0, uint16_t minOffset=0); //!< Construct from a DNS Packet, taking the first question if offset=12
   
   bool isPartOf(const DNSName& rhs) const;   //!< Are we part of the rhs name?
-  bool operator==(const DNSName& rhs) const; //!< DNS-native comparison (case insensitive) - empty compares to empty
+  inline bool operator==(const DNSName& rhs) const; //!< DNS-native comparison (case insensitive) - empty compares to empty
   bool operator!=(const DNSName& other) const { return !(*this == other); }
 
   std::string toString(const std::string& separator=".", const bool trailing=true) const;              //!< Our human-friendly, escaped, representation
@@ -82,6 +77,8 @@ public:
   void appendRawLabel(const char* start, unsigned int length); //!< Append this unescaped label
   void prependRawLabel(const std::string& str); //!< Prepend this unescaped label
   std::vector<std::string> getRawLabels() const; //!< Individual raw unescaped labels
+  std::string getRawLabel(unsigned int pos) const; //!< Get the specified raw unescaped label
+  DNSName getLastLabel() const; //!< Get the DNSName of the last label
   bool chopOff();                               //!< Turn www.powerdns.com. into powerdns.com., returns false for .
   DNSName makeRelative(const DNSName& zone) const;
   DNSName makeLowerCase() const
@@ -93,12 +90,13 @@ public:
   void makeUsLowerCase()
   {
     for(auto & c : d_storage) {
-      c=dns2_tolower(c);
+      c=dns_tolower(c);
     }
   }
   void makeUsRelative(const DNSName& zone);
   DNSName labelReverse() const;
   bool isWildcard() const;
+  bool isHostname() const;
   unsigned int countLabels() const;
   size_t wirelength() const; //!< Number of total bytes in the name
   bool empty() const { return d_storage.empty(); }
@@ -128,20 +126,22 @@ public:
   {
     return std::lexicographical_compare(d_storage.rbegin(), d_storage.rend(), 
 				 rhs.d_storage.rbegin(), rhs.d_storage.rend(),
-				 [](const char& a, const char& b) {
-					  return dns2_tolower(a) < dns2_tolower(b); 
+				 [](const unsigned char& a, const unsigned char& b) {
+					  return dns_tolower(a) < dns_tolower(b);
 					}); // note that this is case insensitive, including on the label lengths
   }
 
   inline bool canonCompare(const DNSName& rhs) const;
   bool slowCanonCompare(const DNSName& rhs) const;  
 
-#if BOOST_VERSION >= 104800 && ! defined( __APPLE__ ) && ! defined(__OpenBSD__)
+#if BOOST_VERSION >= 105300 && ! defined( __APPLE__ ) && ! defined(__OpenBSD__)
   typedef boost::container::string string_t;
 #else
   typedef std::string string_t;
 #endif
-
+  const string_t& getStorage() const {
+    return d_storage;
+  }
 private:
   string_t d_storage;
 
@@ -190,8 +190,8 @@ inline bool DNSName::canonCompare(const DNSName& rhs) const
 					  d_storage.c_str() + ourpos[ourcount] + 1 + *(d_storage.c_str() + ourpos[ourcount]),
 					  rhs.d_storage.c_str() + rhspos[rhscount] + 1, 
 					  rhs.d_storage.c_str() + rhspos[rhscount] + 1 + *(rhs.d_storage.c_str() + rhspos[rhscount]),
-					  [](const char& a, const char& b) {
-					    return dns2_tolower(a) < dns2_tolower(b); 
+					  [](const unsigned char& a, const unsigned char& b) {
+					    return dns_tolower(a) < dns_tolower(b);
 					  });
     
     //    cout<<"Forward: "<<res<<endl;
@@ -202,8 +202,8 @@ inline bool DNSName::canonCompare(const DNSName& rhs) const
 					  rhs.d_storage.c_str() + rhspos[rhscount] + 1 + *(rhs.d_storage.c_str() + rhspos[rhscount]),
 					  d_storage.c_str() + ourpos[ourcount] + 1, 
 					  d_storage.c_str() + ourpos[ourcount] + 1 + *(d_storage.c_str() + ourpos[ourcount]),
-					  [](const char& a, const char& b) {
-					    return dns2_tolower(a) < dns2_tolower(b); 
+					  [](const unsigned char& a, const unsigned char& b) {
+					    return dns_tolower(a) < dns_tolower(b);
 					  });
     //    cout<<"Reverse: "<<res<<endl;
     if(res)
@@ -228,69 +228,127 @@ inline DNSName operator+(const DNSName& lhs, const DNSName& rhs)
   return ret;
 }
 
-/* Quest in life: serve as a rapid block list. If you add a DNSName to a root SuffixMatchNode, 
-   anything part of that domain will return 'true' in check */
-struct SuffixMatchNode
+template<typename T>
+struct SuffixMatchTree
 {
-  SuffixMatchNode(const std::string& name_="", bool endNode_=false) : name(name_), endNode(endNode_)
+  SuffixMatchTree(const std::string& name="", bool endNode_=false) : d_name(name), endNode(endNode_)
   {}
-  std::string name;
-  std::string d_human;
-  mutable std::set<SuffixMatchNode> children;
+
+  SuffixMatchTree(const SuffixMatchTree& rhs)
+  {
+    d_name = rhs.d_name;
+    children = rhs.children;
+    endNode = rhs.endNode;
+    d_value = rhs.d_value;
+  }
+  std::string d_name;
+  mutable std::set<SuffixMatchTree> children;
   mutable bool endNode;
-  bool operator<(const SuffixMatchNode& rhs) const
+  mutable T d_value;
+  bool operator<(const SuffixMatchTree& rhs) const
   {
-    return strcasecmp(name.c_str(), rhs.name.c_str()) < 0;
+    return strcasecmp(d_name.c_str(), rhs.d_name.c_str()) < 0;
+  }
+  typedef SuffixMatchTree value_type;
+
+  template<typename V>
+  void visit(const V& v) const {
+    for(const auto& c : children)
+      c.visit(v);
+    if(endNode)
+      v(*this);
   }
 
-  void add(const DNSName& name) 
+  void add(const DNSName& name, const T& t)
   {
-    if(!d_human.empty())
-      d_human.append(", ");
-    d_human += name.toString();
-    add(name.getRawLabels());
+    add(name.getRawLabels(), t);
   }
 
-  void add(std::vector<std::string> labels) const
+  void add(std::vector<std::string> labels, const T& value) const
   {
     if(labels.empty()) { // this allows insertion of the root
       endNode=true;
+      d_value=value;
     }
     else if(labels.size()==1) {
-      auto res=children.insert(SuffixMatchNode(*labels.begin(), true));
+      SuffixMatchTree newChild(*labels.begin(), true);
+      auto res=children.insert(newChild);
       if(!res.second) {
+        // we might already have had the node as an
+        // intermediary one, but it's now an end node
         if(!res.first->endNode) {
           res.first->endNode = true;
         }
       }
+      res.first->d_value = value;
     }
     else {
-      auto res=children.insert(SuffixMatchNode(*labels.rbegin(), false));
+      SuffixMatchTree newnode(*labels.rbegin(), false);
+      auto res=children.insert(newnode);
       labels.pop_back();
-      res.first->add(labels);
+      res.first->add(labels, value);
     }
   }
 
-  bool check(const DNSName& name)  const
+  T* lookup(const DNSName& name)  const
   {
-    if(children.empty()) // speed up empty set
-      return endNode;
-    return check(name.getRawLabels());
+    if(children.empty()) { // speed up empty set
+      if(endNode)
+        return &d_value;
+      return 0;
+    }
+    return lookup(name.getRawLabels());
   }
 
-  bool check(std::vector<std::string> labels) const
+  T* lookup(std::vector<std::string> labels) const
   {
-    if(labels.empty()) // optimization
-      return endNode; 
+    if(labels.empty()) { // optimization
+      if(endNode)
+        return &d_value;
+      return 0;
+    }
 
-    SuffixMatchNode smn(*labels.rbegin());
+    SuffixMatchTree smn(*labels.rbegin());
     auto child = children.find(smn);
-    if(child == children.end())
-      return endNode;
+    if(child == children.end()) {
+      if(endNode)
+        return &d_value;
+      return 0;
+    }
     labels.pop_back();
-    return child->check(labels);
+    return child->lookup(labels);
   }
-  
+
+};
+
+/* Quest in life: serve as a rapid block list. If you add a DNSName to a root SuffixMatchNode,
+   anything part of that domain will return 'true' in check */
+struct SuffixMatchNode
+{
+  SuffixMatchNode()
+  {}
+  std::string d_human;
+  SuffixMatchTree<bool> d_tree;
+
+  void add(const DNSName& dnsname)
+  {
+    if(!d_human.empty())
+      d_human.append(", ");
+    d_human += dnsname.toString();
+
+    d_tree.add(dnsname, true);
+  }
+
+  void add(std::vector<std::string> labels)
+  {
+    d_tree.add(labels, true);
+  }
+
+  bool check(const DNSName& dnsname) const
+  {
+    return d_tree.lookup(dnsname) != nullptr;
+  }
+
   std::string toString() const
   {
     return d_human;
@@ -307,3 +365,18 @@ namespace std {
 }
 
 DNSName::string_t segmentDNSNameRaw(const char* input); // from ragel
+bool DNSName::operator==(const DNSName& rhs) const
+{
+  if(rhs.empty() != empty() || rhs.d_storage.size() != d_storage.size())
+    return false;
+
+  auto us = d_storage.cbegin();
+  auto p = rhs.d_storage.cbegin();
+  for(; us != d_storage.cend() && p != rhs.d_storage.cend(); ++us, ++p) { 
+    if(dns_tolower(*p) != dns_tolower(*us))
+      return false;
+  }
+  return true;
+}
+
+extern const DNSName g_rootdnsname, g_wildcarddnsname;

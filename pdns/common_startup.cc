@@ -39,7 +39,8 @@ typedef Distributor<DNSPacket,DNSPacket,PacketHandler> DNSDistributor;
 
 ArgvMap theArg;
 StatBag S;  //!< Statistics are gathered across PDNS via the StatBag class S
-PacketCache PC; //!< This is the main PacketCache, shared across all threads
+AuthPacketCache PC; //!< This is the main PacketCache, shared across all threads
+AuthQueryCache QC;
 DNSProxy *DP;
 DynListener *dl;
 CommunicatorClass Communicator;
@@ -48,7 +49,6 @@ int avg_latency;
 TCPNameserver *TN;
 static vector<DNSDistributor*> g_distributors;
 vector<std::shared_ptr<UDPNameserver> > g_udpReceivers;
-AuthLua *LPE;
 
 ArgvMap &arg()
 {
@@ -78,7 +78,7 @@ void declareArguments()
   ::arg().set("max-queue-length","Maximum queuelength before considering situation lost")="5000";
 
   ::arg().set("retrieval-threads", "Number of AXFR-retrieval threads for slave operation")="2";
-  ::arg().setSwitch("api", "Enable/disable the REST API")="no";
+  ::arg().setSwitch("api", "Enable/disable the REST API (including HTTP listener)")="no";
   ::arg().set("api-key", "Static pre-shared authentication key for access to the REST API")="";
   ::arg().set("api-logfile", "Location of the server logfile (used by the REST API)")="/var/log/pdns.log";
   ::arg().setSwitch("api-readonly", "Disallow data modification through the REST API when set")="no";
@@ -100,8 +100,7 @@ void declareArguments()
   ::arg().set("signing-threads","Default number of signer threads to start")="3";
   ::arg().set("receiver-threads","Default number of receiver threads to start")="1";
   ::arg().set("queue-limit","Maximum number of milliseconds to queue a query")="1500"; 
-  ::arg().set("recursor","If recursion is desired, IP address of a recursing nameserver")="no"; 
-  ::arg().set("allow-recursion","List of subnets that are allowed to recurse")="0.0.0.0/0";
+  ::arg().set("resolver","Use this resolver for ALIAS and the internal stub resolver")="no";
   ::arg().set("udp-truncation-threshold", "Maximum UDP response size before we truncate")="1680";
   ::arg().set("disable-tcp","Do not listen to TCP queries")="no";
   
@@ -126,14 +125,15 @@ void declareArguments()
   ::arg().setSwitch("disable-axfr-rectify","Disable the rectify step during an outgoing AXFR. Only required for regression testing.")="no";
   ::arg().setSwitch("guardian","Run within a guardian process")="no";
   ::arg().setSwitch("prevent-self-notification","Don't send notifications to what we think is ourself")="yes";
-  ::arg().setSwitch("webserver","Start a webserver for monitoring")="no"; 
-  ::arg().setSwitch("webserver-print-arguments","If the webserver should print arguments")="no"; 
-  ::arg().setSwitch("edns-subnet-processing","If we should act on EDNS Subnet options")="no"; 
-  ::arg().setSwitch("any-to-tcp","Answer ANY queries with tc=1, shunting to TCP")="yes"; 
-  ::arg().set("webserver-address","IP Address of webserver to listen on")="127.0.0.1";
-  ::arg().set("webserver-port","Port of webserver to listen on")="8081";
+  ::arg().setSwitch("any-to-tcp","Answer ANY queries with tc=1, shunting to TCP")="yes";
+  ::arg().setSwitch("edns-subnet-processing","If we should act on EDNS Subnet options")="no";
+
+  ::arg().setSwitch("webserver","Start a webserver for monitoring (api=yes also enables the HTTP listener)")="no";
+  ::arg().setSwitch("webserver-print-arguments","If the webserver should print arguments")="no";
+  ::arg().set("webserver-address","IP Address of webserver/API to listen on")="127.0.0.1";
+  ::arg().set("webserver-port","Port of webserver/API to listen on")="8081";
   ::arg().set("webserver-password","Password required for accessing the webserver")="";
-  ::arg().set("webserver-allow-from","Webserver access is only allowed from these subnets")="0.0.0.0/0,::/0";
+  ::arg().set("webserver-allow-from","Webserver/API access is only allowed from these subnets")="127.0.0.1,::1";
 
   ::arg().setSwitch("out-of-zone-additional-processing","Do out of zone additional processing")="yes";
   ::arg().setSwitch("do-ipv6-additional-processing", "Do AAAA additional processing")="yes";
@@ -144,7 +144,6 @@ void declareArguments()
   ::arg().set("carbon-interval", "Number of seconds between carbon (graphite) updates")="30";
 
   ::arg().set("cache-ttl","Seconds to store packets in the PacketCache")="20";
-  ::arg().set("recursive-cache-ttl","Seconds to store packets for recursive queries in the PacketCache")="10";
   ::arg().set("negquery-cache-ttl","Seconds to store negative query results in the QueryCache")="60";
   ::arg().set("query-cache-ttl","Seconds to store query results in the QueryCache")="20";
   ::arg().set("soa-minimum-ttl","Default SOA minimum ttl")="3600";
@@ -159,21 +158,28 @@ void declareArguments()
 
   ::arg().set("trusted-notification-proxy", "IP address of incoming notification proxy")="";
   ::arg().set("slave-renotify", "If we should send out notifications for slaved updates")="no";
+  ::arg().set("forward-notify", "IP addresses to forward received notifications to regardless of master or slave settings")="";
 
   ::arg().set("default-ttl","Seconds a result is valid if not set otherwise")="3600";
   ::arg().set("max-tcp-connections","Maximum number of TCP connections")="20";
+  ::arg().set("max-tcp-connections-per-client","Maximum number of simultaneous TCP connections per client")="0";
+  ::arg().set("max-tcp-transactions-per-conn")="0";
+  ::arg().set("max-tcp-connection-duration")="0";
+  ::arg().set("tcp-idle-timeout")="5";
+
   ::arg().setSwitch("no-shuffle","Set this to prevent random shuffling of answers - for regression testing")="off";
 
   ::arg().set("setuid","If set, change user id to this uid for more security")="";
   ::arg().set("setgid","If set, change group id to this gid for more security")="";
 
-  ::arg().set("max-cache-entries", "Maximum number of cache entries")="1000000";
+  ::arg().set("max-cache-entries", "Maximum number of entries in the query cache")="1000000";
+  ::arg().set("max-packet-cache-entries", "Maximum number of entries in the packet cache")="1000000";
   ::arg().set("max-signature-cache-entries", "Maximum number of signatures cache entries")="";
   ::arg().set("max-ent-entries", "Maximum number of empty non-terminals in a zone")="100000";
   ::arg().set("entropy-source", "If set, read entropy from this file")="/dev/urandom";
 
   ::arg().set("lua-prequery-script", "Lua script with prequery handler (DO NOT USE)")="";
-  ::arg().set("experimental-lua-policy-script", "Lua script for the policy engine")="";
+  ::arg().set("lua-dnsupdate-policy-script", "Lua script with DNS update policy handler")="";
 
   ::arg().setSwitch("traceback-handler","Enable the traceback handler (Linux only)")="yes";
   ::arg().setSwitch("direct-dnskey","Fetch DNSKEY RRs from backend during DNSKEY synthesis")="no";
@@ -186,12 +192,15 @@ void declareArguments()
   ::arg().set("include-dir","Include *.conf files from this directory");
   ::arg().set("security-poll-suffix","Domain name from which to query security update notifications")="secpoll.powerdns.com.";
 
+  ::arg().setSwitch("expand-alias", "Expand ALIAS records")="no";
   ::arg().setSwitch("outgoing-axfr-expand-alias", "Expand ALIAS records during outgoing AXFR")="no";
   ::arg().setSwitch("8bit-dns", "Allow 8bit dns queries")="no";
   ::arg().setSwitch("axfr-lower-serial", "Also AXFR a zone from a master with a lower serial")="no";
 
   ::arg().set("lua-axfr-script", "Script to be used to edit incoming AXFRs")="";
   ::arg().set("xfr-max-received-mbytes", "Maximum number of megabytes received from an incoming XFR")="100";
+
+  ::arg().set("tcp-fast-open", "Enable TCP Fast Open support on the listening sockets, using the supplied numerical value as the queue size")="0";
 }
 
 static time_t s_start=time(0);
@@ -276,12 +285,6 @@ void declareStats(void)
 
   S.declare("qsize-q","Number of questions waiting for database attention", getQCount);
 
-  S.declare("deferred-cache-inserts","Amount of cache inserts that were deferred because of maintenance");
-  S.declare("deferred-cache-lookup","Amount of cache lookups that were deferred because of maintenance");
-
-  S.declare("query-cache-hit","Number of hits on the query cache");
-  S.declare("query-cache-miss","Number of misses on the query cache");
-
   S.declare("dnsupdate-queries", "DNS update packets received.");
   S.declare("dnsupdate-answers", "DNS update packets successfully answered.");
   S.declare("dnsupdate-refused", "DNS update packets that are refused.");
@@ -341,6 +344,7 @@ void sendout(DNSPacket* a)
 
 //! The qthread receives questions over the internet via the Nameserver class, and hands them to the Distributor for further processing
 void *qthread(void *number)
+try
 {
   DNSPacket *P;
   DNSDistributor *distributor = DNSDistributor::Create(::arg().asNum("distributor-threads", 1)); // the big dispatcher!
@@ -359,7 +363,6 @@ void *qthread(void *number)
 
   int diff;
   bool logDNSQueries = ::arg().mustDo("log-dns-queries");
-  bool doRecursion = ::arg().mustDo("recursor");
   shared_ptr<UDPNameserver> NS;
 
   // If we have SO_REUSEPORT then create a new port for all receiver threads
@@ -404,11 +407,7 @@ void *qthread(void *number)
     }
 
     if((P->d.opcode != Opcode::Notify && P->d.opcode != Opcode::Update) && P->couldBeCached()) {
-      bool haveSomething = false;
-      if (doRecursion && P->d.rd && DP->recurseFor(P))
-        haveSomething=PC.get(P, &cached, true); // does the PacketCache recognize this ruestion (recursive)?
-      if (!haveSomething)
-        haveSomething=PC.get(P, &cached, false); // does the PacketCache recognize this question?
+      bool haveSomething=PC.get(P, &cached); // does the PacketCache recognize this question?
       if (haveSomething) {
         if(logDNSQueries)
           L<<"packetcache HIT"<<endl;
@@ -419,26 +418,13 @@ void *qthread(void *number)
         cached.d.rd=P->d.rd; // copy in recursion desired bit
         cached.d.id=P->d.id;
         cached.commitD(); // commit d to the packet                        inlined
-
-        int policyres = PolicyDecision::PASS;
-        if(LPE)
-        {
-          // FIXME: cached does not have qdomainwild/qdomainzone because packetcache entries
-          // go through tostring/noparse
-          policyres = LPE->police(&question, &cached);
-        }
-
-        if (policyres == PolicyDecision::PASS) {
-          NS->send(&cached);   // answer it then                              inlined
-          diff=P->d_dt.udiff();
-          avg_latency=(int)(0.999*avg_latency+0.001*diff); // 'EWMA'
-        }
-        // FIXME implement truncate
-
+        NS->send(&cached); // answer it then                              inlined
+        diff=P->d_dt.udiff();
+        avg_latency=(int)(0.999*avg_latency+0.001*diff); // 'EWMA'
         continue;
       }
     }
-    
+
     if(distributor->isOverloaded()) {
       if(logDNSQueries) 
         L<<"Dropped query, backends are overloaded"<<endl;
@@ -457,6 +443,11 @@ void *qthread(void *number)
     }
   }
   return 0;
+}
+catch(PDNSException& pe)
+{
+  L<<Logger::Error<<"Fatal error in question thread: "<<pe.reason<<endl;
+  _exit(1);
 }
 
 static void* dummyThread(void *)
@@ -490,9 +481,21 @@ void mainthread()
    DNSPacket::s_udpTruncationThreshold = std::max(512, ::arg().asNum("udp-truncation-threshold"));
    DNSPacket::s_doEDNSSubnetProcessing = ::arg().mustDo("edns-subnet-processing");
 
+   PC.setTTL(::arg().asNum("cache-ttl"));
+   PC.setMaxEntries(::arg().asNum("max-packet-cache-entries"));
+   QC.setMaxEntries(::arg().asNum("max-cache-entries"));
+
    stubParseResolveConf();
 
    if(!::arg()["chroot"].empty()) {
+#ifdef HAVE_SYSTEMD
+     char *ns;
+     ns = getenv("NOTIFY_SOCKET");
+     if (ns != nullptr) {
+       L<<Logger::Error<<"Unable to chroot when running from systemd. Please disable chroot= or set the 'Type' for this service to 'simple'"<<endl;
+       exit(1);
+     }
+#endif
      triggerLoadOfLibraries();
      if(::arg().mustDo("master") || ::arg().mustDo("slave"))
         gethostbyname("a.root-servers.net"); // this forces all lookup libraries to be loaded
@@ -511,9 +514,8 @@ void mainthread()
   Utility::dropUserPrivs(newuid);
 
   // We need to start the Recursor Proxy before doing secpoll, see issue #2453
-  if(::arg().mustDo("recursor")){
-    DP=new DNSProxy(::arg()["recursor"]);
-    DP->onlyFrom(::arg()["allow-recursion"]);
+  if(::arg().mustDo("resolver")){
+    DP=new DNSProxy(::arg()["resolver"]);
     DP->go();
   }
 
@@ -527,16 +529,11 @@ void mainthread()
 
   pthread_t qtid;
 
-  if(::arg().mustDo("webserver"))
+  if(::arg().mustDo("webserver") || ::arg().mustDo("api"))
     webserver.go();
 
-  if(::arg().mustDo("slave") || ::arg().mustDo("master"))
+  if(::arg().mustDo("slave") || ::arg().mustDo("master") || !::arg()["forward-notify"].empty())
     Communicator.go(); 
-
-  if(!::arg()["experimental-lua-policy-script"].empty()){
-    LPE=new AuthLua(::arg()["experimental-lua-policy-script"]);
-    L<<Logger::Warning<<"Loaded Lua policy script "<<::arg()["experimental-lua-policy-script"]<<endl;
-  }
 
   if(TN)
     TN->go(); // tcp nameserver launch

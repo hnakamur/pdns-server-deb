@@ -37,20 +37,6 @@ DNSPacket* AuthLua::prequery(DNSPacket *p)
   return 0;
 }
 
-int AuthLua::police(DNSPacket *req, DNSPacket *resp, bool isTcp)
-{
-  return PolicyDecision::PASS;
-}
-
-string AuthLua::policycmd(const vector<string>&parts) {
-  return "no policy script loaded";
-}
-
-bool AuthLua::axfrfilter(const ComboAddress& remote, const DNSName& zone, const DNSResourceRecord& in, vector<DNSResourceRecord>& out)
-{
-  return false;
-}
-
 #else
 
 
@@ -76,84 +62,6 @@ AuthLua::AuthLua(const std::string &fname)
 {
   registerLuaDNSPacket();
   pthread_mutex_init(&d_lock,0);
-}
-
-bool AuthLua::axfrfilter(const ComboAddress& remote, const DNSName& zone, const DNSResourceRecord& in, vector<DNSResourceRecord>& out)
-{
-  lua_getglobal(d_lua,  "axfrfilter");
-  if(!lua_isfunction(d_lua, -1)) {
-    // cerr<<"No such function 'axfrfilter'\n";
-    lua_pop(d_lua, 1);
-    return false;
-  }
-  
-  lua_pushstring(d_lua,  remote.toString().c_str() );
-  lua_pushstring(d_lua,  zone.toString().c_str() ); // FIXME400 expose DNSName to Lua?
-  lua_pushstring(d_lua,  in.qname.toString().c_str() );
-  lua_pushnumber(d_lua,  in.qtype.getCode() );
-  lua_pushnumber(d_lua,  in.ttl );
-  lua_pushstring(d_lua,  in.content.c_str() );
-
-  if(lua_pcall(d_lua,  6, 2, 0)) { // error
-    string error=string("lua error in axfrfilter: ")+lua_tostring(d_lua, -1);
-    lua_pop(d_lua, 1);
-    throw runtime_error(error);
-    return false;
-  }
-  
-  int newres = (int)lua_tonumber(d_lua, 1); // did we handle it?
-  if(newres < 0) {
-    //cerr << "handler did not handle"<<endl;
-    lua_pop(d_lua, 2);
-    return false;
-  }
-
-  /* get the result */
-  DNSResourceRecord rr;
-  rr.d_place = DNSResourceRecord::ANSWER;
-  rr.ttl = 3600;
-  rr.domain_id = in.domain_id;
-
-  out.clear();
-
-  /*           1       2   3   4   */
-  /* stack:  boolean table key row */
-
-  int tableLen = getLuaTableLength(d_lua, 2);
-  for(int n=1; n < tableLen + 1; ++n) {
-    lua_pushnumber(d_lua, n);
-    lua_gettable(d_lua, 2);
-
-    uint32_t tmpnum=0;
-    if(!getFromTable("qtype", tmpnum)) 
-      rr.qtype=QType::A;
-    else
-      rr.qtype=tmpnum;
-
-    getFromTable("content", rr.content);
-    if(!getFromTable("ttl", rr.ttl))
-      rr.ttl=3600;
-
-    string qname;
-    if(!getFromTable("qname", qname))
-      rr.qname = zone;
-    else
-      rr.qname=DNSName(qname);
-
-    if(!getFromTable("place", tmpnum))
-      rr.d_place = DNSResourceRecord::ANSWER;
-    else
-      rr.d_place = static_cast<DNSResourceRecord::Place>(tmpnum);
-
-    /* removes 'value'; keeps 'key' for next iteration */
-    lua_pop(d_lua, 1); // table
-
-    //    cerr<<"Adding content '"<<rr.content<<"' with place "<<(int)rr.d_place<<" \n";
-    rr.qname.makeUsLowerCase();
-    out.push_back(rr);
-  }
-  lua_pop(d_lua, 2); // c
-  return true;
 }
 
 struct LuaDNSPacket
@@ -208,7 +116,10 @@ static int ldp_addRecords(lua_State *L) {
   vector<DNSRecord> rrs;
   popResourceRecordsTable(L, DNSName("BOGUS"), rrs);
   for(const DNSRecord& dr :  rrs) {
-    p->addRecord(DNSResourceRecord(dr));
+    DNSZoneRecord dzr;
+    dzr.dr=dr;
+    dzr.auth=true; // LET'S HOPE THIS IS TRUE XXX
+    p->addRecord(dzr);
   }
   return 0;
 }
@@ -337,80 +248,6 @@ DNSPacket* AuthLua::prequery(DNSPacket *p)
     delete r;
     return 0;
   }
-}
-
-int AuthLua::police(DNSPacket *req, DNSPacket *resp, bool isTcp)
-{
-  Lock l(&d_lock);
-
-  lua_getglobal(d_lua,  "police");
-  if(!lua_isfunction(d_lua, -1)) {
-    // cerr<<"No such function 'police'\n"; FIXME: raise Exception? check this beforehand so we can log it once?
-    lua_pop(d_lua, 1);
-    return PolicyDecision::PASS;
-  }
-
-  /* wrap request */
-  LuaDNSPacket* lreq = (LuaDNSPacket *)lua_newuserdata(d_lua, sizeof(LuaDNSPacket));
-  lreq->d_p=req;
-  luaL_getmetatable(d_lua, "LuaDNSPacket");
-  lua_setmetatable(d_lua, -2);
-
-  /* wrap response */
-  if(resp) {
-    LuaDNSPacket* lresp = (LuaDNSPacket *)lua_newuserdata(d_lua, sizeof(LuaDNSPacket));
-    lresp->d_p=resp;
-    luaL_getmetatable(d_lua, "LuaDNSPacket");
-    lua_setmetatable(d_lua, -2);
-  }
-  else
-  {
-    lua_pushnil(d_lua);
-  }
-
-  lua_pushboolean(d_lua, isTcp);
-
-  if(lua_pcall(d_lua, 3, 1, 0)) {
-    string error=string("lua error in police: ")+lua_tostring(d_lua, -1);
-    lua_pop(d_lua, 1);
-    theL()<<Logger::Error<<"police error: "<<error<<endl;
-
-    throw runtime_error(error);
-  }
-
-  int res = (int) lua_tonumber(d_lua, 1);
-  lua_pop(d_lua, 1);
-
-  return res;
-}
-
-string AuthLua::policycmd(const vector<string>&parts) {
-  Lock l(&d_lock);
-
-  lua_getglobal(d_lua, "policycmd");
-  if(!lua_isfunction(d_lua, -1)) {
-    // cerr<<"No such function 'police'\n"; FIXME: raise Exception? check this beforehand so we can log it once?
-    lua_pop(d_lua, 1);
-    return "no policycmd function in policy script";
-  }
-
-  for(vector<string>::size_type i=1; i<parts.size(); i++)
-    lua_pushstring(d_lua, parts[i].c_str());
-
-  if(lua_pcall(d_lua, parts.size()-1, 1, 0)) {
-    string error = string("lua error in policycmd: ")+lua_tostring(d_lua, -1);
-    lua_pop(d_lua, 1);
-    return error;
-  }
-
-  const char *ret = lua_tostring(d_lua, 1);
-  string rets;
-  if(ret)
-    rets = ret;
-
-  lua_pop(d_lua, 1);
-
-  return rets;
 }
 
 #endif

@@ -34,7 +34,6 @@
 #include "dns_random.hh"
 
 extern StatBag S;
-extern PacketCache PC;
 
 DNSProxy::DNSProxy(const string &remote)
 {
@@ -42,7 +41,10 @@ DNSProxy::DNSProxy(const string &remote)
   d_resanswers=S.getPointer("recursing-answers");
   d_resquestions=S.getPointer("recursing-questions");
   d_udpanswers=S.getPointer("udp-answers");
-  ComboAddress remaddr(remote, 53);
+
+  vector<string> addresses;
+  stringtok(addresses, remote, " ,\t");
+  ComboAddress remaddr(addresses[0], 53);
   
   if((d_sock=socket(remaddr.sin4.sin_family, SOCK_DGRAM,0))<0)
     throw PDNSException(string("socket: ")+strerror(errno));
@@ -79,23 +81,9 @@ void DNSProxy::go()
   pthread_create(&tid,0,&launchhelper,this);
 }
 
-
-void DNSProxy::onlyFrom(const string &ips)
-{
-  d_ng.toMasks(ips);
-}
-
-bool DNSProxy::recurseFor(DNSPacket* p)
-{
-  return d_ng.match((ComboAddress *)&p->d_remote);
-}
-
 /** returns false if p->remote is not allowed to recurse via us */
 bool DNSProxy::sendPacket(DNSPacket *p)
 {
-  if(!recurseFor(p))
-    return false;
-
   uint16_t id;
   {
     Lock l(&d_lock);
@@ -249,15 +237,14 @@ void DNSProxy::mainloop(void)
 	    //	    cerr<<"comp: "<<(int)j->first.d_place-1<<" "<<j->first.d_label<<" " << DNSRecordContent::NumberToType(j->first.d_type)<<" "<<j->first.d_content->getZoneRepresentation()<<endl;
 	    if(j->first.d_place == DNSResourceRecord::ANSWER || (j->first.d_place == DNSResourceRecord::AUTHORITY && j->first.d_type == QType::SOA)) {
 	    
-	      DNSResourceRecord rr;
-
 	      if(j->first.d_type == i->second.qtype || (i->second.qtype == QType::ANY && (j->first.d_type == QType::A || j->first.d_type == QType::AAAA))) {
-		rr.qname=i->second.aname;
-		rr.qtype = j->first.d_type;
-		rr.ttl=j->first.d_ttl;
-		rr.d_place= j->first.d_place;
-		rr.content=j->first.d_content->getZoneRepresentation();
-		i->second.complete->addRecord(rr);
+                DNSZoneRecord dzr;
+		dzr.dr.d_name=i->second.aname;
+		dzr.dr.d_type = j->first.d_type;
+		dzr.dr.d_ttl=j->first.d_ttl;
+		dzr.dr.d_place= j->first.d_place;
+		dzr.dr.d_content=j->first.d_content;
+		i->second.complete->addRecord(dzr);
 	      }
 	    }
 	  }
@@ -284,7 +271,6 @@ void DNSProxy::mainloop(void)
         if(sendmsg(i->second.outsock, &msgh, 0) < 0)
           L<<Logger::Warning<<"dnsproxy.cc: Error sending reply with sendmsg (socket="<<i->second.outsock<<"): "<<strerror(errno)<<endl;
         
-        PC.insert(&q, &p, true);
         i->second.created=0;
       }
     }

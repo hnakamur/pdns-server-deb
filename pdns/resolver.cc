@@ -1,24 +1,24 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2002 - 2011 PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
-    published by the Free Software Foundation.
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
@@ -51,7 +51,7 @@
 #include "gss_context.hh"
 #include "namespaces.hh"
 
-int makeQuerySocket(const ComboAddress& local, bool udpOrTCP)
+int makeQuerySocket(const ComboAddress& local, bool udpOrTCP, bool nonLocalBind)
 {
   ComboAddress ourLocal(local);
   
@@ -64,6 +64,10 @@ int makeQuerySocket(const ComboAddress& local, bool udpOrTCP)
   }
 
   setCloseOnExec(sock);
+
+  if(nonLocalBind)
+    Utility::setBindAny(local.sin4.sin_family, sock);
+
   if(udpOrTCP) {
     // udp, try hard to bind an unpredictable port
     int tries=10;
@@ -95,9 +99,9 @@ Resolver::Resolver()
   locals["default4"] = -1;
   locals["default6"] = -1;
   try {
-    locals["default4"] = makeQuerySocket(ComboAddress(::arg()["query-local-address"]), true);
+    locals["default4"] = makeQuerySocket(ComboAddress(::arg()["query-local-address"]), true, ::arg().mustDo("non-local-bind"));
     if(!::arg()["query-local-address6"].empty())
-      locals["default6"] = makeQuerySocket(ComboAddress(::arg()["query-local-address6"]), true);
+      locals["default6"] = makeQuerySocket(ComboAddress(::arg()["query-local-address6"]), true, ::arg().mustDo("non-local-bind"));
   }
   catch(...) {
     if(locals["default4"]>=0)
@@ -140,7 +144,7 @@ uint16_t Resolver::sendResolve(const ComboAddress& remote, const ComboAddress& l
     trc.d_fudge = 300;
     trc.d_origID=ntohs(randomid);
     trc.d_eRcode=0;
-    addTSIG(pw, &trc, tsigkeyname, tsigsecret, "", false);
+    addTSIG(pw, trc, tsigkeyname, tsigsecret, "", false);
   }
 
   int sock;
@@ -213,7 +217,7 @@ static int parseResult(MOADNSParser& mdp, const DNSName& origQname, uint16_t ori
 
 bool Resolver::tryGetSOASerial(DNSName *domain, uint32_t *theirSerial, uint32_t *theirInception, uint32_t *theirExpire, uint16_t* id)
 {
-  struct pollfd *fds = new struct pollfd[locals.size()];
+  auto fds = std::unique_ptr<struct pollfd[]>(new struct pollfd[locals.size()]);
   size_t i = 0, k;
   int sock;
 
@@ -222,8 +226,7 @@ bool Resolver::tryGetSOASerial(DNSName *domain, uint32_t *theirSerial, uint32_t 
     fds[i].events = POLLIN;
   }
 
-  if (poll(fds, i, 250) < 1) { // wait for 0.25s
-    delete [] fds;
+  if (poll(fds.get(), i, 250) < 1) { // wait for 0.25s
     return false;
   }
 
@@ -236,8 +239,6 @@ bool Resolver::tryGetSOASerial(DNSName *domain, uint32_t *theirSerial, uint32_t 
       break;
     }
   }
-
-  delete [] fds;
 
   if (sock < 0) return false; // false alarm
 
@@ -403,7 +404,7 @@ AXFRRetriever::AXFRRetriever(const ComboAddress& remote,
       d_trc.d_fudge = 300;
       d_trc.d_origID=ntohs(pw.getHeader()->id);
       d_trc.d_eRcode=0;
-      addTSIG(pw, &d_trc, tt.name, tt.secret, "", false);
+      addTSIG(pw, d_trc, tt.name, tt.secret, "", false);
     }
   
     uint16_t replen=htons(packet.size());

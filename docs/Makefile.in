@@ -81,13 +81,12 @@ host_triplet = @host@
 @HAVE_BOOST_GE_148_TRUE@	dnstcpbench.1
 
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_2 = dnspcap2protobuf.1
+@TOOLS_TRUE@am__append_3 = $(MANPAGES_TARGET_TOOLS)
 subdir = docs
-DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(dist_man_MANS)
+DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/ax_arg_default_enable_disable.m4 \
-	$(top_srcdir)/m4/ax_check_link_flag.m4 \
 	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
@@ -106,9 +105,9 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/pdns_check_network_libs.m4 \
 	$(top_srcdir)/m4/pdns_check_opendbx.m4 \
 	$(top_srcdir)/m4/pdns_check_os.m4 \
-	$(top_srcdir)/m4/pdns_check_pandoc.m4 \
 	$(top_srcdir)/m4/pdns_check_ragel.m4 \
 	$(top_srcdir)/m4/pdns_check_sqlite3.m4 \
+	$(top_srcdir)/m4/pdns_check_virtualenv.m4 \
 	$(top_srcdir)/m4/pdns_d_fortify_source.m4 \
 	$(top_srcdir)/m4/pdns_enable_botan.m4 \
 	$(top_srcdir)/m4/pdns_enable_coverage.m4 \
@@ -190,7 +189,7 @@ am__uninstall_files_from_dir = { \
 man1dir = $(mandir)/man1
 am__installdirs = "$(DESTDIR)$(man1dir)"
 NROFF = nroff
-MANS = $(dist_man_MANS)
+MANS = $(man_MANS)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 DISTFILES = $(DIST_COMMON) $(DIST_SOURCES) $(TEXINFOS) $(EXTRA_DIST)
 ACLOCAL = @ACLOCAL@
@@ -250,6 +249,7 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+KRB5_LIBS = @KRB5_LIBS@
 LD = @LD@
 LDAP_LIBS = @LDAP_LIBS@
 LDFLAGS = @LDFLAGS@
@@ -299,11 +299,10 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
-PANDOC = @PANDOC@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PGSQL_inc = @PGSQL_inc@
-PGSQL_lib = @PGSQL_lib@
-PGSQL_pg_config = @PGSQL_pg_config@
+PGSQL_CFLAGS = @PGSQL_CFLAGS@
+PGSQL_LIBS = @PGSQL_LIBS@
+PG_CONFIG = @PG_CONFIG@
 PIE_CFLAGS = @PIE_CFLAGS@
 PIE_LDFLAGS = @PIE_LDFLAGS@
 PKG_CONFIG = @PKG_CONFIG@
@@ -334,6 +333,7 @@ UNIXODBC_CFLAGS = @UNIXODBC_CFLAGS@
 UNIXODBC_LIBS = @UNIXODBC_LIBS@
 UNIXODBC_config = @UNIXODBC_config@
 VERSION = @VERSION@
+VIRTUALENV = @VIRTUALENV@
 WARN_CFLAGS = @WARN_CFLAGS@
 YACC = @YACC@
 YAHTTP_CFLAGS = @YAHTTP_CFLAGS@
@@ -400,32 +400,33 @@ target_alias = @target_alias@
 top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
-MANPAGES_TARGET_AUTH = pdns_server.1 \
+MAIN_MANS = pdns_server.1 \
 	pdns_control.1 \
 	pdnsutil.1 \
 	zone2json.1 \
 	zone2ldap.1 \
 	zone2sql.1
 
-MANPAGES_TARGET_TOOLS = calidns.1 dnsgram.1 dnsreplay.1 dnsscan.1 \
-	dnsscope.1 dnswasher.1 dumresp.1 ixplore.1 nproxy.1 nsec3dig.1 \
-	pdns_notify.1 saxfr.1 sdig.1 $(am__append_1) $(am__append_2)
-MANPAGES_TARGET_DNSDIST = dnsdist.1
-MANPAGES_TARGET_RECURSOR = pdns_recursor.1 \
-	rec_control.1
+MANPAGES_INSTALL = $(MAIN_MANS) $(am__append_1) $(am__append_2) \
+	$(am__append_3)
+MANPAGES_DIST = $(MAIN_MANS) $(MANPAGES_TARGET_TOOLS) dnsbulktest.1 \
+	dnstcpbench.1 dnspcap2protobuf.1
+MANPAGES_TARGET_TOOLS = calidns.1 \
+	dnsgram.1 \
+	dnsreplay.1 \
+	dnsscan.1 \
+	dnsscope.1 \
+	dnswasher.1 \
+	dumresp.1 \
+	ixplore.1 \
+	nproxy.1 \
+	nsec3dig.1 \
+	pdns_notify.1 \
+	saxfr.1 \
+	sdig.1
 
-MANPAGES_TARGET_ALL = $(MANPAGES_TARGET_AUTH) \
-		$(MANPAGES_TARGET_RECURSOR) \
-		$(MANPAGES_TARGET_TOOLS) \
-		$(MANPAGES_TARGET_DNSDIST)
-
-@HAVE_MANPAGES_TRUE@dist_man_MANS = $(MANPAGES_TARGET_AUTH) $(MANPAGES_TARGET_TOOLS)
-
-# The manpages to distribute and install are only those for the
-# auth server and tools. For the recursor and dnsdist tarballs,
-# the respective dist- scripts will take care of this
-@HAVE_PANDOC_TRUE@dist_man_MANS = $(MANPAGES_TARGET_AUTH) $(MANPAGES_TARGET_TOOLS)
-EXTRA_DIST = manpages markdown/*.md markdown/appendix markdown/authoritative markdown/common markdown/httpapi markdown/recursor markdown/security markdown/tools
+man_MANS = $(MANPAGES_INSTALL)
+EXTRA_DIST = $(MANPAGES_DIST)
 all: all-am
 
 .SUFFIXES:
@@ -465,10 +466,10 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
-install-man1: $(dist_man_MANS)
+install-man1: $(man_MANS)
 	@$(NORMAL_INSTALL)
 	@list1=''; \
-	list2='$(dist_man_MANS)'; \
+	list2='$(man_MANS)'; \
 	test -n "$(man1dir)" \
 	  && test -n "`echo $$list1$$list2`" \
 	  || exit 0; \
@@ -503,7 +504,7 @@ uninstall-man1:
 	@$(NORMAL_UNINSTALL)
 	@list=''; test -n "$(man1dir)" || exit 0; \
 	files=`{ for i in $$list; do echo "$$i"; done; \
-	l2='$(dist_man_MANS)'; for i in $$l2; do echo "$$i"; done | \
+	l2='$(man_MANS)'; for i in $$l2; do echo "$$i"; done | \
 	  sed -n '/\.1[a-z]*$$/p'; \
 	} | sed -e 's,.*/,,;h;s,.*\.,,;s,^[^1][0-9a-z]*$$,1,;x' \
 	      -e 's,\.[0-9a-z]*$$,,;$(transform);G;s,\n,.,'`; \
@@ -582,6 +583,8 @@ distclean-generic:
 maintainer-clean-generic:
 	@echo "This command is intended for maintainers to use"
 	@echo "it deletes files that may require special tools to rebuild."
+clean: clean-am
+
 clean-am: clean-generic clean-libtool mostlyclean-am
 
 distclean: distclean-am
@@ -591,6 +594,8 @@ distclean-am: clean-am distclean-generic
 dvi: dvi-am
 
 dvi-am:
+
+html: html-am
 
 html-am:
 
@@ -662,41 +667,45 @@ uninstall-man: uninstall-man1
 	uninstall-man1
 
 
-.PHONY: html all-manpages
+@HAVE_MANPAGES_FALSE@@HAVE_VIRTUALENV_TRUE@$(MANPAGES_DIST): %: manpages/%.rst .venv
+@HAVE_MANPAGES_FALSE@@HAVE_VIRTUALENV_TRUE@	.venv/bin/python -msphinx -b man . mans $<
+@HAVE_MANPAGES_FALSE@@HAVE_VIRTUALENV_TRUE@	mv mans/$@ $@
 
-html: html/index.html
+@HAVE_VIRTUALENV_TRUE@.venv: requirements.txt
+@HAVE_VIRTUALENV_TRUE@	virtualenv .venv
+@HAVE_VIRTUALENV_TRUE@	.venv/bin/pip install -U pip setuptools setuptools-git
+@HAVE_VIRTUALENV_TRUE@	.venv/bin/pip install -r requirements.txt
 
-@FROM_GIT_TRUE@html/index.html: process-md.sh mkdocs.yml markdown/** markdown/*/** manpages/*
-@FROM_GIT_TRUE@	mkdir -p doc-build
-@FROM_GIT_TRUE@	rsync -a --delete markdown/. doc-build/.
-@FROM_GIT_TRUE@	cp -r manpages doc-build/
-@FROM_GIT_TRUE@	./process-md.sh pre
-@FROM_GIT_TRUE@	mkdocs build --clean
-@FROM_GIT_TRUE@	./process-md.sh post
+@HAVE_VIRTUALENV_TRUE@html-docs: common/** manpages/** .venv *.rst
+@HAVE_VIRTUALENV_TRUE@	.venv/bin/python -msphinx -b html . html-docs
 
-@FROM_GIT_TRUE@html.tar.bz2: html
-@FROM_GIT_TRUE@	tar cjf html.tar.bz2 html/
+@HAVE_VIRTUALENV_TRUE@latex/PowerDNS-Authoritative.pdf: common/** manpages/** .venv *.rst
+@HAVE_VIRTUALENV_TRUE@	.venv/bin/python -msphinx -M latexpdf . .
 
-@FROM_GIT_TRUE@check-links: html
-@FROM_GIT_TRUE@	./checklinks.sh
+@HAVE_VIRTUALENV_TRUE@PowerDNS-Authoritative.pdf: latex/PowerDNS-Authoritative.pdf
+@HAVE_VIRTUALENV_TRUE@	mv $< $@
 
-@FROM_GIT_TRUE@publish: html html.tar.bz2
-@FROM_GIT_TRUE@	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./html/ web1.powerdns.com:/srv/www/doc.powerdns.com/md
-@FROM_GIT_TRUE@	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./html.tar.bz2 web1.powerdns.com:/srv/www/doc.powerdns.com/html.tar.bz2
-@FROM_GIT_FALSE@html/index.html:
-@FROM_GIT_FALSE@	@echo "Building the documentation HTML is only"
-@FROM_GIT_FALSE@	@echo "supported from a git checkout"
+@HAVE_VIRTUALENV_TRUE@html-docs.tar.bz2: html-docs
+@HAVE_VIRTUALENV_TRUE@	tar cjf $@ $<
 
-all-manpages: $(MANPAGES_TARGET_ALL)
+@HAVE_VIRTUALENV_TRUE@all-docs: PowerDNS-Authoritative.pdf html-docs html-docs.tar.bz2
 
-@HAVE_PANDOC_TRUE@$(MANPAGES_TARGET_ALL): %: manpages/%.md
-@HAVE_PANDOC_TRUE@	$(PANDOC) -s -t man $< -o $@
-@HAVE_PANDOC_FALSE@$(MANPAGES_TARGET_ALL):
-@HAVE_PANDOC_FALSE@	echo "You need pandoc to generate the manpages"
-@HAVE_PANDOC_FALSE@	exit 1
+@HAVE_VIRTUALENV_TRUE@upload-docs: all-docs
+@HAVE_VIRTUALENV_TRUE@	rsync -crv --delete --no-p --chmod=g=rwX --exclude '*~' ./html-docs/ web1.powerdns.com:/srv/www/doc.powerdns.com/authoritative/
+@HAVE_VIRTUALENV_TRUE@	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./html-docs.tar.bz2 web1.powerdns.com:/srv/www/doc.powerdns.com/authoritative/
+@HAVE_VIRTUALENV_TRUE@	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./PowerDNS-Authoritative.pdf web1.powerdns.com:/srv/www/doc.powerdns.com/authoritative/
 
-clean:
-	rm -rf html html.tar.bz2 *.8 *.1
+@HAVE_VIRTUALENV_FALSE@$(dist_MANS):
+@HAVE_VIRTUALENV_FALSE@	echo "You need virtualenv to generate the manpages"
+@HAVE_VIRTUALENV_FALSE@	exit 1
+
+@HAVE_VIRTUALENV_FALSE@PowerDNS-Authoritative.pdf:
+@HAVE_VIRTUALENV_FALSE@	echo "You need virtualenv to generate the PDF"
+@HAVE_VIRTUALENV_FALSE@	exit 1
+
+@HAVE_VIRTUALENV_FALSE@html-docs:
+@HAVE_VIRTUALENV_FALSE@	echo "You need virtualenv to generate the HTML docs"
+@HAVE_VIRTUALENV_FALSE@	exit 1
 
 # Tell versions [3.59,3.63) of GNU make to not export all variables.
 # Otherwise a system limit (for SysV at least) may be exceeded.

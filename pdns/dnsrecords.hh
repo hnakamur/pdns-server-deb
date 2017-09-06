@@ -62,6 +62,12 @@ public:
   includeboilerplate(A);
   void doRecordCheck(const DNSRecord& dr);
   ComboAddress getCA(int port=0) const;
+  bool operator==(const DNSRecordContent& rhs) const override
+  {
+    if(typeid(*this) != typeid(rhs))
+      return false;
+    return d_ip == dynamic_cast<const ARecordContent&>(rhs).d_ip;
+  }
 private:
   uint32_t d_ip;
 };
@@ -73,6 +79,12 @@ public:
   explicit AAAARecordContent(const ComboAddress& ca);
   includeboilerplate(AAAA);
   ComboAddress getCA(int port=0) const;
+  bool operator==(const DNSRecordContent& rhs) const override
+  {
+    if(typeid(*this) != typeid(rhs))
+      return false;
+    return d_ip6 == dynamic_cast<const decltype(this)>(&rhs)->d_ip6;
+  }
 private:
   string d_ip6; // why??
 };
@@ -86,6 +98,15 @@ public:
 
   uint16_t d_preference;
   DNSName d_mxname;
+
+  bool operator==(const DNSRecordContent& rhs) const override
+  {
+    if(typeid(*this) != typeid(rhs))
+      return false;
+    auto rrhs =dynamic_cast<const decltype(this)>(&rhs);
+    return std::tie(d_preference, d_mxname) == std::tie(rrhs->d_preference, rrhs->d_mxname);
+  }
+
 };
 
 class KXRecordContent : public DNSRecordContent
@@ -161,8 +182,13 @@ class TXTRecordContent : public DNSRecordContent
 public:
   includeboilerplate(TXT)
 
-private:
   string d_text;
+};
+
+class ENTRecordContent : public DNSRecordContent
+{
+public:
+  includeboilerplate(ENT)
 };
 
 class SPFRecordContent : public DNSRecordContent
@@ -180,7 +206,15 @@ class NSRecordContent : public DNSRecordContent
 public:
   includeboilerplate(NS)
   explicit NSRecordContent(const DNSName& content) : d_content(content){}
-  DNSName getNS() const { return d_content; } 
+  const DNSName& getNS() const { return d_content; }
+  bool operator==(const DNSRecordContent& rhs) const override
+  {
+    if(typeid(*this) != typeid(rhs))
+      return false;
+    auto rrhs =dynamic_cast<const decltype(this)>(&rhs);
+    return d_content == rrhs->d_content;
+  }
+
 private:
   DNSName d_content;
 };
@@ -189,7 +223,7 @@ class PTRRecordContent : public DNSRecordContent
 {
 public:
   includeboilerplate(PTR)
-
+  explicit PTRRecordContent(const DNSName& content) : d_content(content){}
 private:
   DNSName d_content;
 };
@@ -198,6 +232,7 @@ class CNAMERecordContent : public DNSRecordContent
 {
 public:
   includeboilerplate(CNAME)
+  CNAMERecordContent(const DNSName& content) : d_content(content){}
   DNSName getTarget() const { return d_content; }
 private:
   DNSName d_content;
@@ -208,7 +243,6 @@ class ALIASRecordContent : public DNSRecordContent
 public:
   includeboilerplate(ALIAS)
 
-private:
   DNSName d_content;
 };
 
@@ -217,8 +251,6 @@ class DNAMERecordContent : public DNSRecordContent
 {
 public:
   includeboilerplate(DNAME)
-
-private:
   DNSName d_content;
 };
 
@@ -308,10 +340,13 @@ class DSRecordContent : public DNSRecordContent
 {
 public:
   DSRecordContent();
-  bool operator==(const DSRecordContent& rhs) const
+  bool operator==(const DNSRecordContent& rhs) const override
   {
+    if(typeid(*this) != typeid(rhs))
+      return false;
+    auto rrhs =dynamic_cast<const decltype(this)>(&rhs);
     return tie(d_tag, d_algorithm, d_digesttype, d_digest) ==
-      tie(rhs.d_tag, rhs.d_algorithm, rhs.d_digesttype, rhs.d_digest);
+      tie(rrhs->d_tag, rrhs->d_algorithm, rrhs->d_digesttype, rrhs->d_digest);
   }
   bool operator<(const DSRecordContent& rhs) const
   {
@@ -396,6 +431,16 @@ class TLSARecordContent : public DNSRecordContent
 {
 public:
   includeboilerplate(TLSA)
+
+private:
+  uint8_t d_certusage, d_selector, d_matchtype;
+  string d_cert;
+};
+
+class SMIMEARecordContent : public DNSRecordContent
+{
+public:
+  includeboilerplate(SMIMEA)
 
 private:
   uint8_t d_certusage, d_selector, d_matchtype;

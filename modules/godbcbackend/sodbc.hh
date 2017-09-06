@@ -65,11 +65,11 @@ public:
   //! Sets the logging state.
   void setLog( bool state );
 
-  SSqlStatement* prepare(const string& query, int nparams);
+  std::unique_ptr<SSqlStatement> prepare(const string& query, int nparams);
   void execute(const string& query);
-  void startTransaction();
-  void rollback();
-  void commit();
+  void startTransaction() override;
+  void rollback() override;
+  void commit() override;
 
   //! Returns an exception.
   SSqlException sPerrorException( const std::string & reason );

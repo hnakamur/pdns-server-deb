@@ -36,7 +36,7 @@ bool LUABackend::updateDNSSECOrderAndAuth(uint32_t domain_id, const DNSName& zon
 	if(logging)
 	    L << Logger::Info << backend_name << "(updateDNSSECOrderAndAuth) domain_id: '" << domain_id << "' zonename: '" << zonename << "' qname: '" << qname << "' auth: '" << auth << "'" << endl;
 	    
-	string ins=toLower(labelReverse(qname.makeRelative(zonename).toString()));
+	string ins=qname.makeRelative(zonename).makeLowerCase().labelReverse().toString(" ", false);
 	return this->updateDNSSECOrderAndAuthAbsolute(domain_id, qname, ins, auth);
     } 
 
@@ -72,7 +72,7 @@ bool LUABackend::updateDNSSECOrderAndAuth(uint32_t domain_id, const DNSName& zon
     return ok;
 }
 
-bool LUABackend::updateDNSSECOrderNameAndAuth(unsigned int, DNSName const&, DNSName const&, DNSName const&, bool, unsigned short)
+bool LUABackend::updateDNSSECOrderNameAndAuth(unsigned int, DNSName const&, DNSName const&, bool, unsigned short)
 {
   return false;
 }
@@ -114,7 +114,7 @@ bool LUABackend::updateDNSSECOrderAndAuthAbsolute(uint32_t domain_id, const DNSN
     return ok;
 }
 
-bool LUABackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, DNSName& unhashed, std::string& before, std::string& after) {
+bool LUABackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const DNSName& qname, DNSName& unhashed, DNSName& before, DNSName& after) {
 
     if(f_lua_getbeforeandafternamesabsolute == 0)
 	return false;
@@ -129,7 +129,7 @@ bool LUABackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& 
     lua_rawgeti(lua, LUA_REGISTRYINDEX, f_lua_updatednssecorderandauthabsolute);
 
     lua_pushinteger(lua, id);
-    lua_pushstring(lua, qname.c_str());
+    lua_pushstring(lua, qname.toString().c_str());
 
     if(lua_pcall(lua, 2, 3, f_lua_exec_error) != 0) {
         string e = backend_name + lua_tostring(lua, -1);
@@ -156,13 +156,13 @@ bool LUABackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& 
     returnedwhat = lua_type(lua, -1);
     ok = (returnedwhat == LUA_TSTRING) && ok;
     
-    before = lua_tostring(lua, -1);
+    before = DNSName(lua_tostring(lua, -1));
     lua_pop(lua, 1);
 
     returnedwhat = lua_type(lua, -1);
     ok = (returnedwhat == LUA_TSTRING) && ok;
     
-    after = lua_tostring(lua, -1);
+    after = DNSName(lua_tostring(lua, -1));
     lua_pop(lua, 1);
 
     if(logging)
@@ -312,13 +312,13 @@ bool LUABackend::removeDomainKey(const DNSName& name, unsigned int id) {
     return ok;
 }
 
-int LUABackend::addDomainKey(const DNSName& name, const KeyData& key) {
+bool LUABackend::addDomainKey(const DNSName& name, const KeyData& key, int64_t& id) {
 // there is no logging function in pdnsutil when running this routine?
 
 //key = id, flags, active, content
 
     if(f_lua_adddomainkey == 0) 
-	return -1;
+	return false;
 
     if(logging)
 	//L << Logger::Info << backend_name << "(addDomainKey) BEGIN name: '" << name << "' id: '" << id << endl;
@@ -347,7 +347,6 @@ int LUABackend::addDomainKey(const DNSName& name, const KeyData& key) {
         lua_pop(lua, 1);
 
         throw runtime_error(e);
-        return -1;
     }
 
     size_t returnedwhat = lua_type(lua, -1);
@@ -359,28 +358,24 @@ int LUABackend::addDomainKey(const DNSName& name, const KeyData& key) {
     lua_pop(lua, 1);
 
     if(logging)
-	cerr << backend_name << "(addDomainKey) END" << endl;
-	
-    return ok;
+        cerr << backend_name << "(addDomainKey) END" << endl;
+
+    return ok >= 0;
 }
 
-bool LUABackend::getDomainKeys(const DNSName& name, unsigned int kind, std::vector<KeyData>& keys) {
-    //what is kind used for?
-
+bool LUABackend::getDomainKeys(const DNSName& name, std::vector<KeyData>& keys) {
     if(f_lua_getdomainkeys == 0) 
 	return false;
 
     if(logging)
-	L << Logger::Info << backend_name << "(getDomainKeys) BEGIN name: '" << name << "' kind: '" << kind << endl;
+	L << Logger::Info << backend_name << "(getDomainKeys) BEGIN name: '" << name << endl;
 
     lua_rawgeti(lua, LUA_REGISTRYINDEX, f_lua_getdomainkeys);
 
     lua_pushstring(lua, name.toString().c_str());
-    lua_pushinteger(lua, kind);
 
-    if(lua_pcall(lua, 2, 1, f_lua_exec_error) != 0) {
+    if(lua_pcall(lua, 1, 1, f_lua_exec_error) != 0) {
         string e = backend_name + lua_tostring(lua, -1);
-        lua_pop(lua, 1);
 
         throw runtime_error(e);
         return false;

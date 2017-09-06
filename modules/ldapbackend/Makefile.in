@@ -14,6 +14,7 @@
 
 @SET_MAKE@
 
+
 VPATH = @srcdir@
 am__is_gnu_make = test -n '$(MAKEFILE_LIST)' && test -n '$(MAKELEVEL)'
 am__make_running_with_option = \
@@ -80,11 +81,10 @@ build_triplet = @build@
 host_triplet = @host@
 subdir = modules/ldapbackend
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
-	$(top_srcdir)/build-aux/depcomp
+	$(top_srcdir)/build-aux/depcomp $(dist_doc_DATA)
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/ax_arg_default_enable_disable.m4 \
-	$(top_srcdir)/m4/ax_check_link_flag.m4 \
 	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
@@ -103,9 +103,9 @@ am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/pdns_check_network_libs.m4 \
 	$(top_srcdir)/m4/pdns_check_opendbx.m4 \
 	$(top_srcdir)/m4/pdns_check_os.m4 \
-	$(top_srcdir)/m4/pdns_check_pandoc.m4 \
 	$(top_srcdir)/m4/pdns_check_ragel.m4 \
 	$(top_srcdir)/m4/pdns_check_sqlite3.m4 \
+	$(top_srcdir)/m4/pdns_check_virtualenv.m4 \
 	$(top_srcdir)/m4/pdns_d_fortify_source.m4 \
 	$(top_srcdir)/m4/pdns_enable_botan.m4 \
 	$(top_srcdir)/m4/pdns_enable_coverage.m4 \
@@ -165,11 +165,13 @@ am__uninstall_files_from_dir = { \
     || { echo " ( cd '$$dir' && rm -f" $$files ")"; \
          $(am__cd) "$$dir" && rm -f $$files; }; \
   }
-am__installdirs = "$(DESTDIR)$(pkglibdir)"
+am__installdirs = "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(docdir)"
 LTLIBRARIES = $(pkglib_LTLIBRARIES)
 am__DEPENDENCIES_1 =
-libldapbackend_la_DEPENDENCIES = $(am__DEPENDENCIES_1)
-am_libldapbackend_la_OBJECTS = ldapbackend.lo powerldap.lo
+libldapbackend_la_DEPENDENCIES = $(am__DEPENDENCIES_1) \
+	$(am__DEPENDENCIES_1)
+am_libldapbackend_la_OBJECTS = ldapbackend.lo powerldap.lo \
+	ldaputils.lo ldapauthenticator.lo
 libldapbackend_la_OBJECTS = $(am_libldapbackend_la_OBJECTS)
 AM_V_lt = $(am__v_lt_@AM_V@)
 am__v_lt_ = $(am__v_lt_@AM_DEFAULT_V@)
@@ -238,6 +240,7 @@ am__can_run_installinfo = \
     n|no|NO) false;; \
     *) (install-info --version) >/dev/null 2>&1;; \
   esac
+DATA = $(dist_doc_DATA)
 am__tagged_files = $(HEADERS) $(SOURCES) $(TAGS_FILES) $(LISP)
 # Read a list of newline-separated strings from the standard input,
 # and print each of them once, without duplicates.  Input order is
@@ -315,6 +318,7 @@ INSTALL_DATA = @INSTALL_DATA@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_SCRIPT = @INSTALL_SCRIPT@
 INSTALL_STRIP_PROGRAM = @INSTALL_STRIP_PROGRAM@
+KRB5_LIBS = @KRB5_LIBS@
 LD = @LD@
 LDAP_LIBS = @LDAP_LIBS@
 LDFLAGS = @LDFLAGS@
@@ -364,11 +368,10 @@ PACKAGE_STRING = @PACKAGE_STRING@
 PACKAGE_TARNAME = @PACKAGE_TARNAME@
 PACKAGE_URL = @PACKAGE_URL@
 PACKAGE_VERSION = @PACKAGE_VERSION@
-PANDOC = @PANDOC@
 PATH_SEPARATOR = @PATH_SEPARATOR@
-PGSQL_inc = @PGSQL_inc@
-PGSQL_lib = @PGSQL_lib@
-PGSQL_pg_config = @PGSQL_pg_config@
+PGSQL_CFLAGS = @PGSQL_CFLAGS@
+PGSQL_LIBS = @PGSQL_LIBS@
+PG_CONFIG = @PG_CONFIG@
 PIE_CFLAGS = @PIE_CFLAGS@
 PIE_LDFLAGS = @PIE_LDFLAGS@
 PKG_CONFIG = @PKG_CONFIG@
@@ -399,6 +402,7 @@ UNIXODBC_CFLAGS = @UNIXODBC_CFLAGS@
 UNIXODBC_LIBS = @UNIXODBC_LIBS@
 UNIXODBC_config = @UNIXODBC_config@
 VERSION = @VERSION@
+VIRTUALENV = @VIRTUALENV@
 WARN_CFLAGS = @WARN_CFLAGS@
 YACC = @YACC@
 YAHTTP_CFLAGS = @YAHTTP_CFLAGS@
@@ -466,14 +470,25 @@ top_build_prefix = @top_build_prefix@
 top_builddir = @top_builddir@
 top_srcdir = @top_srcdir@
 pkglib_LTLIBRARIES = libldapbackend.la
-EXTRA_DIST = OBJECTFILES OBJECTLIBS
+EXTRA_DIST = \
+    OBJECTFILES \
+    OBJECTLIBS \
+    dnsdomain2.schema \
+    pdns-domaininfo.schema
+
+dist_doc_DATA = \
+    dnsdomain2.schema \
+    pdns-domaininfo.schema
+
 libldapbackend_la_SOURCES = \
 	ldapbackend.cc ldapbackend.hh \
 	powerldap.cc powerldap.hh \
-	utils.hh
+	utils.hh exceptions.hh \
+	ldaputils.hh ldaputils.cc \
+	ldapauthenticator.hh ldapauthenticator_p.hh ldapauthenticator.cc
 
 libldapbackend_la_LDFLAGS = -module -avoid-version
-libldapbackend_la_LIBADD = $(LDAP_LIBS)
+libldapbackend_la_LIBADD = $(LDAP_LIBS) $(KRB5_LIBS)
 all: all-am
 
 .SUFFIXES:
@@ -553,7 +568,9 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldapauthenticator.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldapbackend.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ldaputils.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/powerldap.Plo@am__quote@
 
 .cc.o:
@@ -585,6 +602,27 @@ mostlyclean-libtool:
 
 clean-libtool:
 	-rm -rf .libs _libs
+install-dist_docDATA: $(dist_doc_DATA)
+	@$(NORMAL_INSTALL)
+	@list='$(dist_doc_DATA)'; test -n "$(docdir)" || list=; \
+	if test -n "$$list"; then \
+	  echo " $(MKDIR_P) '$(DESTDIR)$(docdir)'"; \
+	  $(MKDIR_P) "$(DESTDIR)$(docdir)" || exit 1; \
+	fi; \
+	for p in $$list; do \
+	  if test -f "$$p"; then d=; else d="$(srcdir)/"; fi; \
+	  echo "$$d$$p"; \
+	done | $(am__base_list) | \
+	while read files; do \
+	  echo " $(INSTALL_DATA) $$files '$(DESTDIR)$(docdir)'"; \
+	  $(INSTALL_DATA) $$files "$(DESTDIR)$(docdir)" || exit $$?; \
+	done
+
+uninstall-dist_docDATA:
+	@$(NORMAL_UNINSTALL)
+	@list='$(dist_doc_DATA)'; test -n "$(docdir)" || list=; \
+	files=`for p in $$list; do echo $$p; done | sed -e 's|^.*/||'`; \
+	dir='$(DESTDIR)$(docdir)'; $(am__uninstall_files_from_dir)
 
 ID: $(am__tagged_files)
 	$(am__define_uniq_tagged_files); mkid -fID $$unique
@@ -670,9 +708,9 @@ distdir: $(DISTFILES)
 	done
 check-am: all-am
 check: check-am
-all-am: Makefile $(LTLIBRARIES)
+all-am: Makefile $(LTLIBRARIES) $(DATA)
 installdirs:
-	for dir in "$(DESTDIR)$(pkglibdir)"; do \
+	for dir in "$(DESTDIR)$(pkglibdir)" "$(DESTDIR)$(docdir)"; do \
 	  test -z "$$dir" || $(MKDIR_P) "$$dir"; \
 	done
 install: install-am
@@ -728,7 +766,7 @@ info: info-am
 
 info-am:
 
-install-data-am:
+install-data-am: install-dist_docDATA
 
 install-dvi: install-dvi-am
 
@@ -774,7 +812,7 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-pkglibLTLIBRARIES
+uninstall-am: uninstall-dist_docDATA uninstall-pkglibLTLIBRARIES
 
 .MAKE: install-am install-strip
 
@@ -783,14 +821,15 @@ uninstall-am: uninstall-pkglibLTLIBRARIES
 	ctags-am distclean distclean-compile distclean-generic \
 	distclean-libtool distclean-tags distdir dvi dvi-am html \
 	html-am info info-am install install-am install-data \
-	install-data-am install-dvi install-dvi-am install-exec \
-	install-exec-am install-html install-html-am install-info \
-	install-info-am install-man install-pdf install-pdf-am \
-	install-pkglibLTLIBRARIES install-ps install-ps-am \
-	install-strip installcheck installcheck-am installdirs \
-	maintainer-clean maintainer-clean-generic mostlyclean \
-	mostlyclean-compile mostlyclean-generic mostlyclean-libtool \
-	pdf pdf-am ps ps-am tags tags-am uninstall uninstall-am \
+	install-data-am install-dist_docDATA install-dvi \
+	install-dvi-am install-exec install-exec-am install-html \
+	install-html-am install-info install-info-am install-man \
+	install-pdf install-pdf-am install-pkglibLTLIBRARIES \
+	install-ps install-ps-am install-strip installcheck \
+	installcheck-am installdirs maintainer-clean \
+	maintainer-clean-generic mostlyclean mostlyclean-compile \
+	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
+	tags tags-am uninstall uninstall-am uninstall-dist_docDATA \
 	uninstall-pkglibLTLIBRARIES
 
 

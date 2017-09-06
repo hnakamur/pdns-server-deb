@@ -30,6 +30,9 @@
 /* Define to 1 if you have clock_gettime */
 #undef HAVE_CLOCK_GETTIME
 
+/* Define to 1 if you have the `crypto_box_easy_afternm' function. */
+#undef HAVE_CRYPTO_BOX_EASY_AFTERNM
+
 /* define if the compiler supports basic C++11 syntax */
 #undef HAVE_CXX11
 
@@ -44,8 +47,18 @@
 /* Define to 1 if you have the <dlfcn.h> header file. */
 #undef HAVE_DLFCN_H
 
+/* Define if ASAN fiber annotation interface is available. */
+#undef HAVE_FIBER_SANITIZER
+
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
+
+/* Define to 1 if you have the `krb5_get_init_creds_opt_set_default_flags'
+   function. */
+#undef HAVE_KRB5_GET_INIT_CREDS_OPT_SET_DEFAULT_FLAGS
+
+/* Define to 1 if you have the <krb5.h> header file. */
+#undef HAVE_KRB5_H
 
 /* Define to 1 if you have the <lber.h> header file. */
 #undef HAVE_LBER_H
@@ -103,6 +116,16 @@
 
 /* Define to 1 if you have the `recvmmsg' function. */
 #undef HAVE_RECVMMSG
+
+/* Define to 1 if you have the <sanitizer/common_interface_defs.h> header
+   file. */
+#undef HAVE_SANITIZER_COMMON_INTERFACE_DEFS_H
+
+/* Define to 1 if __sanitizer_finish_switch_fiber takes only a pointer */
+#undef HAVE_SANITIZER_FINISH_SWITCH_FIBER_SINGLE_PTR
+
+/* Define to 1 if __sanitizer_finish_switch_fiber takes three pointers */
+#undef HAVE_SANITIZER_FINISH_SWITCH_FIBER_THREE_PTRS
 
 /* Define to 1 if you have sqlite3 */
 #undef HAVE_SQLITE3

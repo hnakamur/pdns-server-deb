@@ -130,6 +130,7 @@ DNSPacket::DNSPacket(const DNSPacket &orig)
   d=orig.d;
 
   d_isQuery = orig.d_isQuery;
+  d_hash = orig.d_hash;
 }
 
 void DNSPacket::setRcode(int v)
@@ -178,42 +179,36 @@ void DNSPacket::clearRecords()
   d_rrs.clear();
 }
 
-void DNSPacket::addRecord(const DNSResourceRecord &rr)
+void DNSPacket::addRecord(const DNSZoneRecord &rr)
 {
   // this removes duplicates from the packet in case we are not compressing
   // for AXFR, no such checking is performed!
   // cerr<<"addrecord, content=["<<rr.content<<"]"<<endl;
-  if(d_compress)
-    for(vector<DNSResourceRecord>::const_iterator i=d_rrs.begin();i!=d_rrs.end();++i) 
-      if(rr.qname==i->qname && rr.qtype==i->qtype && rr.content==i->content) {
+  if(d_compress) {
+    for(auto i=d_rrs.begin();i!=d_rrs.end();++i) {
+      if(rr.dr == i->dr)  // XXX SUPER SLOW
           return;
-      }
+    }
+  }
+
   // cerr<<"added to d_rrs"<<endl;
   d_rrs.push_back(rr);
 }
 
 
 
-static int rrcomp(const DNSResourceRecord &A, const DNSResourceRecord &B)
+vector<DNSZoneRecord*> DNSPacket::getAPRecords()
 {
-  if(A.d_place < B.d_place)
-    return 1;
+  vector<DNSZoneRecord*> arrs;
 
-  return 0;
-}
-
-vector<DNSResourceRecord*> DNSPacket::getAPRecords()
-{
-  vector<DNSResourceRecord*> arrs;
-
-  for(vector<DNSResourceRecord>::iterator i=d_rrs.begin();
+  for(vector<DNSZoneRecord>::iterator i=d_rrs.begin();
       i!=d_rrs.end();
       ++i)
     {
-      if(i->d_place!=DNSResourceRecord::ADDITIONAL &&
-         (i->qtype.getCode()==QType::MX ||
-          i->qtype.getCode()==QType::NS ||
-          i->qtype.getCode()==QType::SRV))
+      if(i->dr.d_place!=DNSResourceRecord::ADDITIONAL &&
+         (i->dr.d_type==QType::MX ||
+          i->dr.d_type==QType::NS ||
+          i->dr.d_type==QType::SRV))
         {
           arrs.push_back(&*i);
         }
@@ -223,15 +218,15 @@ vector<DNSResourceRecord*> DNSPacket::getAPRecords()
 
 }
 
-vector<DNSResourceRecord*> DNSPacket::getAnswerRecords()
+vector<DNSZoneRecord*> DNSPacket::getAnswerRecords()
 {
-  vector<DNSResourceRecord*> arrs;
+  vector<DNSZoneRecord*> arrs;
 
-  for(vector<DNSResourceRecord>::iterator i=d_rrs.begin();
+  for(vector<DNSZoneRecord>::iterator i=d_rrs.begin();
       i!=d_rrs.end();
       ++i)
     {
-      if(i->d_place!=DNSResourceRecord::ADDITIONAL)
+      if(i->dr.d_place!=DNSResourceRecord::ADDITIONAL)
         arrs.push_back(&*i);
     }
   return arrs;
@@ -253,9 +248,9 @@ bool DNSPacket::couldBeCached()
 unsigned int DNSPacket::getMinTTL()
 {
   unsigned int minttl = UINT_MAX;
-  for(const DNSResourceRecord& rr :  d_rrs) {
-  if (rr.ttl < minttl)
-      minttl = rr.ttl;
+  for(const DNSZoneRecord& rr :  d_rrs) {
+  if (rr.dr.d_ttl < minttl)
+      minttl = rr.dr.d_ttl;
   }
 
   return minttl;
@@ -275,13 +270,15 @@ void DNSPacket::wrapup()
     return;
   }
 
-  DNSResourceRecord rr;
-  vector<DNSResourceRecord>::iterator pos;
+  DNSZoneRecord rr;
+  vector<DNSZoneRecord>::iterator pos;
 
   // we now need to order rrs so that the different sections come at the right place
   // we want a stable sort, based on the d_place field
 
-  stable_sort(d_rrs.begin(),d_rrs.end(), rrcomp);
+  stable_sort(d_rrs.begin(),d_rrs.end(), [](const DNSZoneRecord& a, const DNSZoneRecord& b) {
+      return a.dr.d_place < b.dr.d_place;
+    });
   static bool mustNotShuffle = ::arg().mustDo("no-shuffle");
 
   if(!d_tcp && !mustNotShuffle) {
@@ -320,19 +317,12 @@ void DNSPacket::wrapup()
       for(pos=d_rrs.begin(); pos < d_rrs.end(); ++pos) {
         // cerr<<"during wrapup, content=["<<pos->content<<"]"<<endl;
         maxScopeMask = max(maxScopeMask, pos->scopeMask);
-
-        if(!pos->content.empty() && pos->qtype.getCode()==QType::TXT && pos->content[0]!='"') {
-          pos->content="\""+pos->content+"\"";
-        }
-        if(pos->content.empty())  // empty contents confuse the MOADNS setup
-          pos->content=".";
         
-        pw.startRecord(pos->qname, pos->qtype.getCode(), pos->ttl, pos->qclass, pos->d_place);
-        shared_ptr<DNSRecordContent> drc(DNSRecordContent::mastermake(pos->qtype.getCode(), pos->qclass, pos->content));
-              drc->toPacket(pw);
+        pw.startRecord(pos->dr.d_name, pos->dr.d_type, pos->dr.d_ttl, pos->dr.d_class, pos->dr.d_place);
+        pos->dr.d_content->toPacket(pw);
         if(pw.size() + 20U > (d_tcp ? 65535 : getMaxReplyLen())) { // 20 = room for EDNS0
           pw.rollback();
-          if(pos->d_place == DNSResourceRecord::ANSWER || pos->d_place == DNSResourceRecord::AUTHORITY) {
+          if(pos->dr.d_place == DNSResourceRecord::ANSWER || pos->dr.d_place == DNSResourceRecord::AUTHORITY) {
             pw.getHeader()->tc=1;
           }
           goto noCommit;
@@ -367,11 +357,11 @@ void DNSPacket::wrapup()
   }
   
   if(d_trc.d_algoName.countLabels())
-    addTSIG(pw, &d_trc, d_tsigkeyname, d_tsigsecret, d_tsigprevious, d_tsigtimersonly);
+    addTSIG(pw, d_trc, d_tsigkeyname, d_tsigsecret, d_tsigprevious, d_tsigtimersonly);
   
-  d_rawpacket.assign((char*)&packet[0], packet.size());
+  d_rawpacket.assign((char*)&packet[0], packet.size()); // XXX we could do this natively on a vector..
 
-  // copy RR counts so LPE can read them
+  // copy RR counts so they can be read later
   d.qdcount = pw.getHeader()->qdcount;
   d.ancount = pw.getHeader()->ancount;
   d.nscount = pw.getHeader()->nscount;
@@ -473,11 +463,11 @@ void DNSPacket::setTSIGDetails(const TSIGRecordContent& tr, const DNSName& keyna
   d_tsigtimersonly=timersonly;
 }
 
-bool DNSPacket::getTSIGDetails(TSIGRecordContent* trc, DNSName* keyname, string* message) const
+bool DNSPacket::getTSIGDetails(TSIGRecordContent* trc, DNSName* keyname, uint16_t* tsigPosOut) const
 {
   MOADNSParser mdp(d_isQuery, d_rawpacket);
-
-  if(!mdp.getTSIGPos()) 
+  uint16_t tsigPos = mdp.getTSIGPos();
+  if(!tsigPos)
     return false;
   
   bool gotit=false;
@@ -496,8 +486,10 @@ bool DNSPacket::getTSIGDetails(TSIGRecordContent* trc, DNSName* keyname, string*
   }
   if(!gotit)
     return false;
-  if(message)
-    *message = makeTSIGMessageFromTSIGPacket(d_rawpacket, mdp.getTSIGPos(), *keyname, *trc, "", false); // if you change rawpacket to getString it breaks!
+
+  if (tsigPosOut) {
+    *tsigPosOut = tsigPos;
+  }
   
   return true;
 }
@@ -653,50 +645,38 @@ void DNSPacket::commitD()
   d_rawpacket.replace(0,12,(char *)&d,12); // copy in d
 }
 
-bool checkForCorrectTSIG(const DNSPacket* q, UeberBackend* B, DNSName* keyname, string* secret, TSIGRecordContent* trc)
+bool DNSPacket::checkForCorrectTSIG(UeberBackend* B, DNSName* keyname, string* secret, TSIGRecordContent* trc) const
 {
-  string message;
+  uint16_t tsigPos;
 
-  if (!q->getTSIGDetails(trc, keyname, &message)) {
+  if (!this->getTSIGDetails(trc, keyname, &tsigPos)) {
     return false;
   }
 
-  uint64_t delta = std::abs((int64_t)trc->d_time - (int64_t)time(0));
-  if(delta > trc->d_fudge) {
-    L<<Logger::Error<<"Packet for '"<<q->qdomain<<"' denied: TSIG (key '"<<*keyname<<"') time delta "<< delta <<" > 'fudge' "<<trc->d_fudge<<endl;
-    return false;
-  }
-
-  DNSName algoName = trc->d_algoName; // FIXME400
-  if (algoName == DNSName("hmac-md5.sig-alg.reg.int"))
-    algoName = DNSName("hmac-md5");
-
-  if (algoName == DNSName("gss-tsig")) {
-    if (!gss_verify_signature(*keyname, message, trc->d_mac)) {
-      L<<Logger::Error<<"Packet for domain '"<<q->qdomain<<"' denied: TSIG signature mismatch using '"<<*keyname<<"' and algorithm '"<<trc->d_algoName<<"'"<<endl;
-      return false;
-    }
-    return true;
-  }
+  TSIGTriplet tt;
+  tt.name = *keyname;
+  tt.algo = trc->d_algoName;
+  if (tt.algo == DNSName("hmac-md5.sig-alg.reg.int"))
+    tt.algo = DNSName("hmac-md5");
 
   string secret64;
-  if(!B->getTSIGKey(*keyname, &algoName, &secret64)) {
-    L<<Logger::Error<<"Packet for domain '"<<q->qdomain<<"' denied: can't find TSIG key with name '"<<*keyname<<"' and algorithm '"<<algoName<<"'"<<endl;
+  if (tt.algo != DNSName("gss-tsig")) {
+    if(!B->getTSIGKey(*keyname, &tt.algo, &secret64)) {
+      L<<Logger::Error<<"Packet for domain '"<<this->qdomain<<"' denied: can't find TSIG key with name '"<<*keyname<<"' and algorithm '"<<tt.algo<<"'"<<endl;
+      return false;
+    }
+    B64Decode(secret64, *secret);
+    tt.secret = *secret;
+  }
+
+  bool result;
+
+  try {
+    result = validateTSIG(d_rawpacket, tsigPos, tt, *trc, "", trc->d_mac, false);
+  }
+  catch(const std::runtime_error& err) {
+    L<<Logger::Error<<"Packet for '"<<this->qdomain<<"' denied: "<<err.what()<<endl;
     return false;
-  }
-  if (trc->d_algoName == DNSName("hmac-md5"))
-    trc->d_algoName += DNSName("sig-alg.reg.int");
-
-  TSIGHashEnum algo;
-  if(!getTSIGHashEnum(trc->d_algoName, algo)) {
-     L<<Logger::Error<<"Unsupported TSIG HMAC algorithm " << trc->d_algoName.toString() << endl;
-     return false;
-  }
-
-  B64Decode(secret64, *secret);
-  bool result=calculateHMAC(*secret, message, algo) == trc->d_mac;
-  if(!result) {
-    L<<Logger::Error<<"Packet for domain '"<<q->qdomain<<"' denied: TSIG signature mismatch using '"<<*keyname<<"' and algorithm '"<<trc->d_algoName<<"'"<<endl;
   }
 
   return result;

@@ -35,7 +35,7 @@
 class SPgSQLStatement: public SSqlStatement
 {
 public:
-  SPgSQLStatement(const string& query, bool dolog, int nparams, SPgSQL* db) {
+  SPgSQLStatement(const string& query, bool dolog, int nparams, SPgSQL* db, unsigned int nstatement) {
     d_query = query;
     d_dolog = dolog;
     d_parent = db;
@@ -45,7 +45,7 @@ public:
     d_res_set = NULL;
     paramValues = NULL;
     paramLengths = NULL;
-    d_do_commit = false;
+    d_nstatement = nstatement;
     d_paridx = 0;
     d_residx = 0;
     d_resnum = 0;
@@ -80,11 +80,6 @@ public:
     if (d_dolog) {
       L<<Logger::Warning<<"Query: "<<d_query<<endl;
     }
-    if (!d_parent->in_trx()) {
-      auto res=PQexec(d_db(),"BEGIN");
-      PQclear(res);
-      d_do_commit = true;
-    } else d_do_commit = false;
     d_res_set = PQexecPrepared(d_db(), d_stmt.c_str(), d_nparams, paramValues, paramLengths, NULL, 0);
     ExecStatusType status = PQresultStatus(d_res_set);
     string errmsg(PQresultErrorMessage(d_res_set));
@@ -110,7 +105,7 @@ public:
     // if you return SETOF refcursor.
     if (PQftype(d_res_set, 0) == 1790) { // REFCURSOR
 #if PG_VERSION_NUM > 90000
-      // PQescapeIdentifier was added to libpq in postggresql 9.0
+      // PQescapeIdentifier was added to libpq in postgresql 9.0
       char *val = PQgetvalue(d_res_set, d_cur_set++, 0);
       char *portal =  PQescapeIdentifier(d_db(), val, strlen(val));
       string cmd = string("FETCH ALL FROM \"") + string(portal) + string("\"");
@@ -174,11 +169,6 @@ public:
 
   SSqlStatement* reset() {
      int i;
-     if (!d_parent->in_trx() && d_do_commit) {
-       PGresult *res = PQexec(d_db(),"COMMIT");
-       PQclear(res);
-     }
-     d_do_commit = false;
      if (d_res)
        PQclear(d_res);
      if (d_res_set)
@@ -218,11 +208,9 @@ private:
   }
 
   void prepareStatement() {
-    struct timeval tv;
     if (d_prepared) return;
-    // prepare a statement
-    gettimeofday(&tv,NULL);
-    this->d_stmt = string("stmt") + std::to_string(tv.tv_sec) + std::to_string(tv.tv_usec);
+    // prepare a statement; name must be unique per session (using d_nstatement to ensure this).
+    this->d_stmt = string("stmt") + std::to_string(d_nstatement);
     PGresult* res = PQprepare(d_db(), d_stmt.c_str(), d_query.c_str(), d_nparams, NULL);
     ExecStatusType status = PQresultStatus(res);
     string errmsg(PQresultErrorMessage(res));
@@ -236,7 +224,6 @@ private:
     paramLengths=NULL;
     d_res=NULL;
     d_res_set=NULL;
-    d_do_commit=false;
     d_prepared = true;
   }
 
@@ -263,17 +250,18 @@ private:
   int d_resnum;
   int d_fnum;
   int d_cur_set;
-  bool d_do_commit;
+  unsigned int d_nstatement;
 };
 
 bool SPgSQL::s_dolog;
 
 SPgSQL::SPgSQL(const string &database, const string &host, const string& port, const string &user,
-               const string &password)
+               const string &password, const string &extra_connection_parameters)
 {
   d_db=0;
   d_in_trx = false;
   d_connectstr="";
+  d_nstatement = 0;
 
   if (!database.empty())
     d_connectstr+="dbname="+database;
@@ -286,6 +274,9 @@ SPgSQL::SPgSQL(const string &database, const string &host, const string& port, c
 
   if(!port.empty())
     d_connectstr+=" port="+port;
+
+  if(!extra_connection_parameters.empty())
+    d_connectstr+=" " + extra_connection_parameters;
 
   d_connectlogstr=d_connectstr;
 
@@ -335,9 +326,10 @@ void SPgSQL::execute(const string& query)
   }
 }
 
-SSqlStatement* SPgSQL::prepare(const string& query, int nparams)
+std::unique_ptr<SSqlStatement> SPgSQL::prepare(const string& query, int nparams)
 {
-  return new SPgSQLStatement(query, s_dolog, nparams, this);
+  d_nstatement++;
+  return std::unique_ptr<SSqlStatement>(new SPgSQLStatement(query, s_dolog, nparams, this, d_nstatement));
 }
 
 void SPgSQL::startTransaction() {
@@ -353,4 +345,36 @@ void SPgSQL::commit() {
 void SPgSQL::rollback() {
   execute("rollback");
   d_in_trx = false;
+}
+
+bool SPgSQL::isConnectionUsable()
+{
+  if (PQstatus(d_db) != CONNECTION_OK) {
+    return false;
+  }
+
+  bool usable = false;
+  int sd = PQsocket(d_db);
+  bool wasNonBlocking = isNonBlocking(sd);
+
+  if (!wasNonBlocking) {
+    if (!setNonBlocking(sd)) {
+      return usable;
+    }
+  }
+
+  usable = isTCPSocketUsable(sd);
+
+  if (!wasNonBlocking) {
+    if (!setBlocking(sd)) {
+      usable = false;
+    }
+  }
+
+  return usable;
+}
+
+void SPgSQL::reconnect()
+{
+  PQreset(d_db);
 }

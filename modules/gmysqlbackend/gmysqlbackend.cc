@@ -29,7 +29,6 @@
 #include "pdns/dns.hh"
 #include "pdns/dnsbackend.hh"
 #include "pdns/dnspacket.hh"
-#include "pdns/ueberbackend.hh"
 #include "pdns/pdnsexception.hh"
 #include "pdns/logger.hh"
 #include "pdns/arguments.hh"
@@ -40,15 +39,7 @@
 gMySQLBackend::gMySQLBackend(const string &mode, const string &suffix)  : GSQLBackend(mode,suffix)
 {
   try {
-    setDB(new SMySQL(getArg("dbname"),
-                     getArg("host"),
-                     getArgAsNum("port"),
-                     getArg("socket"),
-                     getArg("user"),
-                     getArg("password"),
-                     getArg("group"),
-                     mustDo("innodb-read-committed"),
-                     getArgAsNum("timeout")));
+    reconnect();
   }
 
   catch(SSqlException &e) {
@@ -56,6 +47,19 @@ gMySQLBackend::gMySQLBackend(const string &mode, const string &suffix)  : GSQLBa
     throw PDNSException("Unable to launch "+mode+" connection: "+e.txtReason());
   }
   L<<Logger::Info<<mode<<" Connection successful. Connected to database '"<<getArg("dbname")<<"' on '"<<(getArg("host").empty() ? getArg("socket") : getArg("host"))<<"'."<<endl;
+}
+
+void gMySQLBackend::reconnect()
+{
+  setDB(new SMySQL(getArg("dbname"),
+                   getArg("host"),
+                   getArgAsNum("port"),
+                   getArg("socket"),
+                   getArg("user"),
+                   getArg("password"),
+                   getArg("group"),
+                   mustDo("innodb-read-committed"),
+                   getArgAsNum("timeout")));
 }
 
 class gMySQLFactory : public BackendFactory
@@ -126,6 +130,7 @@ public:
     declare(suffix,"delete-names-query","","delete from records where domain_id=? and name=?");
 
     declare(suffix,"add-domain-key-query","", "insert into cryptokeys (domain_id, flags, active, content) select id, ?, ?, ? from domains where name=?");
+    declare(suffix,"get-last-inserted-key-id-query", "", "select LAST_INSERT_ID()");
     declare(suffix,"list-domain-keys-query","", "select cryptokeys.id, flags, active, content from domains, cryptokeys where cryptokeys.domain_id=domains.id and name=?");
     declare(suffix,"get-all-domain-metadata-query","", "select kind,content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name=?");
     declare(suffix,"get-domain-metadata-query","", "select content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name=? and domainmetadata.kind=?");

@@ -75,26 +75,6 @@ bool DNSResourceRecord::operator==(const DNSResourceRecord& rhs)
     tie(rhs.qname, rhs.qtype, rcontent, rhs.ttl);
 }
 
-DNSResourceRecord::DNSResourceRecord(const DNSRecord &p) {
-  auth=true;
-  qclass = p.d_class;
-  disabled=false;
-  qname = p.d_name;
-  d_place = p.d_place;
-  // if(!qname.empty())
-  //   boost::erase_tail(qname, 1); // strip .
-
-  qtype = p.d_type;
-  ttl = p.d_ttl;
-  setContent(p.d_content->getZoneRepresentation());
-  last_modified = 0;
-  signttl = 0;
-  domain_id = -1;
-  qclass = p.d_class;
-  d_place = p.d_place;
-  scopeMask = 0;
-}
-
 boilerplate_conv(A, QType::A, conv.xfrIP(d_ip));
 
 ARecordContent::ARecordContent(uint32_t ip) 
@@ -150,6 +130,7 @@ boilerplate_conv(DNAME, QType::DNAME, conv.xfrName(d_content));
 boilerplate_conv(MR, QType::MR, conv.xfrName(d_alias, true));
 boilerplate_conv(MINFO, QType::MINFO, conv.xfrName(d_rmailbx, true); conv.xfrName(d_emailbx, true));
 boilerplate_conv(TXT, QType::TXT, conv.xfrText(d_text, true));
+boilerplate_conv(ENT, 0, );
 boilerplate_conv(SPF, 99, conv.xfrText(d_text, true));
 boilerplate_conv(HINFO, QType::HINFO,  conv.xfrText(d_cpu);   conv.xfrText(d_host));
 
@@ -311,6 +292,13 @@ boilerplate_conv(TLSA, 52,
                  
 boilerplate_conv(OPENPGPKEY, 61,
                  conv.xfrBlob(d_keyring);
+                 )
+
+boilerplate_conv(SMIMEA, 53,
+                 conv.xfr8BitInt(d_certusage);
+                 conv.xfr8BitInt(d_selector);
+                 conv.xfr8BitInt(d_matchtype);
+                 conv.xfrHexBlob(d_cert, true);
                  )
 
 DSRecordContent::DSRecordContent() {}
@@ -519,6 +507,9 @@ uint16_t DNSKEYRecordContent::getTag()
 }
 
 
+/*
+ * Fills `eo` by parsing the EDNS(0) OPT RR (RFC 6891)
+ */
 bool getEDNSOpts(const MOADNSParser& mdp, EDNSOpts* eo)
 {
   eo->d_Z=0;
@@ -557,7 +548,7 @@ DNSRecord makeOpt(int udpsize, int extRCode, int Z)
   static_assert(sizeof(EDNS0Record) == sizeof(dr.d_ttl), "sizeof(EDNS0Record) must match sizeof(DNSRecord.d_ttl)");
   memcpy(&dr.d_ttl, &stuff, sizeof(stuff));
   dr.d_ttl=ntohl(dr.d_ttl);
-  dr.d_name=DNSName(".");
+  dr.d_name=g_rootdnsname;
   dr.d_type = QType::OPT;
   dr.d_class=udpsize;
   dr.d_place=DNSResourceRecord::ADDITIONAL;
@@ -592,6 +583,7 @@ void reportOtherTypes()
    SPFRecordContent::report();
    NAPTRRecordContent::report();
    LOCRecordContent::report();
+   ENTRecordContent::report();
    HINFORecordContent::report();
    RPRecordContent::report();
    KEYRecordContent::report();
@@ -608,6 +600,7 @@ void reportOtherTypes()
    NSEC3RecordContent::report();
    NSEC3PARAMRecordContent::report();
    TLSARecordContent::report();
+   SMIMEARecordContent::report();
    OPENPGPKEYRecordContent::report();
    DLVRecordContent::report();
    DNSRecordContent::regist(QClass::ANY, QType::TSIG, &TSIGRecordContent::make, &TSIGRecordContent::make, "TSIG");

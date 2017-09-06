@@ -22,6 +22,7 @@
 #pragma once
 #include "iputils.hh"
 #include "dns.hh"
+#include "dnsname.hh"
 #include "dnsparser.hh"
 #include <map>
 #include <unordered_map>
@@ -31,16 +32,16 @@
 
 
    We know the following actions:
-   
+
    No action - just pass it on
    Drop - drop a query, no response
-   NXDOMAIN - fake up an NXDOMAIN for the query 
+   NXDOMAIN - fake up an NXDOMAIN for the query
    NODATA - just return no data for this qtype
    Truncate - set TC bit
    Modified - "we fake an answer for you"
 
    These actions can be caused by the following triggers:
-   
+
    qname - the query name
    client-ip - the IP address of the requestor
    response-ip - an IP address in the response
@@ -57,7 +58,7 @@
    Wildcard versions (*.domain.com does NOT match domain.com)
    Netmasks (IPv4 and IPv6)
    Finally, triggers are grouped in different zones. The "first" zone that has a match
-   is consulted. Then within that zone, rules again have precedences. 
+   is consulted. Then within that zone, rules again have precedences.
 */
 
 
@@ -65,60 +66,146 @@ class DNSFilterEngine
 {
 public:
   enum class PolicyKind { NoAction, Drop, NXDOMAIN, NODATA, Truncate, Custom};
+  enum class PolicyType { None, QName, ClientIP, ResponseIP, NSDName, NSIP };
+
   struct Policy
   {
-    Policy(): d_kind(PolicyKind::NoAction), d_custom(nullptr), d_name(nullptr), d_ttl(0)
+    Policy(): d_custom(nullptr), d_name(nullptr), d_kind(PolicyKind::NoAction), d_type(PolicyType::None), d_ttl(0)
     {
     }
     bool operator==(const Policy& rhs) const
     {
       return d_kind == rhs.d_kind; // XXX check d_custom too!
     }
-    PolicyKind d_kind;
+    std::string getKindToString() const;
+    DNSRecord getCustomRecord(const DNSName& qname) const;
+    DNSRecord getRecord(const DNSName& qname) const;
+
     std::shared_ptr<DNSRecordContent> d_custom;
     std::shared_ptr<std::string> d_name;
-    int d_ttl;
+    PolicyKind d_kind;
+    PolicyType d_type;
+    int32_t d_ttl;
+  };
+
+  class Zone {
+  public:
+    void clear()
+    {
+      d_qpolAddr.clear();
+      d_postpolAddr.clear();
+      d_propolName.clear();
+      d_propolNSAddr.clear();
+      d_qpolName.clear();
+    }
+    void reserve(size_t entriesCount)
+    {
+      d_qpolName.reserve(entriesCount);
+    }
+    void setName(const std::string& name)
+    {
+      d_name = std::make_shared<std::string>(name);
+    }
+    void setDomain(const DNSName& domain)
+    {
+      d_domain = domain;
+    }
+    void setSerial(uint32_t serial)
+    {
+      d_serial = serial;
+    }
+    void setRefresh(uint32_t refresh)
+    {
+      d_refresh = refresh;
+    }
+    const std::shared_ptr<std::string> getName() const
+    {
+      return d_name;
+    }
+    void dump(FILE * fp) const;
+
+    void addClientTrigger(const Netmask& nm, Policy pol);
+    void addQNameTrigger(const DNSName& nm, Policy pol);
+    void addNSTrigger(const DNSName& dn, Policy pol);
+    void addNSIPTrigger(const Netmask& nm, Policy pol);
+    void addResponseTrigger(const Netmask& nm, Policy pol);
+
+    bool rmClientTrigger(const Netmask& nm, Policy pol);
+    bool rmQNameTrigger(const DNSName& nm, Policy pol);
+    bool rmNSTrigger(const DNSName& dn, Policy pol);
+    bool rmNSIPTrigger(const Netmask& nm, Policy pol);
+    bool rmResponseTrigger(const Netmask& nm, Policy pol);
+
+    bool findQNamePolicy(const DNSName& qname, DNSFilterEngine::Policy& pol) const;
+    bool findNSPolicy(const DNSName& qname, DNSFilterEngine::Policy& pol) const;
+    bool findNSIPPolicy(const ComboAddress& addr, DNSFilterEngine::Policy& pol) const;
+    bool findResponsePolicy(const ComboAddress& addr, DNSFilterEngine::Policy& pol) const;
+    bool findClientPolicy(const ComboAddress& addr, DNSFilterEngine::Policy& pol) const;
+
+  private:
+    static DNSName maskToRPZ(const Netmask& nm);
+    bool findNamedPolicy(const std::unordered_map<DNSName, DNSFilterEngine::Policy>& polmap, const DNSName& qname, DNSFilterEngine::Policy& pol) const;
+    void dumpNamedPolicy(FILE* fp, const DNSName& name, const Policy& pol) const;
+    void dumpAddrPolicy(FILE* fp, const Netmask& nm, const DNSName& name, const Policy& pol) const;
+
+    std::unordered_map<DNSName, Policy> d_qpolName;   // QNAME trigger (RPZ)
+    NetmaskTree<Policy> d_qpolAddr;         // Source address
+    std::unordered_map<DNSName, Policy> d_propolName; // NSDNAME (RPZ)
+    NetmaskTree<Policy> d_propolNSAddr;     // NSIP (RPZ)
+    NetmaskTree<Policy> d_postpolAddr;      // IP trigger (RPZ)
+    DNSName d_domain;
+    std::shared_ptr<std::string> d_name;
+    uint32_t d_serial{0};
+    uint32_t d_refresh{0};
   };
 
   DNSFilterEngine();
-  void clear();
-  void clear(size_t zone);
-  void addClientTrigger(const Netmask& nm, Policy pol, size_t zone);
-  void addQNameTrigger(const DNSName& nm, Policy pol, size_t zone);
-  void addNSTrigger(const DNSName& dn, Policy pol, size_t zone);
-  void addNSIPTrigger(const Netmask& nm, Policy pol, size_t zone);
-  void addResponseTrigger(const Netmask& nm, Policy pol, size_t zone);
-
-  bool rmClientTrigger(const Netmask& nm, Policy pol, size_t zone);
-  bool rmQNameTrigger(const DNSName& nm, Policy pol, size_t zone);
-  bool rmNSTrigger(const DNSName& dn, Policy pol, size_t zone);
-  bool rmNSIPTrigger(const Netmask& nm, Policy pol, size_t zone);
-  bool rmResponseTrigger(const Netmask& nm, Policy pol, size_t zone);
-
+  void clear()
+  {
+    for(auto& z : d_zones) {
+      z->clear();
+    }
+  }
+  const std::shared_ptr<Zone> getZone(size_t zoneIdx) const
+  {
+    std::shared_ptr<Zone> result{nullptr};
+    if (zoneIdx < d_zones.size()) {
+      result = d_zones[zoneIdx];
+    }
+    return result;
+  }
+  const std::shared_ptr<Zone> getZone(const std::string& name) const
+  {
+    for (const auto zone : d_zones) {
+      const auto& zName = zone->getName();
+      if (zName && *zName == name) {
+        return zone;
+      }
+    }
+    return nullptr;
+  }
+  size_t addZone(std::shared_ptr<Zone> newZone)
+  {
+    d_zones.push_back(newZone);
+    return (d_zones.size() - 1);
+  }
+  void setZone(size_t zoneIdx, std::shared_ptr<Zone> newZone)
+  {
+    if (newZone) {
+      assureZones(zoneIdx);
+      d_zones[zoneIdx] = newZone;
+    }
+  }
 
   Policy getQueryPolicy(const DNSName& qname, const ComboAddress& nm, const std::unordered_map<std::string,bool>& discardedPolicies) const;
   Policy getProcessingPolicy(const DNSName& qname, const std::unordered_map<std::string,bool>& discardedPolicies) const;
   Policy getProcessingPolicy(const ComboAddress& address, const std::unordered_map<std::string,bool>& discardedPolicies) const;
   Policy getPostPolicy(const vector<DNSRecord>& records, const std::unordered_map<std::string,bool>& discardedPolicies) const;
 
-  size_t size() {
+  size_t size() const {
     return d_zones.size();
-  }
-  void setPolicyName(size_t zoneIdx, std::string name)
-  {
-    assureZones(zoneIdx);
-    d_zones[zoneIdx].name = std::make_shared<std::string>(name);
   }
 private:
   void assureZones(size_t zone);
-  struct Zone {
-    std::map<DNSName, Policy> qpolName;   // QNAME trigger (RPZ)
-    NetmaskTree<Policy> qpolAddr;         // Source address
-    std::map<DNSName, Policy> propolName; // NSDNAME (RPZ)
-    NetmaskTree<Policy> propolNSAddr;     // NSIP (RPZ)
-    NetmaskTree<Policy> postpolAddr;      // IP trigger (RPZ)
-    std::shared_ptr<std::string> name;
-  };
-  vector<Zone> d_zones;
-
+  vector<std::shared_ptr<Zone>> d_zones;
 };

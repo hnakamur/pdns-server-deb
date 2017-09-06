@@ -28,7 +28,6 @@
 #include "pdns/dns.hh"
 #include "pdns/dnsbackend.hh"
 #include "pdns/dnspacket.hh"
-#include "pdns/ueberbackend.hh"
 #include "pdns/pdnsexception.hh"
 #include "pdns/logger.hh"
 #include "pdns/arguments.hh"
@@ -51,12 +50,12 @@ gOracleBackend::gOracleBackend(const string &mode, const string &suffix)  : GSQL
     int err = OCIEnvCreate(&d_environmentHandle, OCI_THREADED, NULL, NULL, NULL, NULL, 0, NULL); 
 
     if (err) {
-      throw PDNSException("OCIEnvCraete failed");
+      throw PDNSException("OCIEnvCreate failed");
     }
   }
 
   try {
-    // set Oracle envionment variables
+    // set Oracle environment variables
     setDB(new SOracle(getArg("tnsname"),
                       getArg("user"),
                       getArg("password"), 
@@ -135,6 +134,7 @@ public:
     declare(suffix, "delete-names-query", "", "delete from records where domain_id=:domain_id and name=:qname");
 
     declare(suffix, "add-domain-key-query","", "insert into cryptokeys (id, domain_id, flags, active, content) select cryptokeys_id_sequence.nextval, id, :flags,:active, :content from domains where name=:domain");
+    declare(suffix, "get-last-inserted-key-id-query", "", "select cryptokeys_id_sequence.currval from DUAL");
     declare(suffix, "list-domain-keys-query","", "select cryptokeys.id, flags, active, content from domains, cryptokeys where cryptokeys.domain_id=domains.id and name=:domain");
     declare(suffix, "get-all-domain-metadata-query","", "select kind,content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name=:domain");
     declare(suffix, "get-domain-metadata-query","", "select content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name=:domain and domainmetadata.kind=:kind");

@@ -121,28 +121,28 @@ shared_ptr<DNSRecordContent> DNSRecordContent::unserialize(const DNSName& qname,
   return ret;
 }
 
-DNSRecordContent* DNSRecordContent::mastermake(const DNSRecord &dr, 
+std::shared_ptr<DNSRecordContent> DNSRecordContent::mastermake(const DNSRecord &dr,
                                                PacketReader& pr)
 {
   uint16_t searchclass = (dr.d_type == QType::OPT) ? 1 : dr.d_class; // class is invalid for OPT
 
   typemap_t::const_iterator i=getTypemap().find(make_pair(searchclass, dr.d_type));
   if(i==getTypemap().end() || !i->second) {
-    return new UnknownRecordContent(dr, pr);
+    return std::make_shared<UnknownRecordContent>(dr, pr);
   }
 
-  return i->second(dr, pr);
+  return std::shared_ptr<DNSRecordContent>(i->second(dr, pr));
 }
 
-DNSRecordContent* DNSRecordContent::mastermake(uint16_t qtype, uint16_t qclass,
+std::shared_ptr<DNSRecordContent> DNSRecordContent::mastermake(uint16_t qtype, uint16_t qclass,
                                                const string& content)
 {
   zmakermap_t::const_iterator i=getZmakermap().find(make_pair(qclass, qtype));
   if(i==getZmakermap().end()) {
-    return new UnknownRecordContent(content);
+    return std::make_shared<UnknownRecordContent>(content);
   }
 
-  return i->second(content);
+  return std::shared_ptr<DNSRecordContent>(i->second(content));
 }
 
 std::unique_ptr<DNSRecordContent> DNSRecordContent::makeunique(uint16_t qtype, uint16_t qclass,
@@ -157,21 +157,21 @@ std::unique_ptr<DNSRecordContent> DNSRecordContent::makeunique(uint16_t qtype, u
 }
 
 
-DNSRecordContent* DNSRecordContent::mastermake(const DNSRecord &dr, PacketReader& pr, uint16_t oc) {
+std::shared_ptr<DNSRecordContent> DNSRecordContent::mastermake(const DNSRecord &dr, PacketReader& pr, uint16_t oc) {
   // For opcode UPDATE and where the DNSRecord is an answer record, we don't care about content, because this is
   // not used within the prerequisite section of RFC2136, so - we can simply use unknownrecordcontent.
-  // For section 3.2.3, we do need content so we need to get it properly. But only for the correct Qclasses.
+  // For section 3.2.3, we do need content so we need to get it properly. But only for the correct QClasses.
   if (oc == Opcode::Update && dr.d_place == DNSResourceRecord::ANSWER && dr.d_class != 1)
-    return new UnknownRecordContent(dr, pr);
+    return std::make_shared<UnknownRecordContent>(dr, pr);
 
   uint16_t searchclass = (dr.d_type == QType::OPT) ? 1 : dr.d_class; // class is invalid for OPT
 
   typemap_t::const_iterator i=getTypemap().find(make_pair(searchclass, dr.d_type));
   if(i==getTypemap().end() || !i->second) {
-    return new UnknownRecordContent(dr, pr);
+    return std::make_shared<UnknownRecordContent>(dr, pr);
   }
 
-  return i->second(dr, pr);
+  return std::shared_ptr<DNSRecordContent>(i->second(dr, pr));
 }
 
 
@@ -193,7 +193,6 @@ DNSRecordContent::t2namemap_t& DNSRecordContent::getT2Namemap()
   return t2namemap;
 }
 
-
 DNSRecordContent::zmakermap_t& DNSRecordContent::getZmakermap()
 {
   static DNSRecordContent::zmakermap_t zmakermap;
@@ -206,9 +205,21 @@ DNSRecord::DNSRecord(const DNSResourceRecord& rr)
   d_type = rr.qtype.getCode();
   d_ttl = rr.ttl;
   d_class = rr.qclass;
-  d_place = rr.d_place;
+  d_place = DNSResourceRecord::ANSWER;
   d_clen = 0;
-  d_content = std::shared_ptr<DNSRecordContent>(DNSRecordContent::mastermake(d_type, rr.qclass, rr.content));
+  d_content = DNSRecordContent::mastermake(d_type, rr.qclass, rr.content);
+}
+
+// If you call this and you are not parsing a packet coming from a socket, you are doing it wrong.
+DNSResourceRecord DNSResourceRecord::fromWire(const DNSRecord& d) {
+  DNSResourceRecord rr;
+  rr.qname = d.d_name;
+  rr.qtype = QType(d.d_type);
+  rr.ttl = d.d_ttl;
+  rr.content = d.d_content->getZoneRepresentation(true);
+  rr.auth = false;
+  rr.qclass = d.d_class;
+  return rr;
 }
 
 void MOADNSParser::init(bool query, const char *packet, unsigned int len)
@@ -275,11 +286,11 @@ void MOADNSParser::init(bool query, const char *packet, unsigned int len)
 
       if (query && (dr.d_place == DNSResourceRecord::ANSWER || dr.d_place == DNSResourceRecord::AUTHORITY || (dr.d_type != QType::OPT && dr.d_type != QType::TSIG && dr.d_type != QType::SIG && dr.d_type != QType::TKEY) || ((dr.d_type == QType::TSIG || dr.d_type == QType::SIG || dr.d_type == QType::TKEY) && dr.d_class != QClass::ANY))) {
 //        cerr<<"discarding RR, query is "<<query<<", place is "<<dr.d_place<<", type is "<<dr.d_type<<", class is "<<dr.d_class<<endl;
-        dr.d_content=std::shared_ptr<DNSRecordContent>(new UnknownRecordContent(dr, pr));
+        dr.d_content=std::make_shared<UnknownRecordContent>(dr, pr);
       }
       else {
 //        cerr<<"parsing RR, query is "<<query<<", place is "<<dr.d_place<<", type is "<<dr.d_type<<", class is "<<dr.d_class<<endl;
-        dr.d_content=std::shared_ptr<DNSRecordContent>(DNSRecordContent::mastermake(dr, pr, d_header.opcode));
+        dr.d_content=DNSRecordContent::mastermake(dr, pr, d_header.opcode);
       }
 
       d_answers.push_back(make_pair(dr, pr.d_pos));
@@ -420,15 +431,12 @@ DNSName PacketReader::getName()
     d_pos+=consumed;
     return dn;
   }
-  catch(std::range_error& re)
-    {
-      throw std::out_of_range(string("dnsname issue: ")+re.what());
-    }
-
-  catch(...)
-    {
-      throw std::out_of_range("dnsname issue");
-    }
+  catch(const std::range_error& re) {
+    throw std::out_of_range(string("dnsname issue: ")+re.what());
+  }
+  catch(...) {
+    throw std::out_of_range("dnsname issue");
+  }
   throw PDNSException("PacketReader::getName(): name is empty");
 }
 
@@ -588,7 +596,11 @@ public:
   }
   void skipBytes(uint16_t bytes)
   {
-      moveOffset(bytes);
+    moveOffset(bytes);
+  }
+  void rewindBytes(uint16_t by)
+  {
+    rewindOffset(by);
   }
   uint32_t get32BitInt()
   {
@@ -619,17 +631,25 @@ public:
     int toskip = get16BitInt();
     moveOffset(toskip);
   }
+
   void decreaseAndSkip32BitInt(uint32_t decrease)
   {
     const char *p = d_packet + d_offset;
     moveOffset(4);
-    
+
     uint32_t tmp;
     memcpy(&tmp, (void*) p, sizeof(tmp));
     tmp = ntohl(tmp);
     tmp-=decrease;
     tmp = htonl(tmp);
     memcpy(d_packet + d_offset-4, (const char*)&tmp, sizeof(tmp));
+  }
+  void setAndSkip32BitInt(uint32_t value)
+  {
+    moveOffset(4);
+
+    value = htonl(value);
+    memcpy(d_packet + d_offset-4, (const char*)&value, sizeof(value));
   }
   uint32_t getOffset() const
   {
@@ -643,6 +663,16 @@ private:
       throw std::out_of_range("dns packet out of range: "+std::to_string(d_notyouroffset) +" > " 
       + std::to_string(d_length) );
   }
+  void rewindOffset(uint16_t by)
+  {
+    if(d_notyouroffset < by)
+      throw std::out_of_range("Rewinding dns packet out of range: "+std::to_string(d_notyouroffset) +" < "
+                              + std::to_string(by));
+    d_notyouroffset -= by;
+    if(d_notyouroffset < 12)
+      throw std::out_of_range("Rewinding dns packet out of range: "+std::to_string(d_notyouroffset) +" < "
+                              + std::to_string(12));
+  }
   char* d_packet;
   size_t d_length;
   
@@ -650,6 +680,50 @@ private:
   const uint32_t&  d_offset; // look.. but don't touch
   
 };
+
+// method of operation: silently fail if it doesn't work - we're only trying to be nice, don't fall over on it
+void editDNSPacketTTL(char* packet, size_t length, std::function<uint32_t(uint8_t, uint16_t, uint16_t, uint32_t)> visitor)
+{
+  if(length < sizeof(dnsheader))
+    return;
+  try
+  {
+    dnsheader dh;
+    memcpy((void*)&dh, (const dnsheader*)packet, sizeof(dh));
+    uint64_t numrecords = ntohs(dh.ancount) + ntohs(dh.nscount) + ntohs(dh.arcount);
+    DNSPacketMangler dpm(packet, length);
+
+    uint64_t n;
+    for(n=0; n < ntohs(dh.qdcount) ; ++n) {
+      dpm.skipLabel();
+      /* type and class */
+      dpm.skipBytes(4);
+    }
+
+    for(n=0; n < numrecords; ++n) {
+      dpm.skipLabel();
+
+      uint8_t section = n < dh.ancount ? 1 : (n < (dh.ancount + dh.nscount) ? 2 : 3);
+      uint16_t dnstype = dpm.get16BitInt();
+      uint16_t dnsclass = dpm.get16BitInt();
+
+      if(dnstype == QType::OPT) // not getting near that one with a stick
+        break;
+
+      uint32_t dnsttl = dpm.get32BitInt();
+      uint32_t newttl = visitor(section, dnsclass, dnstype, dnsttl);
+      if (newttl) {
+        dpm.rewindBytes(sizeof(newttl));
+        dpm.setAndSkip32BitInt(newttl);
+      }
+      dpm.skipRData();
+    }
+  }
+  catch(...)
+  {
+    return;
+  }
+}
 
 // method of operation: silently fail if it doesn't work - we're only trying to be nice, don't fall over on it
 void ageDNSPacket(char* packet, size_t length, uint32_t seconds)

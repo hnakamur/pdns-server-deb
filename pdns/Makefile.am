@@ -54,7 +54,8 @@ EXTRA_DIST = \
 
 BUILT_SOURCES = \
 	bind-dnssec.schema.sqlite3.sql.h \
-	bindparser.h
+	bindparser.h \
+	dnslabeltext.cc
 
 CLEANFILES = \
 	*.gcda \
@@ -132,7 +133,11 @@ EXTRA_PROGRAMS = \
 
 pdns_server_SOURCES = \
 	arguments.cc arguments.hh \
+	ascii.hh \
 	auth-carbon.cc \
+	auth-caches.cc auth-caches.hh \
+	auth-packetcache.cc auth-packetcache.hh \
+	auth-querycache.cc auth-querycache.hh \
 	backends/gsql/gsqlbackend.cc backends/gsql/gsqlbackend.hh \
 	backends/gsql/ssql.hh \
 	base32.cc base32.hh \
@@ -162,6 +167,7 @@ pdns_server_SOURCES = \
 	dynhandler.cc dynhandler.hh \
 	dynlistener.cc dynlistener.hh \
 	dynmessenger.hh \
+	ednsoptions.cc ednsoptions.hh \
 	ednssubnet.cc ednssubnet.hh \
 	gss_context.cc gss_context.hh \
 	iputils.cc iputils.hh \
@@ -170,6 +176,7 @@ pdns_server_SOURCES = \
 	lock.hh \
 	logger.cc logger.hh \
 	lua-auth.cc lua-auth.hh \
+	lua-auth4.cc lua-auth4.hh \
 	lua-pdns.cc lua-pdns.hh lua-iputils.cc \
 	mastercommunicator.cc \
 	md5.hh \
@@ -178,7 +185,7 @@ pdns_server_SOURCES = \
 	namespaces.hh \
 	nsecrecords.cc \
 	opensslsigners.cc opensslsigners.hh \
-	packetcache.cc packetcache.hh \
+	packetcache.hh \
 	packethandler.cc packethandler.hh \
 	pdnsexception.hh \
 	qtype.cc qtype.hh \
@@ -262,6 +269,9 @@ endif
 
 pdnsutil_SOURCES = \
 	arguments.cc \
+	auth-caches.cc auth-caches.hh \
+	auth-packetcache.cc auth-packetcache.hh \
+	auth-querycache.cc auth-querycache.hh \
 	backends/gsql/gsqlbackend.cc backends/gsql/gsqlbackend.hh \
 	backends/gsql/ssql.hh \
 	base32.cc \
@@ -282,6 +292,7 @@ pdnsutil_SOURCES = \
 	dnssecsigner.cc \
 	dnswriter.cc dnswriter.hh \
 	dynlistener.cc \
+	ednsoptions.cc ednsoptions.hh \
 	ednssubnet.cc \
 	gss_context.cc gss_context.hh \
 	iputils.cc iputils.hh \
@@ -290,7 +301,6 @@ pdnsutil_SOURCES = \
 	misc.cc misc.hh \
 	nsecrecords.cc \
 	opensslsigners.cc opensslsigners.hh \
-	packetcache.cc \
 	pdnsutil.cc \
 	qtype.cc \
 	randomhelper.cc \
@@ -454,7 +464,7 @@ sdig_SOURCES = \
 	dnsparser.cc dnsparser.hh \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
-	ednssubnet.cc \
+	ednssubnet.cc iputils.cc \
 	logger.cc \
 	misc.cc misc.hh \
 	nsecrecords.cc \
@@ -489,8 +499,10 @@ calidns_SOURCES = \
 	statbag.cc \
 	unix_utility.cc
 
-calidns_LDADD = $(LIBCRYPTO_LIBS)
-calidns_LDFLAGS = $(AM_LDFLAGS) $(THREADFLAGS) $(LIBCRYPTO_LDFLAGS)
+calidns_LDADD = $(LIBCRYPTO_LIBS) \
+	$(BOOST_PROGRAM_OPTIONS_LIBS)
+calidns_LDFLAGS = $(AM_LDFLAGS) $(THREADFLAGS) $(LIBCRYPTO_LDFLAGS) \
+	$(BOOST_PROGRAM_OPTIONS_LDFLAGS)
 
 dumresp_SOURCES = \
 	dnslabeltext.cc \
@@ -684,6 +696,7 @@ toysdig_SOURCES = \
 	ednssubnet.cc ednssubnet.hh \
 	filterpo.hh \
 	gss_context.cc gss_context.hh \
+	iputils.cc \
 	logger.cc \
 	misc.cc misc.hh \
 	nsecrecords.cc \
@@ -892,8 +905,9 @@ dnsreplay_SOURCES = \
 	dnsrecords.cc \
 	dnsreplay.cc \
 	dnswriter.cc dnswriter.hh \
-	ednssubnet.cc ednssubnet.hh \
 	ednsoptions.cc ednsoptions.hh \
+	ednssubnet.cc ednssubnet.hh \
+	iputils.cc \
 	logger.cc \
 	misc.cc \
 	nsecrecords.cc \
@@ -1110,6 +1124,9 @@ pdns.conf-dist: pdns_server
 
 testrunner_SOURCES = \
 	arguments.cc \
+	auth-caches.cc auth-caches.hh \
+	auth-packetcache.cc auth-packetcache.hh \
+	auth-querycache.cc auth-querycache.hh \
 	base32.cc \
 	base64.cc \
 	bindlexer.l \
@@ -1132,15 +1149,13 @@ testrunner_SOURCES = \
 	gettime.cc gettime.hh \
 	gss_context.cc gss_context.hh \
 	iputils.cc \
+	ixfr.cc ixfr.hh \
 	logger.cc \
 	misc.cc \
 	nameserver.cc \
 	nsecrecords.cc \
-	packetcache.cc \
 	qtype.cc \
 	rcpgenerator.cc \
-	recpacketcache.cc recpacketcache.hh \
-	rec-protobuf.hh \
 	responsestats.cc \
 	responsestats-auth.cc \
 	sillyrecords.cc \
@@ -1149,25 +1164,30 @@ testrunner_SOURCES = \
 	test-base32_cc.cc \
 	test-base64_cc.cc \
 	test-bindparser_cc.cc \
+	test-common.hh \
 	test-delaypipe_hh.cc \
+	test-dnsrecordcontent.cc \
 	test-distributor_hh.cc \
 	test-dns_random_hh.cc \
 	test-dnsname_cc.cc \
 	test-dnsparser_hh.cc \
 	test-dnsrecords_cc.cc \
 	test-iputils_hh.cc \
+	test-ixfr_cc.cc \
+	test-lock_hh.cc \
 	test-md5_hh.cc \
 	test-misc_hh.cc \
 	test-nameserver_cc.cc \
 	test-nmtree.cc \
 	test-packetcache_cc.cc \
 	test-rcpgenerator_cc.cc \
-	test-recpacketcache_cc.cc \
 	test-signers.cc \
 	test-sha_hh.cc \
 	test-statbag_cc.cc \
+	test-tsig.cc \
 	test-zoneparser_tng_cc.cc \
 	testrunner.cc \
+	tsigverifier.cc tsigverifier.hh \
 	ueberbackend.cc \
 	unix_utility.cc \
 	zoneparser-tng.cc zoneparser-tng.hh
@@ -1182,18 +1202,6 @@ testrunner_LDADD = \
 	$(BOOST_UNIT_TEST_FRAMEWORK_LIBS) \
 	$(RT_LIBS) \
 	$(LIBDL)
-
-if HAVE_PROTOBUF
-if HAVE_PROTOC
-nodist_testrunner_SOURCES = \
-	dnsmessage.pb.cc dnsmessage.pb.h
-
-testrunner_LDADD += \
-	$(PROTOBUF_LIBS)
-
-recpacketcache.$(OBJEXT): dnsmessage.pb.cc
-endif
-endif
 
 if PKCS11
 testrunner_SOURCES += pkcs11signers.cc pkcs11signers.hh
