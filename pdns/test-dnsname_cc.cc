@@ -249,11 +249,75 @@ BOOST_AUTO_TEST_CASE(test_Append) {
   BOOST_CHECK(dn == DNSName("www.powerdns.com."));
 }
 
+BOOST_AUTO_TEST_CASE(test_packetCompress) {
+  reportBasicTypes();
+  vector<unsigned char> packet;
+  DNSPacketWriter dpw(packet, DNSName("www.ds9a.nl."), QType::AAAA);
+  dpw.startRecord(DNSName("ds9a.nl"), QType::SOA);
+  SOARecordContent src("ns1.powerdns.nl admin.powerdns.nl 1 2 3 4 5");
+  src.toPacket(dpw);
+  AAAARecordContent aaaa("::1");
+  dpw.startRecord(DNSName("www.dS9A.nl"), QType::AAAA);
+  aaaa.toPacket(dpw);
+  dpw.startRecord(DNSName("www.ds9A.nl"), QType::AAAA);
+  aaaa.toPacket(dpw);
+  dpw.startRecord(DNSName("www.dS9a.nl"), QType::AAAA);
+  aaaa.toPacket(dpw);
+  dpw.startRecord(DNSName("www2.DS9a.nl"), QType::AAAA);
+  aaaa.toPacket(dpw);
+  dpw.startRecord(DNSName("www2.dS9a.nl"), QType::AAAA);
+  aaaa.toPacket(dpw);
+  dpw.commit();
+  string str((const char*)&packet[0], (const char*)&packet[0] + packet.size());
+  size_t pos = 0; 
+  int count=0;
+  while((pos = str.find("ds9a", pos)) != string::npos) {
+    ++pos;
+    ++count;
+  }
+  BOOST_CHECK_EQUAL(count, 1);
+  pos = 0; 
+  count=0;
+  while((pos = str.find("powerdns", pos)) != string::npos) {
+    ++pos;
+    ++count;
+  }
+  BOOST_CHECK_EQUAL(count, 1);
+
+}
+
+BOOST_AUTO_TEST_CASE(test_packetCompressLong) {
+  reportBasicTypes();
+  vector<unsigned char> packet;
+  DNSName loopback("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa");
+  DNSPacketWriter dpw(packet, loopback, QType::PTR);
+
+  dpw.startRecord(loopback, QType::PTR);
+  PTRRecordContent prc(DNSName("localhost"));
+  prc.toPacket(dpw);
+  dpw.commit();
+  DNSName roundtrip((char*)&packet[0], packet.size(), 12, false);
+  BOOST_CHECK_EQUAL(loopback,roundtrip);
+  
+  packet.clear();
+  DNSName longer("1.2.3.4.5.6.7.8.1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa");
+  DNSPacketWriter dpw2(packet, longer, QType::PTR);
+
+  dpw2.startRecord(DNSName("a.b.c.d.e")+longer, QType::PTR);
+  PTRRecordContent prc2(DNSName("localhost"));
+  prc2.toPacket(dpw2);
+  dpw2.commit();
+
+}
+
+
+
+
 BOOST_AUTO_TEST_CASE(test_PacketParse) {
   vector<unsigned char> packet;
   reportBasicTypes();
   DNSName root(".");
-  DNSPacketWriter dpw1(packet, DNSName("."), QType::AAAA);
+  DNSPacketWriter dpw1(packet, g_rootdnsname, QType::AAAA);
   DNSName p((char*)&packet[0], packet.size(), 12, false);
   BOOST_CHECK_EQUAL(p, root);
   unsigned char* buffer=&packet[0];
@@ -425,7 +489,7 @@ BOOST_AUTO_TEST_CASE(test_suffixmatch) {
 
   BOOST_CHECK(!smn.check(DNSName("www.news.gov.uk.")));
 
-  smn.add(DNSName(".")); // block the root
+  smn.add(g_rootdnsname); // block the root
   BOOST_CHECK(smn.check(DNSName("a.root-servers.net.")));
 
   DNSName examplenet("example.net.");
@@ -434,6 +498,57 @@ BOOST_AUTO_TEST_CASE(test_suffixmatch) {
   smn.add(net);
   BOOST_CHECK(smn.check(examplenet));
   BOOST_CHECK(smn.check(net));
+}
+
+BOOST_AUTO_TEST_CASE(test_suffixmatch_tree) {
+  SuffixMatchTree<DNSName> smt;
+  DNSName ezdns("ezdns.it.");
+  smt.add(ezdns, ezdns);
+
+  smt.add(DNSName("org.").getRawLabels(), DNSName("org."));
+
+  DNSName wwwpowerdnscom("www.powerdns.com.");
+  DNSName wwwezdnsit("www.ezdns.it.");
+  BOOST_REQUIRE(smt.lookup(wwwezdnsit));
+  BOOST_CHECK_EQUAL(*smt.lookup(wwwezdnsit), ezdns);
+  BOOST_CHECK(smt.lookup(wwwpowerdnscom) == nullptr);
+
+  BOOST_REQUIRE(smt.lookup(DNSName("www.powerdns.org.")));
+  BOOST_CHECK_EQUAL(*smt.lookup(DNSName("www.powerdns.org.")), DNSName("org."));
+  BOOST_REQUIRE(smt.lookup(DNSName("www.powerdns.oRG.")));
+  BOOST_CHECK_EQUAL(*smt.lookup(DNSName("www.powerdns.oRG.")), DNSName("org."));
+
+  smt.add(DNSName("news.bbc.co.uk."), DNSName("news.bbc.co.uk."));
+  BOOST_REQUIRE(smt.lookup(DNSName("news.bbc.co.uk.")));
+  BOOST_CHECK_EQUAL(*smt.lookup(DNSName("news.bbc.co.uk.")), DNSName("news.bbc.co.uk."));
+  BOOST_REQUIRE(smt.lookup(DNSName("www.news.bbc.co.uk.")));
+  BOOST_CHECK_EQUAL(*smt.lookup(DNSName("www.news.bbc.co.uk.")), DNSName("news.bbc.co.uk."));
+  BOOST_REQUIRE(smt.lookup(DNSName("www.www.www.www.www.news.bbc.co.uk.")));
+  BOOST_CHECK_EQUAL(*smt.lookup(DNSName("www.www.www.www.www.news.bbc.co.uk.")), DNSName("news.bbc.co.uk."));
+  BOOST_CHECK(smt.lookup(DNSName("images.bbc.co.uk.")) == nullptr);
+  BOOST_CHECK(smt.lookup(DNSName("www.news.gov.uk.")) == nullptr);
+
+  smt.add(g_rootdnsname, g_rootdnsname); // block the root
+  BOOST_REQUIRE(smt.lookup(DNSName("a.root-servers.net.")));
+  BOOST_CHECK_EQUAL(*smt.lookup(DNSName("a.root-servers.net.")), g_rootdnsname);
+
+  DNSName apowerdnscom("a.powerdns.com.");
+  DNSName bpowerdnscom("b.powerdns.com.");
+  smt.add(apowerdnscom, apowerdnscom);
+  smt.add(bpowerdnscom, bpowerdnscom);
+  BOOST_REQUIRE(smt.lookup(apowerdnscom));
+  BOOST_CHECK_EQUAL(*smt.lookup(apowerdnscom), apowerdnscom);
+  BOOST_REQUIRE(smt.lookup(bpowerdnscom));
+  BOOST_CHECK_EQUAL(*smt.lookup(bpowerdnscom), bpowerdnscom);
+
+  DNSName examplenet("example.net.");
+  DNSName net("net.");
+  smt.add(examplenet, examplenet);
+  smt.add(net, net);
+  BOOST_REQUIRE(smt.lookup(examplenet));
+  BOOST_CHECK_EQUAL(*smt.lookup(examplenet), examplenet);
+  BOOST_REQUIRE(smt.lookup(net));
+  BOOST_CHECK_EQUAL(*smt.lookup(net), net);
 }
 
 
@@ -477,14 +592,14 @@ BOOST_AUTO_TEST_CASE(test_compare_canonical) {
   BOOST_CHECK(!DNSName("www.BeRt.com").canonCompare(DNSName("WWW.berT.com")));
 
   CanonDNSNameCompare a;
-  BOOST_CHECK(a(DNSName("."), DNSName("www.powerdns.com")));
-  BOOST_CHECK(a(DNSName("."), DNSName("www.powerdns.net")));
-  BOOST_CHECK(!a(DNSName("www.powerdns.net"), DNSName(".")));
+  BOOST_CHECK(a(g_rootdnsname, DNSName("www.powerdns.com")));
+  BOOST_CHECK(a(g_rootdnsname, DNSName("www.powerdns.net")));
+  BOOST_CHECK(!a(DNSName("www.powerdns.net"), g_rootdnsname));
 
   vector<DNSName> vec;
   for(const std::string& a : {"bert.com.", "alpha.nl.", "articles.xxx.",
 	"Aleph1.powerdns.com.", "ZOMG.powerdns.com.", "aaa.XXX.", "yyy.XXX.", 
-	"test.powerdns.com."}) {
+	"test.powerdns.com.", "\\128.com"}) {
     vec.push_back(DNSName(a));
   }
   sort(vec.begin(), vec.end(), CanonDNSNameCompare());
@@ -495,6 +610,7 @@ BOOST_AUTO_TEST_CASE(test_compare_canonical) {
   for(const auto& a: {"bert.com.",  "Aleph1.powerdns.com.",
 	"test.powerdns.com.",
 	"ZOMG.powerdns.com.",
+	"\\128.com.",
 	"alpha.nl.",
 	"aaa.XXX.",
 	"articles.xxx.",
@@ -733,5 +849,23 @@ BOOST_AUTO_TEST_CASE(test_wirelength) { // Testing if we get the correct value f
   BOOST_CHECK_EQUAL(sname.wirelength(), 19);
 }
 
+BOOST_AUTO_TEST_CASE(test_getrawlabel) {
+  DNSName name("a.bb.ccc.dddd.");
+  BOOST_CHECK_EQUAL(name.getRawLabel(0), "a");
+  BOOST_CHECK_EQUAL(name.getRawLabel(1), "bb");
+  BOOST_CHECK_EQUAL(name.getRawLabel(2), "ccc");
+  BOOST_CHECK_EQUAL(name.getRawLabel(3), "dddd");
+  BOOST_CHECK_THROW(name.getRawLabel(name.countLabels()), std::out_of_range);
+}
 
+BOOST_AUTO_TEST_CASE(test_getlastlabel) {
+  DNSName name("www.powerdns.com");
+  DNSName ans = name.getLastLabel();
+
+  // Check the const-ness
+  BOOST_CHECK_EQUAL(name, DNSName("www.powerdns.com"));
+
+  // Check if the last label is indeed returned
+  BOOST_CHECK_EQUAL(ans, DNSName("com"));
+}
 BOOST_AUTO_TEST_SUITE_END()

@@ -4,7 +4,8 @@
 #include "packethandler.hh"
 #include "qtype.hh"
 #include "dnspacket.hh"
-#include "packetcache.hh"
+#include "auth-caches.hh"
+#include "statbag.hh"
 #include "dnsseckeeper.hh"
 #include "base64.hh"
 #include "base32.hh"
@@ -16,7 +17,6 @@
 #include "backends/gsql/ssql.hh"
 #include "communicator.hh"
 
-extern PacketCache PC;
 extern StatBag S;
 extern CommunicatorClass Communicator;
 
@@ -149,21 +149,21 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
             ++ddepth;
         } while(shorter.chopOff());
 
-        DNSName ordername = DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, qname))) + di->zone;
+        DNSName ordername = DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, qname)));
         if (! *narrow && (ddepth == 0 || (ddepth == 1 && nssets.count(qname)))) {
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, ordername, (ddepth == 0 ));
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, ordername, (ddepth == 0 ));
 
           if (nssets.count(qname)) {
             if (ns3pr->d_flags)
-              di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, DNSName(), false, QType::NS );
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, DNSName(), false, QType::A);
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, DNSName(), false, QType::AAAA);
+              di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, DNSName(), false, QType::NS );
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, DNSName(), false, QType::A);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, DNSName(), false, QType::AAAA);
           }
         } else {
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, DNSName(), (ddepth == 0));
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, DNSName(), (ddepth == 0));
         }
         if (ddepth == 1 || dssets.count(qname)) // FIXME400 && ?
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, ordername, false, QType::DS);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, ordername, false, QType::DS);
       }
       return 1;
     }
@@ -212,7 +212,7 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
           L<<Logger::Notice<<msgPrefix<<"Replace for record "<<rr->d_name<<"|"<<rrType.getName()<<" requested, but no changes made."<<endl;
         }
 
-      // In any other case, we must check if the TYPE and RDATA match to provide an update (which effectily means a update of TTL)
+      // In any other case, we must check if the TYPE and RDATA match to provide an update (which effectively means a update of TTL)
       } else {
         int updateTTL=0;
         foundRecord = false;
@@ -243,23 +243,23 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
         if(*haveNSEC3) {
           DNSName ordername;
           if(! *narrow)
-            ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, rr->d_name)))+di->zone;
+            ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, rr->d_name)));
 
           if (*narrow)
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), auth);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), auth);
           else
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, ordername, auth);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, ordername, auth);
           if(!auth || rrType == QType::DS) {
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::NS);
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::A);
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::AAAA);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::NS);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::A);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::AAAA);
           }
 
         } else { // NSEC
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, rr->d_name, auth);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, rr->d_name.makeRelative(di->zone), auth);
           if(!auth || rrType == QType::DS) {
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::A);
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::AAAA);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::A);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::AAAA);
           }
         }
       }
@@ -270,10 +270,10 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
     if (! foundRecord) {
       L<<Logger::Notice<<msgPrefix<<"Adding record "<<rr->d_name<<"|"<<rrType.getName()<<endl;
       delnonterm.insert(rr->d_name); // always remove any ENT's in the place where we're going to add a record.
-      DNSResourceRecord newRec(*rr);
+      auto newRec = DNSResourceRecord::fromWire(*rr);
       newRec.domain_id = di->id;
       newRec.auth = (rr->d_name == di->zone || rrType.getCode() != QType::NS);
-      di->backend->feedRecord(newRec);
+      di->backend->feedRecord(newRec, DNSName());
       changedRecords++;
 
 
@@ -310,33 +310,34 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
       {
         DNSName ordername;
         if(! *narrow)
-          ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, rr->d_name)))+di->zone;
+          ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, rr->d_name)));
 
         if (*narrow)
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), auth);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), auth);
         else
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, ordername, auth);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, ordername, auth);
 
         if (fixDS)
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, ordername, true, QType::DS);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, ordername, true, QType::DS);
 
         if(!auth)
         {
           if (ns3pr->d_flags)
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::NS);
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::A);
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::AAAA);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::NS);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::A);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::AAAA);
         }
       }
       else // NSEC
       {
-        di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, rr->d_name, auth);
+        DNSName ordername=rr->d_name.makeRelative(di->zone);
+        di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, ordername, auth);
         if (fixDS) {
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, rr->d_name, true, QType::DS);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, ordername, true, QType::DS);
         }
         if(!auth) {
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::A);
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), false, QType::AAAA);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::A);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), false, QType::AAAA);
         }
       }
 
@@ -356,21 +357,23 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
           if(*haveNSEC3)  {
             DNSName ordername;
             if(! *narrow)
-              ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, *qname)))+di->zone;
+              ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, *qname)));
 
             if (*narrow)
-              di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, rr->d_name, DNSName(), auth); // FIXME400 no *qname here?
+              di->backend->updateDNSSECOrderNameAndAuth(di->id, rr->d_name, DNSName(), auth); // FIXME400 no *qname here?
             else
-              di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, *qname, ordername, auth);
+              di->backend->updateDNSSECOrderNameAndAuth(di->id, *qname, ordername, auth);
 
             if (ns3pr->d_flags)
-              di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, *qname, DNSName(), false, QType::NS);
+              di->backend->updateDNSSECOrderNameAndAuth(di->id, *qname, DNSName(), false, QType::NS);
           }
-          else // NSEC
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, *qname, *qname, false, QType::NS);
+          else { // NSEC
+            DNSName ordername=DNSName(*qname).makeRelative(di->zone);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, *qname, ordername, false, QType::NS);
+          }
 
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, *qname, DNSName(), false, QType::A);
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, *qname, DNSName(), false, QType::AAAA);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, *qname, DNSName(), false, QType::A);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, *qname, DNSName(), false, QType::AAAA);
         }
       }
     }
@@ -380,7 +383,7 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
   // Delete records - section 3.4.2.3 and 3.4.2.4 with the exception of the 'always leave 1 NS rule' as that's handled by
   // the code that calls this performUpdate().
   if ((rr->d_class == QClass::ANY || rr->d_class == QClass::NONE) && rrType != QType::SOA) { // never delete a SOA.
-    DLOG(L<<msgPrefix<<"Deleting records: "<<rr->d_name<<"; QClasse:"<<rr->d_class<<"; rrType: "<<rrType.getName()<<endl);
+    DLOG(L<<msgPrefix<<"Deleting records: "<<rr->d_name<<"; QClass:"<<rr->d_class<<"; rrType: "<<rrType.getName()<<endl);
 
     if (rrType == QType::NSEC3PARAM) {
       L<<Logger::Notice<<msgPrefix<<"Deleting NSEC3PARAM from zone, resetting ordernames."<<endl;
@@ -423,18 +426,19 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
             ++ddepth;
         } while(shorter.chopOff());
 
+        DNSName ordername=qname.makeRelative(di->zone);
         if (!ents.count(qname) && (ddepth == 0 || (ddepth == 1 && nssets.count(qname)))) {
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, qname, (ddepth == 0));
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, ordername, (ddepth == 0));
 
           if (nssets.count(qname)) {
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, DNSName(), false, QType::A);
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, DNSName(), false, QType::AAAA);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, DNSName(), false, QType::A);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, DNSName(), false, QType::AAAA);
           }
         } else {
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, DNSName(), (ddepth == 0));
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, DNSName(), (ddepth == 0));
         }
         if (ddepth == 1 || dssets.count(qname))
-          di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, qname, qname, true, QType::DS);
+          di->backend->updateDNSSECOrderNameAndAuth(di->id, qname, ordername, true, QType::DS);
       }
       return 1;
     } // end of NSEC3PARAM delete block
@@ -490,12 +494,14 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
           if(*haveNSEC3)  {
             DNSName ordername;
             if(! *narrow)
-              ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, changeRec)))+di->zone;
+              ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, changeRec)));
 
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, changeRec, ordername, true);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, changeRec, ordername, true);
           }
-          else // NSEC
-            di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, changeRec, changeRec, true);
+          else { // NSEC
+            DNSName ordername=changeRec.makeRelative(di->zone);
+            di->backend->updateDNSSECOrderNameAndAuth(di->id, changeRec, ordername, true);
+          }
         }
       }
 
@@ -554,15 +560,15 @@ uint PacketHandler::performUpdate(const string &msgPrefix, const DNSRecord *rr, 
   //Insert and delete ENT's
   if (insnonterm.size() > 0 || delnonterm.size() > 0) {
     DLOG(L<<msgPrefix<<"Updating ENT records - "<<insnonterm.size()<<"|"<<delnonterm.size()<<endl);
-    di->backend->updateEmptyNonTerminals(di->id, di->zone, insnonterm, delnonterm, false);
+    di->backend->updateEmptyNonTerminals(di->id, insnonterm, delnonterm, false);
     for (const auto &i: insnonterm) {
       string hashed;
       if(*haveNSEC3)
       {
         DNSName ordername;
         if(! *narrow)
-          ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, i)))+di->zone;
-        di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, i, ordername, true);
+          ordername=DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, i)));
+        di->backend->updateDNSSECOrderNameAndAuth(di->id, i, ordername, true);
       }
     }
   }
@@ -709,61 +715,66 @@ int PacketHandler::processUpdate(DNSPacket *p) {
   string msgPrefix="UPDATE (" + itoa(p->d.id) + ") from " + p->getRemote().toString() + " for " + p->qdomain.toLogString() + ": ";
   L<<Logger::Info<<msgPrefix<<"Processing started."<<endl;
 
-  // Check permissions - IP based
-  vector<string> allowedRanges;
-  B.getDomainMetadata(p->qdomain, "ALLOW-DNSUPDATE-FROM", allowedRanges);
-  if (! ::arg()["allow-dnsupdate-from"].empty())
-    stringtok(allowedRanges, ::arg()["allow-dnsupdate-from"], ", \t" );
+  // if there is policy, we delegate all checks to it
+  if (this->d_update_policy_lua == NULL) {
 
-  NetmaskGroup ng;
-  for(vector<string>::const_iterator i=allowedRanges.begin(); i != allowedRanges.end(); i++)
-    ng.addMask(*i);
+    // Check permissions - IP based
+    vector<string> allowedRanges;
+    B.getDomainMetadata(p->qdomain, "ALLOW-DNSUPDATE-FROM", allowedRanges);
+    if (! ::arg()["allow-dnsupdate-from"].empty())
+      stringtok(allowedRanges, ::arg()["allow-dnsupdate-from"], ", \t" );
 
-  if ( ! ng.match(&p->d_remote)) {
-    L<<Logger::Error<<msgPrefix<<"Remote not listed in allow-dnsupdate-from or domainmetadata. Sending REFUSED"<<endl;
-    return RCode::Refused;
-  }
+    NetmaskGroup ng;
+    for(vector<string>::const_iterator i=allowedRanges.begin(); i != allowedRanges.end(); i++)
+      ng.addMask(*i);
 
-
-  // Check permissions - TSIG based.
-  vector<string> tsigKeys;
-  B.getDomainMetadata(p->qdomain, "TSIG-ALLOW-DNSUPDATE", tsigKeys);
-  if (tsigKeys.size() > 0) {
-    bool validKey = false;
-
-    TSIGRecordContent trc;
-    DNSName inputkey;
-    string message;
-    if (! p->getTSIGDetails(&trc,  &inputkey, 0)) {
-      L<<Logger::Error<<msgPrefix<<"TSIG key required, but packet does not contain key. Sending REFUSED"<<endl;
+    if ( ! ng.match(&p->d_remote)) {
+      L<<Logger::Error<<msgPrefix<<"Remote not listed in allow-dnsupdate-from or domainmetadata. Sending REFUSED"<<endl;
       return RCode::Refused;
     }
 
-    if (p->d_tsig_algo == TSIG_GSS) {
-      GssName inputname(p->d_peer_principal); // match against principal since GSS
-      for(vector<string>::const_iterator key=tsigKeys.begin(); key != tsigKeys.end(); key++) {
-        if (inputname.match(*key)) {
-          validKey = true;
-          break;
+
+    // Check permissions - TSIG based.
+    vector<string> tsigKeys;
+    B.getDomainMetadata(p->qdomain, "TSIG-ALLOW-DNSUPDATE", tsigKeys);
+    if (tsigKeys.size() > 0) {
+      bool validKey = false;
+
+      TSIGRecordContent trc;
+      DNSName inputkey;
+      string message;
+      if (! p->getTSIGDetails(&trc,  &inputkey)) {
+        L<<Logger::Error<<msgPrefix<<"TSIG key required, but packet does not contain key. Sending REFUSED"<<endl;
+        return RCode::Refused;
+      }
+
+      if (p->d_tsig_algo == TSIG_GSS) {
+        GssName inputname(p->d_peer_principal); // match against principal since GSS
+        for(vector<string>::const_iterator key=tsigKeys.begin(); key != tsigKeys.end(); key++) {
+          if (inputname.match(*key)) {
+            validKey = true;
+            break;
+          }
+        }
+      } else {
+        for(vector<string>::const_iterator key=tsigKeys.begin(); key != tsigKeys.end(); key++) {
+          if (inputkey == DNSName(*key)) { // because checkForCorrectTSIG has already been performed earlier on, if the names of the ky match with the domain given. THis is valid.
+            validKey=true;
+            break;
+          }
         }
       }
-    } else {
-      for(vector<string>::const_iterator key=tsigKeys.begin(); key != tsigKeys.end(); key++) {
-        if (inputkey == DNSName(*key)) { // because checkForCorrectTSIG has already been performed earlier on, if the names of the ky match with the domain given. THis is valid.
-          validKey=true;
-          break;
-        }
+
+      if (!validKey) {
+        L<<Logger::Error<<msgPrefix<<"TSIG key ("<<inputkey<<") required, but no matching key found in domainmetadata, tried "<<tsigKeys.size()<<". Sending REFUSED"<<endl;
+        return RCode::Refused;
       }
     }
 
-    if (!validKey) {
-      L<<Logger::Error<<msgPrefix<<"TSIG key ("<<inputkey<<") required, but no matching key found in domainmetadata, tried "<<tsigKeys.size()<<". Sending REFUSED"<<endl;
-      return RCode::Refused;
-    }
+    if (tsigKeys.size() == 0 && p->d_havetsig)
+      L<<Logger::Warning<<msgPrefix<<"TSIG is provided, but domain is not secured with TSIG. Processing continues"<<endl;
+
   }
-
-  if (tsigKeys.size() == 0 && p->d_havetsig)
-    L<<Logger::Warning<<msgPrefix<<"TSIG is provided, but domain is not secured with TSIG. Processing continues"<<endl;
 
   // RFC2136 uses the same DNS Header and Message as defined in RFC1035.
   // This means we can use the MOADNSParser to parse the incoming packet. The result is that we have some different
@@ -829,13 +840,13 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     }
   }
 
-  // 3.2.3 - Prerequisite check - this is outside of updatePrequisitesCheck because we check an RRSet and not the RR.
+  // 3.2.3 - Prerequisite check - this is outside of updatePrerequisitesCheck because we check an RRSet and not the RR.
   typedef pair<DNSName, QType> rrSetKey_t;
   typedef vector<DNSResourceRecord> rrVector_t;
   typedef std::map<rrSetKey_t, rrVector_t> RRsetMap_t;
   RRsetMap_t preReqRRsets;
-  for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
-    const DNSRecord *rr = &i->first;
+  for(const auto& i : mdp.d_answers) {
+    const DNSRecord* rr = &i.first;
     if (rr->d_place == DNSResourceRecord::ANSWER) {
       // Last line of 3.2.3
       if (rr->d_class != QClass::IN && rr->d_class != QClass::NONE && rr->d_class != QClass::ANY)
@@ -844,7 +855,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       if (rr->d_class == QClass::IN) {
         rrSetKey_t key = make_pair(rr->d_name, QType(rr->d_type));
         rrVector_t *vec = &preReqRRsets[key];
-        vec->push_back(DNSResourceRecord(*rr));
+        vec->push_back(DNSResourceRecord::fromWire(*rr));
       }
     }
   }
@@ -907,6 +918,16 @@ int PacketHandler::processUpdate(DNSPacket *p) {
     for(MOADNSParser::answers_t::const_iterator i=mdp.d_answers.begin(); i != mdp.d_answers.end(); ++i) {
       const DNSRecord *rr = &i->first;
       if (rr->d_place == DNSResourceRecord::AUTHORITY) {
+        /* see if it's permitted by policy */
+        if (this->d_update_policy_lua != NULL) {
+          if (this->d_update_policy_lua->updatePolicy(rr->d_name, QType(rr->d_type), di.zone, p) == false) {
+            L<<Logger::Warning<<msgPrefix<<"Refusing update for " << rr->d_name << "/" << QType(rr->d_type).getName() << ": Not permitted by policy"<<endl;
+            continue;
+          } else {
+            L<<Logger::Debug<<msgPrefix<<"Accepting update for " << rr->d_name << "/" << QType(rr->d_type).getName() << ": Permitted by policy"<<endl;
+          }
+        }
+
         if (rr->d_class == QClass::NONE  && rr->d_type == QType::NS && rr->d_name == di.zone)
           nsRRtoDelete.push_back(rr);
         else
@@ -947,7 +968,7 @@ int PacketHandler::processUpdate(DNSPacket *p) {
       // Purge the records!
       string zone(di.zone.toString());
       zone.append("$");
-      PC.purge(zone);
+      purgeAuthCaches(zone);
 
       // Notify slaves
       if (di.kind == DomainInfo::Master) {
@@ -1040,14 +1061,16 @@ void PacketHandler::increaseSerial(const string &msgPrefix, const DomainInfo *di
 
   //Correct ordername + auth flag
   if (haveNSEC3 && narrow)
-    di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, newRec.qname, DNSName(), true);
+    di->backend->updateDNSSECOrderNameAndAuth(di->id, newRec.qname, DNSName(), true);
   else if (haveNSEC3) {
     DNSName ordername;
     if (!narrow)
-      ordername = DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, newRec.qname)))+di->zone;
+      ordername = DNSName(toBase32Hex(hashQNameWithSalt(*ns3pr, newRec.qname)));
 
-    di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, newRec.qname, ordername, true);
+    di->backend->updateDNSSECOrderNameAndAuth(di->id, newRec.qname, ordername, true);
   }
-  else // NSEC
-    di->backend->updateDNSSECOrderNameAndAuth(di->id, di->zone, newRec.qname, newRec.qname, true);
+  else { // NSEC
+    DNSName ordername=newRec.qname.makeRelative(di->zone);
+    di->backend->updateDNSSECOrderNameAndAuth(di->id, newRec.qname, ordername, true);
+  }
 }

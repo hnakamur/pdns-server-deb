@@ -36,11 +36,11 @@ public:
   MyDNSBackend(const string &suffix);
   ~MyDNSBackend();
   
-  void lookup(const QType &, const DNSName &qdomain, DNSPacket *p=0, int zoneId=-1);
-  bool list(const DNSName &target, int domain_id, bool include_disabled=false);
-  bool get(DNSResourceRecord &r);
-  bool getSOA(const DNSName& name, SOAData& soadata, DNSPacket*);
-    
+  void lookup(const QType &, const DNSName &qdomain, DNSPacket *p=0, int zoneId=-1) override;
+  bool list(const DNSName &target, int domain_id, bool include_disabled=false) override;
+  bool get(DNSResourceRecord &r) override;
+  bool getSOA(const DNSName& name, SOAData& soadata) override;
+  void getAllDomains(vector<DomainInfo> *domains, bool include_disabled=false) override;
 private:
   SMySQL *d_db; 
 
@@ -51,13 +51,14 @@ private:
 
   SSqlStatement::result_t d_result;
 
-  SSqlStatement* d_query_stmt;
-  SSqlStatement* d_domainIdQuery_stmt;
-  SSqlStatement* d_domainNoIdQuery_stmt;
-  SSqlStatement* d_listQuery_stmt;
-  SSqlStatement* d_soaQuery_stmt;
-  SSqlStatement* d_basicQuery_stmt;
-  SSqlStatement* d_anyQuery_stmt;
+  std::unique_ptr<SSqlStatement>* d_query_stmt;
+  std::unique_ptr<SSqlStatement> d_domainIdQuery_stmt;
+  std::unique_ptr<SSqlStatement> d_domainNoIdQuery_stmt;
+  std::unique_ptr<SSqlStatement> d_listQuery_stmt;
+  std::unique_ptr<SSqlStatement> d_soaQuery_stmt;
+  std::unique_ptr<SSqlStatement> d_basicQuery_stmt;
+  std::unique_ptr<SSqlStatement> d_anyQuery_stmt;
+  std::unique_ptr<SSqlStatement> d_allDomainsQuery_stmt;
 };
 
 #endif /* MYDNSBACKEND_HH */

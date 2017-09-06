@@ -22,7 +22,9 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include "packetcache.hh"
+#include "auth-caches.hh"
+#include "auth-querycache.hh"
+#include "auth-packetcache.hh"
 #include "utility.hh"
 #include "dynhandler.hh"
 #include "statbag.hh"
@@ -121,14 +123,13 @@ string DLUptimeHandler(const vector<string>&parts, Utility::pid_t ppid)
 
 string DLPurgeHandler(const vector<string>&parts, Utility::pid_t ppid)
 {
-  extern PacketCache PC;  
   DNSSECKeeper dk;
   ostringstream os;
   int ret=0;
 
   if(parts.size()>1) {
     for (vector<string>::const_iterator i=++parts.begin();i<parts.end();++i) {
-      ret+=PC.purge(*i);
+      ret+=purgeAuthCaches(*i);
       if(!boost::ends_with(*i, "$"))
 	dk.clearCaches(DNSName(*i));
       else
@@ -136,7 +137,7 @@ string DLPurgeHandler(const vector<string>&parts, Utility::pid_t ppid)
     }
   }
   else {
-    ret=PC.purge();
+    ret = purgeAuthCaches();
     dk.clearAllCaches();
   }
 
@@ -146,11 +147,13 @@ string DLPurgeHandler(const vector<string>&parts, Utility::pid_t ppid)
 
 string DLCCHandler(const vector<string>&parts, Utility::pid_t ppid)
 {
-  extern PacketCache PC;  
-  map<char,int> counts=PC.getCounts();
+  extern AuthPacketCache PC;
+  extern AuthQueryCache QC;
+  map<char,uint64_t> counts=QC.getCounts();
+  uint64_t packetEntries = PC.size();
   ostringstream os;
   bool first=true;
-  for(map<char,int>::const_iterator i=counts.begin();i!=counts.end();++i) {
+  for(map<char,uint64_t>::const_iterator i=counts.begin();i!=counts.end();++i) {
     if(!first) 
       os<<", ";
     first=false;
@@ -159,15 +162,12 @@ string DLCCHandler(const vector<string>&parts, Utility::pid_t ppid)
       os<<"negative queries: ";
     else if(i->first=='Q')
       os<<"queries: ";
-    else if(i->first=='n')
-      os<<"non-recursive packets: ";
-    else if(i->first=='r')
-      os<<"recursive packets: ";
     else 
       os<<"unknown: ";
 
     os<<i->second;
   }
+  os<<"packets: "<<packetEntries;
 
   return os.str();
 }
@@ -247,7 +247,7 @@ string DLNotifyRetrieveHandler(const vector<string>&parts, Utility::pid_t ppid)
   if(!B.getDomainInfo(domain, di))
     return "Domain '"+domain.toString()+"' unknown";
   
-  if(di.masters.empty())
+  if(di.kind != DomainInfo::Slave || di.masters.empty())
     return "Domain '"+domain.toString()+"' is not a slave domain (or has no master defined)";
 
   random_shuffle(di.masters.begin(), di.masters.end());
@@ -378,16 +378,6 @@ string DLListZones(const vector<string>&parts, Utility::pid_t ppid)
     ret<<"All zonecount:"<<count;
 
   return ret.str();
-}
-
-string DLPolicy(const vector<string>&parts, Utility::pid_t ppid)
-{
-  if(LPE) {
-    return LPE->policycmd(parts);
-  }
-  else {
-    return "no policy script loaded";
-  }
 }
 
 #ifdef HAVE_P11KIT1

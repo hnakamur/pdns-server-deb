@@ -27,7 +27,6 @@
 #include "pdns/dns.hh"
 #include "pdns/dnsbackend.hh"
 #include "pdns/dnspacket.hh"
-#include "pdns/ueberbackend.hh"
 #include "pdns/pdnsexception.hh"
 #include "pdns/logger.hh"
 #include "pdns/arguments.hh"
@@ -118,6 +117,7 @@ public:
     declare(suffix,"delete-names-query","","delete from records where domain_id=? and name=?");
 
     declare(suffix,"add-domain-key-query","", "insert into cryptokeys (domain_id, flags, active, content) select id, ?, ?, ? from domains where name=?");
+    declare(suffix,"get-last-inserted-key-id-query", "", "select ident_current('cryptokeys')");
     declare(suffix,"list-domain-keys-query","", "select cryptokeys.id, flags, active, content from domains, cryptokeys where cryptokeys.domain_id=domains.id and name=?");
     declare(suffix,"get-all-domain-metadata-query","", "select kind,content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name=?");
     declare(suffix,"get-domain-metadata-query","", "select content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name=? and domainmetadata.kind=?");

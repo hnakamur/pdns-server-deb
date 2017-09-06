@@ -1,34 +1,35 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2005 - 2011  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 as 
-    published by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
 #include <boost/archive/binary_iarchive.hpp>
 #include <boost/archive/binary_oarchive.hpp>
 
-#include "packetcache.hh"
+#include "auth-querycache.hh"
 #include "utility.hh"
 
 
+#include <dlfcn.h>
 #include <string>
 #include <map>
 #include <sys/types.h>
@@ -50,8 +51,6 @@ extern StatBag S;
 
 vector<UeberBackend *>UeberBackend::instances;
 pthread_mutex_t UeberBackend::instances_lock=PTHREAD_MUTEX_INITIALIZER;
-
-sem_t UeberBackend::d_dynserialize;
 
 // initially we are blocked
 bool UeberBackend::d_go=false;
@@ -108,19 +107,19 @@ bool UeberBackend::doesDNSSEC()
   return false;
 }
 
-int UeberBackend::addDomainKey(const DNSName& name, const DNSBackend::KeyData& key)
+bool UeberBackend::addDomainKey(const DNSName& name, const DNSBackend::KeyData& key, int64_t& id)
 {
-  int ret;
+  id = -1;
   for(DNSBackend* db :  backends) {
-    if((ret = db->addDomainKey(name, key)) >= 0)
-      return ret;
+    if(db->addDomainKey(name, key, id))
+      return true;
   }
-  return -1;
+  return false;
 }
-bool UeberBackend::getDomainKeys(const DNSName& name, unsigned int kind, std::vector<DNSBackend::KeyData>& keys)
+bool UeberBackend::getDomainKeys(const DNSName& name, std::vector<DNSBackend::KeyData>& keys)
 {
   for(DNSBackend* db :  backends) {
-    if(db->getDomainKeys(name, kind, keys))
+    if(db->getDomainKeys(name, keys))
       return true;
   }
   return false;
@@ -256,68 +255,68 @@ void UeberBackend::getUpdatedMasters(vector<DomainInfo>* domains)
   }
 }
 
-bool UeberBackend::getAuth(DNSPacket *p, SOAData *sd, const DNSName &target)
+bool UeberBackend::getAuth(const DNSName &target, const QType& qtype, SOAData* sd, bool cachedOk)
 {
+  // A backend can respond to our authority request with the 'best' match it
+  // has. For example, when asked for a.b.c.example.com. it might respond with
+  // com. We then store that and keep querying the other backends in case one
+  // of them has a more specific zone but don't bother asking this specific
+  // backend again for b.c.example.com., c.example.com. and example.com.
+  // If a backend has no match it may respond with an enmpty qname.
+
   bool found = false;
   int cstat;
-  DNSName choppedOff(target);
+  DNSName shorter(target);
   vector<pair<size_t, SOAData> > bestmatch (backends.size(), make_pair(target.wirelength()+1, SOAData()));
   do {
 
     // Check cache
-    if(sd->db != (DNSBackend *)-1 && (d_cache_ttl || d_negcache_ttl)) {
+    if(cachedOk && (d_cache_ttl || d_negcache_ttl)) {
       d_question.qtype = QType::SOA;
-      d_question.qname = choppedOff;
+      d_question.qname = shorter;
       d_question.zoneId = -1;
 
       cstat = cacheHas(d_question,d_answers);
 
       if(cstat == 1 && !d_answers.empty() && d_cache_ttl) {
-        DLOG(L<<Logger::Error<<"has pos cache entry: "<<choppedOff<<endl);
-        fillSOAData(d_answers[0].content, *sd);
-        sd->domain_id = d_answers[0].domain_id;
-        sd->ttl = d_answers[0].ttl;
+        DLOG(L<<Logger::Error<<"has pos cache entry: "<<shorter<<endl);
+        fillSOAData(d_answers[0], *sd);
+
         sd->db = 0;
-        sd->qname = choppedOff;
+        sd->qname = shorter;
         goto found;
       } else if(cstat == 0 && d_negcache_ttl) {
-        DLOG(L<<Logger::Error<<"has neg cache entry: "<<choppedOff<<endl);
+        DLOG(L<<Logger::Error<<"has neg cache entry: "<<shorter<<endl);
         continue;
       }
     }
 
     // Check backends
-    // A backend can respond to our SOA request with the 'best'
-    // match it has. For example, when asked the SOA for a.b.c.powerdns.com.
-    // it might respond with the SOA for powerdns.com.
-    // We then store that, keep querying the other backends in case
-    // one of them has a more specific SOA but don't bother
-    // asking this specific backend again for b.c.powerdns.com. or c.powerdns.com.
     {
       vector<DNSBackend *>::const_iterator i = backends.begin();
       vector<pair<size_t, SOAData> >::iterator j = bestmatch.begin();
       for(; i != backends.end() && j != bestmatch.end(); ++i, ++j) {
 
-        DLOG(L<<Logger::Error<<"backend: "<<i-backends.begin()<<", qname: "<<choppedOff<<endl);
+        DLOG(L<<Logger::Error<<"backend: "<<i-backends.begin()<<", qname: "<<shorter<<endl);
 
-        if(j->first < choppedOff.wirelength()) {
-          DLOG(L<<Logger::Error<<"skip this backend, we already know the 'higher' match: "<<j->second.qname<<endl);
+        if(j->first < shorter.wirelength()) {
+          DLOG(L<<Logger::Error<<"skipped, we already found a shorter best match in this backend: "<<j->second.qname<<endl);
           continue;
-        } else if(j->first == choppedOff.wirelength()) {
-          DLOG(L<<Logger::Error<<"use 'higher' match: "<<j->second.qname<<endl);
+        } else if(j->first == shorter.wirelength()) {
+          DLOG(L<<Logger::Error<<"use shorter best match: "<<j->second.qname<<endl);
           *sd = j->second;
           break;
         } else {
-          DLOG(L<<Logger::Error<<"lookup: "<<choppedOff<<endl);
-          if((*i)->getAuth(p, sd, choppedOff)) {
+          DLOG(L<<Logger::Error<<"lookup: "<<shorter<<endl);
+          if((*i)->getAuth(shorter, sd)) {
             DLOG(L<<Logger::Error<<"got: "<<sd->qname<<endl);
             j->first = sd->qname.wirelength();
             j->second = *sd;
-            if(sd->qname == choppedOff) {
+            if(sd->qname == shorter) {
               break;
             }
           } else {
-            DLOG(L<<Logger::Error<<"no match for: "<<choppedOff<<endl);
+            DLOG(L<<Logger::Error<<"no match for: "<<shorter<<endl);
           }
         }
       }
@@ -325,8 +324,8 @@ bool UeberBackend::getAuth(DNSPacket *p, SOAData *sd, const DNSName &target)
       // Add to cache
       if(i == backends.end()) {
         if(d_negcache_ttl) {
-          DLOG(L<<Logger::Error<<"add neg cache entry:"<<choppedOff<<endl);
-          d_question.qname=choppedOff;
+          DLOG(L<<Logger::Error<<"add neg cache entry:"<<shorter<<endl);
+          d_question.qname=shorter;
           addNegCache(d_question);
         }
         continue;
@@ -336,20 +335,19 @@ bool UeberBackend::getAuth(DNSPacket *p, SOAData *sd, const DNSName &target)
         d_question.qname = sd->qname;
         d_question.zoneId = -1;
 
-        DNSResourceRecord rr;
-        rr.qname = sd->qname;
-        rr.qtype = QType::SOA;
-        rr.content = serializeSOAData(*sd);
-        rr.ttl = sd->ttl;
+        DNSZoneRecord rr;
+        rr.dr.d_name = sd->qname;
+        rr.dr.d_type = QType::SOA;
+        rr.dr.d_content = makeSOAContent(*sd);
+        rr.dr.d_ttl = sd->ttl;
         rr.domain_id = sd->domain_id;
-        vector<DNSResourceRecord> rrs;
-        rrs.push_back(rr);
-        addCache(d_question, rrs);
+
+        addCache(d_question, {rr});
       }
     }
 
 found:
-    if(found == (p->qtype == QType::DS)){
+    if(found == (qtype == QType::DS) || target != shorter) {
       DLOG(L<<Logger::Error<<"found: "<<sd->qname<<endl);
       return true;
     } else {
@@ -357,11 +355,11 @@ found:
       found = true;
     }
 
-  } while(choppedOff.chopOff());
+  } while(shorter.chopOff());
   return found;
 }
 
-bool UeberBackend::getSOA(const DNSName &domain, SOAData &sd, DNSPacket *p)
+bool UeberBackend::getSOA(const DNSName &domain, SOAData &sd)
 {
   d_question.qtype=QType::SOA;
   d_question.qname=domain;
@@ -372,35 +370,36 @@ bool UeberBackend::getSOA(const DNSName &domain, SOAData &sd, DNSPacket *p)
     return false;
   }
   else if(cstat==1 && !d_answers.empty()) {
-    fillSOAData(d_answers[0].content,sd);
+    fillSOAData(d_answers[0],sd);
     sd.domain_id=d_answers[0].domain_id;
-    sd.ttl=d_answers[0].ttl;
+    sd.ttl=d_answers[0].dr.d_ttl;
     sd.db=0;
     return true;
   }
 
   // not found in neg. or pos. cache, look it up
-  return getSOAUncached(domain, sd, p);
+  return getSOAUncached(domain, sd);
 }
 
-bool UeberBackend::getSOAUncached(const DNSName &domain, SOAData &sd, DNSPacket *p)
+bool UeberBackend::getSOAUncached(const DNSName &domain, SOAData &sd)
 {
   d_question.qtype=QType::SOA;
   d_question.qname=domain;
   d_question.zoneId=-1;
 
   for(vector<DNSBackend *>::const_iterator i=backends.begin();i!=backends.end();++i)
-    if((*i)->getSOA(domain, sd, p)) {
+    if((*i)->getSOA(domain, sd)) {
       if( d_cache_ttl ) {
-        DNSResourceRecord rr;
-        rr.qname=domain;
-        rr.qtype=QType::SOA;
-        rr.content=serializeSOAData(sd);
-        rr.ttl=sd.ttl;
-        rr.domain_id=sd.domain_id;
-        vector<DNSResourceRecord> rrs;
-        rrs.push_back(rr);
-        addCache(d_question, rrs);
+        DNSZoneRecord rr;
+        rr.dr.d_name = sd.qname;
+        rr.dr.d_type = QType::SOA;
+        
+        rr.dr.d_content = makeSOAContent(sd);
+        rr.dr.d_ttl = sd.ttl;
+        rr.domain_id = sd.domain_id;
+
+        addCache(d_question, {rr});
+
       }
       return true;
     }
@@ -426,13 +425,13 @@ UeberBackend::UeberBackend(const string &pname)
 
   d_negcached=0;
   d_ancount=0;
-  domain_id=-1;
+  d_domain_id=-1;
   d_cached=0;
   d_cache_ttl = ::arg().asNum("query-cache-ttl");
   d_negcache_ttl = ::arg().asNum("negquery-cache-ttl");
 
-  tid=pthread_self(); 
-  stale=false;
+  d_tid=pthread_self();
+  d_stale=false;
 
   backends=BackendMakers().all(pname=="key-only");
 }
@@ -454,30 +453,22 @@ void UeberBackend::cleanup()
   for_each(backends.begin(),backends.end(),del);
 }
 
-// silly Solaris fix
-#undef PC
-
 // returns -1 for miss, 0 for negative match, 1 for hit
-int UeberBackend::cacheHas(const Question &q, vector<DNSResourceRecord> &rrs)
+int UeberBackend::cacheHas(const Question &q, vector<DNSZoneRecord> &rrs)
 {
-  extern PacketCache PC;
-  static AtomicCounter *qcachehit=S.getPointer("query-cache-hit");
-  static AtomicCounter *qcachemiss=S.getPointer("query-cache-miss");
+  extern AuthQueryCache QC;
 
   if(!d_cache_ttl && ! d_negcache_ttl) {
-    (*qcachemiss)++;
     return -1;
   }
 
   rrs.clear();
   //  L<<Logger::Warning<<"looking up: '"<<q.qname+"'|N|"+q.qtype.getName()+"|"+itoa(q.zoneId)<<endl;
 
-  bool ret=PC.getEntry(q.qname, q.qtype, PacketCache::QUERYCACHE, rrs, q.zoneId);   // think about lowercasing here
+  bool ret=QC.getEntry(q.qname, q.qtype, rrs, q.zoneId);   // think about lowercasing here
   if(!ret) {
-    (*qcachemiss)++;
     return -1;
   }
-  (*qcachehit)++;
   if(rrs.empty()) // negatively cached
     return 0;
   
@@ -486,29 +477,29 @@ int UeberBackend::cacheHas(const Question &q, vector<DNSResourceRecord> &rrs)
 
 void UeberBackend::addNegCache(const Question &q)
 {
-  extern PacketCache PC;
+  extern AuthQueryCache QC;
   if(!d_negcache_ttl)
     return;
   // we should also not be storing negative answers if a pipebackend does scopeMask, but we can't pass a negative scopeMask in an empty set!
-  PC.insert(q.qname, q.qtype, PacketCache::QUERYCACHE, vector<DNSResourceRecord>(), d_negcache_ttl, q.zoneId);
+  QC.insert(q.qname, q.qtype, vector<DNSZoneRecord>(), d_negcache_ttl, q.zoneId);
 }
 
-void UeberBackend::addCache(const Question &q, const vector<DNSResourceRecord> &rrs)
+void UeberBackend::addCache(const Question &q, const vector<DNSZoneRecord> &rrs)
 {
-  extern PacketCache PC;
+  extern AuthQueryCache QC;
 
   if(!d_cache_ttl)
     return;
 
   unsigned int store_ttl = d_cache_ttl;
-  for(const DNSResourceRecord& rr : rrs) {
-   if (rr.ttl < d_cache_ttl)
-     store_ttl = rr.ttl;
+  for(const auto& rr : rrs) {
+   if (rr.dr.d_ttl < d_cache_ttl)
+     store_ttl = rr.dr.d_ttl;
    if (rr.scopeMask)
      return;
   }
 
-  PC.insert(q.qname, q.qtype, PacketCache::QUERYCACHE, rrs, store_ttl, q.zoneId);
+  QC.insert(q.qname, q.qtype, rrs, store_ttl, q.zoneId);
 }
 
 void UeberBackend::alsoNotifies(const DNSName &domain, set<string> *ips)
@@ -526,7 +517,7 @@ UeberBackend::~UeberBackend()
 // this handle is more magic than most
 void UeberBackend::lookup(const QType &qtype,const DNSName &qname, DNSPacket *pkt_p, int zoneId)
 {
-  if(stale) {
+  if(d_stale) {
     L<<Logger::Error<<"Stale ueberbackend received question, signalling that we want to be recycled"<<endl;
     throw PDNSException("We are stale, please recycle");
   }
@@ -542,7 +533,7 @@ void UeberBackend::lookup(const QType &qtype,const DNSName &qname, DNSPacket *pk
     pthread_mutex_unlock(&d_mut);
   }
 
-  domain_id=zoneId;
+  d_domain_id=zoneId;
 
   d_handle.i=0;
   d_handle.qtype=qtype;
@@ -552,7 +543,7 @@ void UeberBackend::lookup(const QType &qtype,const DNSName &qname, DNSPacket *pk
 
   if(!backends.size()) {
     L<<Logger::Error<<"No database backends available - unable to answer questions."<<endl;
-    stale=true; // please recycle us!
+    d_stale=true; // please recycle us!
     throw PDNSException("We are stale, please recycle");
   }
   else {
@@ -561,16 +552,19 @@ void UeberBackend::lookup(const QType &qtype,const DNSName &qname, DNSPacket *pk
     d_question.zoneId=zoneId;
     int cstat=cacheHas(d_question, d_answers);
     if(cstat<0) { // nothing
+      //      cout<<"UeberBackend::lookup("<<qname<<"|"<<DNSRecordContent::NumberToType(qtype.getCode())<<"): uncached"<<endl;
       d_negcached=d_cached=false;
       d_answers.clear(); 
       (d_handle.d_hinterBackend=backends[d_handle.i++])->lookup(qtype, qname,pkt_p,zoneId);
     } 
     else if(cstat==0) {
+      //      cout<<"UeberBackend::lookup("<<qname<<"|"<<DNSRecordContent::NumberToType(qtype.getCode())<<"): NEGcached"<<endl;
       d_negcached=true;
       d_cached=false;
       d_answers.clear();
     }
     else {
+      // cout<<"UeberBackend::lookup("<<qname<<"|"<<DNSRecordContent::NumberToType(qtype.getCode())<<"): CACHED"<<endl;
       d_negcached=false;
       d_cached=true;
       d_cachehandleiter = d_answers.begin();
@@ -587,8 +581,9 @@ void UeberBackend::getAllDomains(vector<DomainInfo> *domains, bool include_disab
   }
 }
 
-bool UeberBackend::get(DNSResourceRecord &rr)
+bool UeberBackend::get(DNSZoneRecord &rr)
 {
+  // cout<<"UeberBackend::get(DNSZoneRecord) called"<<endl;
   if(d_negcached) {
     return false; 
   }
@@ -601,23 +596,21 @@ bool UeberBackend::get(DNSResourceRecord &rr)
     return false;
   }
   if(!d_handle.get(rr)) {
-    if(!d_ancount && d_handle.qname.countLabels()) // don't cache axfr
+    // cout<<"end of ueberbackend get, seeing if we should cache"<<endl;
+    if(!d_ancount && d_handle.qname.countLabels()) {// don't cache axfr
+      // cout<<"adding negcache"<<endl;
       addNegCache(d_question);
-
-    addCache(d_question, d_answers);
+    }
+    else {
+      // cout<<"adding query cache"<<endl;
+      addCache(d_question, d_answers);
+    }
     d_answers.clear();
     return false;
   }
   d_ancount++;
   d_answers.push_back(rr);
   return true;
-}
-
-bool UeberBackend::list(const DNSName &target, int domain_id, bool include_disabled)
-{
-  L<<Logger::Error<<"UeberBackend::list called, should NEVER EVER HAPPEN"<<endl;
-  exit(1);
-  return false;
 }
 
 bool UeberBackend::searchRecords(const string& pattern, int maxResults, vector<DNSResourceRecord>& result)
@@ -653,7 +646,7 @@ UeberBackend::handle::~handle()
   --instances;
 }
 
-bool UeberBackend::handle::get(DNSResourceRecord &r)
+bool UeberBackend::handle::get(DNSZoneRecord &r)
 {
   DLOG(L << "Ueber get() was called for a "<<qtype.getName()<<" record" << endl);
   bool isMore=false;
@@ -663,7 +656,7 @@ bool UeberBackend::handle::get(DNSResourceRecord &r)
            <<" out of answers, taking next"<<endl);
       
       d_hinterBackend=parent->backends[i++];
-      d_hinterBackend->lookup(qtype,qname,pkt_p,parent->domain_id);
+      d_hinterBackend->lookup(qtype,qname,pkt_p,parent->d_domain_id);
     }
     else 
       break;

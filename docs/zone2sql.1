@@ -1,144 +1,147 @@
-.TH "ZONE2SQL" "1" "December 2002" "" ""
+.\" Man page generated from reStructuredText.
+.
+.TH "ZONE2SQL" "1" "Aug 31, 2017" "4.1" "PowerDNS Recursor"
 .SH NAME
-.PP
-\f[B]zone2sql\f[] \- convert BIND zones to SQL
+zone2sql \- 
+.
+.nr rst2man-indent-level 0
+.
+.de1 rstReportMargin
+\\$1 \\n[an-margin]
+level \\n[rst2man-indent-level]
+level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
+-
+\\n[rst2man-indent0]
+\\n[rst2man-indent1]
+\\n[rst2man-indent2]
+..
+.de1 INDENT
+.\" .rstReportMargin pre:
+. RS \\$1
+. nr rst2man-indent\\n[rst2man-indent-level] \\n[an-margin]
+. nr rst2man-indent-level +1
+.\" .rstReportMargin post:
+..
+.de UNINDENT
+. RE
+.\" indent \\n[an-margin]
+.\" old: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.nr rst2man-indent-level -1
+.\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
+.in \\n[rst2man-indent\\n[rst2man-indent-level]]u
+..
+.sp
+\fBzone2sql\fP \- convert BIND zones to SQL
 .SH SYNOPSIS
-.PP
-\f[B]zone2sql\f[]
-{\f[B]\-\-named\-conf=\f[]\f[I]PATH\f[],\f[B]\-\-zone\-file=\f[]\f[I]PATH\f[]
-[\f[B]\-\-zone\-name=\f[]\f[I]NAME\f[]]} [\f[I]OPTIONS\f[]]
+.sp
+\fBzone2sql\fP {\fB–named\-conf=\fP\fIPATH\fP,\fB–zone\-file=\fP\fIPATH\fP [\fB–zone\-name=\fP\fINAME\fP]} [\fIOptions\fP]
 .SH DESCRIPTION
-.PP
-\f[B]zone2sql\f[] parses Bind named.conf files and zonefiles and outputs
-SQL on standard out, which can then be fed to your database.
-.PP
-\f[B]zone2sql\f[] understands the Bind master file extension
-\f[C]$GENERATE\f[] and will also honour \f[C]$ORIGIN\f[] and
-\f[C]$TTL\f[].
-.PP
+.sp
+\fBzone2sql\fP parses Bind named.conf files and zonefiles and outputs SQL
+on standard out, which can then be fed to your database.
+.sp
+\fBzone2sql\fP understands the Bind master file extension \fB$GENERATE\fP
+and will also honour \fB$ORIGIN\fP and \fB$TTL\fP\&.
+.sp
 For backends supporting slave operation there is also an option to keep
 slave zones as slaves, and not convert them to native operation.
-.PP
-\f[B]zone2sql\f[] can generate SQL for the Generic MySQL, Generic
-PostgreSQL, Generic SQLite3 and Generic Oracle backends.
+.sp
+\fBzone2sql\fP can generate SQL for the Generic MySQL, Generic PostgreSQL,
+Generic SQLite3 and Generic Oracle backends.
 .SH OPTIONS
-.SS INPUT OPTIONS
+.SH INPUT OPTIONS
+.INDENT 0.0
 .TP
-.B \-\-named\-conf=\f[I]PATH\f[]
-Read \f[I]PATH\f[] to get the bind configuration
-.RS
-.RE
+.BI \-\-named\-conf\fB= <PATH>
+Read \fIPATH\fP to get the bind configuration
 .TP
-.B \-\-zone=\f[I]PATH\f[]
-Parse only the zone file at \f[I]PATH\f[] Conflicts with
-\f[B]\-\-named\-conf\f[] parameter.
-.RS
-.RE
+.BI \-\-zone\fB= <PATH>
+Parse only the zone file at \fIPATH\fP Conflicts with \fB–named\-conf\fP parameter.
 .TP
-.B \-\-zone\-name=\f[I]NAME\f[]
-When parsing a single zone without $ORIGIN statement, set \f[I]ZONE\f[]
-as the zone name.
-.RS
-.RE
-.SS BACKENDS
+.BI \-\-zone\-name\fB= <NAME>
+When parsing a single zone without $ORIGIN statement, set \fIZONE\fP as
+the zone name.
+.UNINDENT
+.SH BACKENDS
+.INDENT 0.0
 .TP
 .B \-\-gmysql
-Output in format suitable for the default configuration of the Generic
-MySQL backend.
-.RS
-.RE
+Output in format suitable for the default configuration of the
+Generic MySQL backend.
 .TP
 .B \-\-gpgsql
-Output in format suitable for the default configuration of the Generic
-PostgreSQL backend.
-.RS
-.RE
+Output in format suitable for the default configuration of the
+Generic PostgreSQL backend.
 .TP
 .B \-\-gsqlite
-Output in format suitable for the default configuration of the Generic
-SQLite3 backend.
-.RS
-.RE
+Output in format suitable for the default configuration of the
+Generic SQLite3 backend.
 .TP
 .B \-\-goracle
-Output in format suitable for the default configuration of the Generic
-Oracle backend.
-.RS
-.RE
+Output in format suitable for the default configuration of the
+Generic Oracle backend.
 .TP
 .B \-\-mydns
 Output in a format suitable for the MyDNS backend.
-.RS
-.RE
 .TP
 .B \-\-oracle
-Output in format suitable for the default configuration of the Oracle
-backend.
-.RS
-.RE
-.SS OUTPUT OPTIONS
+Output in format suitable for the default configuration of the
+Oracle backend.
+.UNINDENT
+.SH OUTPUT OPTIONS
+.INDENT 0.0
 .TP
 .B \-\-json\-comments
-Parse JSON in zonefile comments to set the \[aq]disabled\[aq] and
-\[aq]comment\[aq] fields in the database.
-See \f[I]JSON COMMENTS\f[] for more information.
-.RS
-.RE
+Parse JSON in zonefile comments to set the ‘disabled’ and ‘comment’
+fields in the database. See \fIJSON COMMENTS\fP for more information.
 .TP
 .B \-\-transactions
-If the target SQL backend supports transactions, wrap every domain into
-a transaction for integrity and possibly higher speed.
-.RS
-.RE
-.SS OTHER OPTIONS
+If the target SQL backend supports transactions, wrap every domain
+into a transaction for integrity and possibly higher speed.
+.UNINDENT
+.SH OTHER OPTIONS
+.INDENT 0.0
 .TP
 .B \-\-filter\-duplicate\-soa
-If there\[aq]s more than one SOA record in the zone (possibly because it
-was AXFR\[aq]d), ignore it.
-If this option is not set, all SOA records in the zone are emitted.
-.RS
-.RE
+If there’s more than one SOA record in the zone (possibly because it
+was AXFR’d), ignore it. If this option is not set, all SOA records
+in the zone are emitted.
 .TP
 .B \-\-help
 List all options
-.RS
-.RE
 .TP
 .B \-\-on\-error\-resume\-next
-Ignore missing zone files during parsing.
-Dangerous.
-.RS
-.RE
+Ignore missing zone files during parsing. Dangerous.
 .TP
 .B \-\-slave
 Maintain slave status of zones listed in named.conf as being slaves.
 The default behaviour is to convert all zones to native operation.
-.RS
-.RE
 .TP
 .B \-\-verbose
 Be verbose during conversion.
-.RS
-.RE
+.UNINDENT
 .SH JSON COMMENTS
-.PP
-The Generic SQL backends have the \[aq]comment\[aq] and
-\[aq]disabled\[aq] fields in the \[aq]records\[aq] table.
-The \[aq]comment\[aq] field contains a comment for this record (if any)
-and the \[aq]disabled\[aq] field tells PowerDNS if the record can be
+.sp
+The Generic SQL backends have the ‘comment’ and ‘disabled’ fields in the
+‘records’ table. The ‘comment’ field contains a comment for this record
+(if any) and the ‘disabled’ field tells PowerDNS if the record can be
 served to clients.
-.PP
+.sp
 When a zonefile contains a comment like
-\f[C];\ json={"comment":\ "Something",\ "disabled":\ true}\f[] and
-\f[B]\-\-json\-comments\f[] is provided, the \[aq]comment\[aq] field
-will contain "Something" and the \[aq]disabled\[aq] field will be set to
-the database\[aq]s native true value.
-.PP
+\fB; json={"comment": "Something", "disabled": true}\fP and
+\fB–json\-comments\fP is provided, the ‘comment’ field will contain
+“Something” and the ‘disabled’ field will be set to the database’s
+native true value.
+.sp
 WARNING: Using JSON comments to disable records means that the zone in
 PowerDNS is different from the one served by BIND, as BIND does not
 handle the disabled status in the comment.
 .SH SEE ALSO
-.PP
+.sp
 pdns_server(1)
-.SH AUTHORS
-PowerDNS.
+.SH AUTHOR
+PowerDNS.COM BV
+.SH COPYRIGHT
+2017, PowerDNS.COM BV
+.\" Generated by docutils manpage writer.
+.

@@ -44,17 +44,17 @@ public:
     d_ourdomain.chopOff();
   }
 
-  bool list(const DNSName &target, int id, bool include_disabled) {
+  bool list(const DNSName &target, int id, bool include_disabled) override {
     return false; // we don't support AXFR
   }
 
-  void lookup(const QType &type, const DNSName &qdomain, DNSPacket *p, int zoneId)
+  void lookup(const QType &type, const DNSName &qdomain, DNSPacket *p, int zoneId) override
   {
     if(qdomain == d_ourdomain){
       if(type.getCode() == QType::SOA || type.getCode() == QType::ANY) {
         d_answer="ns1." + d_ourdomain.toString() + " hostmaster." + d_ourdomain.toString() + " 1234567890 86400 7200 604800 300";
       } else {
-        d_answer="";
+        d_answer.clear();;
       }
     } else if (qdomain == d_ourname) {
       if(type.getCode() == QType::A || type.getCode() == QType::ANY) {
@@ -69,24 +69,25 @@ public:
     }
   }
 
-  bool get(DNSResourceRecord &rr)
+  bool get(DNSResourceRecord &rr) override
   {
-    if(!d_answer.empty()) {
-      if(d_answer.find("ns1.") == 0){
-        rr.qname=d_ourdomain;
-        rr.qtype=QType::SOA;
-      } else {
-        rr.qname=d_ourname;
-        rr.qtype=QType::A;
-      }
-      rr.ttl=5;             // 5 seconds
-      rr.auth = 1;          // it may be random.. but it is auth!
-      rr.content=d_answer;
+    if(d_answer.empty())
+      return false;
 
-      d_answer="";          // this was the last answer
-      return true;
+    if(d_answer.find("ns1.") == 0){
+      rr.qname=d_ourdomain;
+      rr.qtype=QType::SOA;
+    } else {
+      rr.qname=d_ourname;
+      rr.qtype=QType::A;
     }
-    return false;
+    rr.qclass=QClass::IN;   // Internet class randomness.
+    rr.ttl=5;               // 5 seconds
+    rr.auth = 1;            // it may be random.. but it is auth!
+    rr.content = d_answer;
+
+    d_answer.clear();       // this was the last answer
+    return true;
   }
 
 private:

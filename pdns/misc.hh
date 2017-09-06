@@ -33,6 +33,7 @@
 #include <boost/tuple/tuple_comparison.hpp>
 #include <boost/multi_index/key_extractors.hpp>
 #include <boost/multi_index/sequenced_index.hpp>
+
 using namespace ::boost::multi_index;
 
 #include "dns.hh"
@@ -146,7 +147,7 @@ vstringtok (Container &container, string const &in,
 size_t writen2(int fd, const void *buf, size_t count);
 inline size_t writen2(int fd, const std::string &s) { return writen2(fd, s.data(), s.size()); }
 size_t readn2(int fd, void* buffer, size_t len);
-size_t readn2WithTimeout(int fd, void* buffer, size_t len, int timeout);
+size_t readn2WithTimeout(int fd, void* buffer, size_t len, int idleTimeout, int totalTimeout=0);
 size_t writen2WithTimeout(int fd, const void * buffer, size_t len, int timeout);
 
 const string toLower(const string &upper);
@@ -228,26 +229,6 @@ inline int DTime::udiffNoReset()
   return ret;
 }
 
-
-inline bool dns_isspace(char c)
-{
-  return c==' ' || c=='\t' || c=='\r' || c=='\n';
-}
-
-inline char dns_tolower(char c)
-{
-  if(c>='A' && c<='Z')
-    c+='a'-'A';
-  return c;
-}
-
-inline char dns_toupper(char c)
-{
-  if(c>='a' && c<='z')
-    c+='A'-'a';
-  return c;
-}
-
 inline const string toLower(const string &upper)
 {
   string reply(upper);
@@ -265,7 +246,7 @@ inline const string toLowerCanonic(const string &upper)
   string reply(upper);
   if(!upper.empty()) {
     unsigned int i, limit= ( unsigned int ) reply.length();
-    char c;
+    unsigned char c;
     for(i = 0; i < limit ; i++) {
       c = dns_tolower(upper[i]);
       if(c != upper[i])
@@ -304,8 +285,11 @@ inline void unixDie(const string &why)
 }
 
 string makeHexDump(const string& str);
+struct DNSRecord;
+struct DNSZoneRecord;
 void shuffle(vector<DNSRecord>& rrs);
-void shuffle(vector<DNSResourceRecord>& rrs);
+void shuffle(vector<DNSZoneRecord>& rrs);
+
 void orderAndShuffle(vector<DNSRecord>& rrs);
 
 void normalizeTV(struct timeval& tv);
@@ -443,9 +427,6 @@ inline DNSName toCanonic(const DNSName& zone, const string& qname)
 string stripDot(const string& dom);
 
 void seedRandom(const string& source);
-string makeRelative(const std::string& fqdn, const std::string& zone);
-string labelReverse(const std::string& qname);
-std::string dotConcat(const std::string& a, const std::string &b);
 int makeIPv6sockaddr(const std::string& addr, struct sockaddr_in6* ret);
 int makeIPv4sockaddr(const std::string& str, struct sockaddr_in* ret);
 int makeUNsockaddr(const std::string& path, struct sockaddr_un* ret);
@@ -543,7 +524,7 @@ void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* sour
 unsigned int getFilenumLimit(bool hardOrSoft=0);
 void setFilenumLimit(unsigned int lim);
 bool readFileIfThere(const char* fname, std::string* line);
-uint32_t burtle(const unsigned char* k, uint32_t lengh, uint32_t init);
+uint32_t burtle(const unsigned char* k, uint32_t length, uint32_t init);
 bool setSocketTimestamps(int fd);
 
 //! Sets the socket into blocking mode.
@@ -613,3 +594,5 @@ gid_t strToGID(const string &str);
 
 unsigned int pdns_stou(const std::string& str, size_t * idx = 0, int base = 10);
 
+bool isSettingThreadCPUAffinitySupported();
+int mapThreadToCPUList(pthread_t tid, const std::set<int>& cpus);

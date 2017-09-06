@@ -1,28 +1,28 @@
 /*
-    PowerDNS Versatile Database Driven Nameserver
-    Copyright (C) 2005 - 2008  PowerDNS.COM BV
-
-    This program is free software; you can redistribute it and/or modify
-    it under the terms of the GNU General Public License version 2 
-    as published by the Free Software Foundation
-
-    Additionally, the license of this program contains a special
-    exception which allows to distribute the program in binary form when
-    it is linked against OpenSSL.
-
-    This program is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU General Public License for more details.
-
-    You should have received a copy of the GNU General Public License
-    along with this program; if not, write to the Free Software
-    Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
-*/
-
+ * This file is part of PowerDNS or dnsdist.
+ * Copyright -- PowerDNS.COM B.V. and its contributors
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of version 2 of the GNU General Public License as
+ * published by the Free Software Foundation.
+ *
+ * In addition, for the avoidance of any doubt, permission is granted to
+ * link this program with OpenSSL and to (re)distribute the binaries
+ * produced as the result of such linking.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+ */
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include "ascii.hh"
 #include "dnsparser.hh"
 #include "sstuff.hh"
 #include "misc.hh"
@@ -150,7 +150,7 @@ bool ZoneParserTNG::getTemplateLine()
     string part=makeString(d_templateline, *iter);
     
     /* a part can contain a 'naked' $, an escaped $ (\$), or ${offset,width,radix}, with width defaulting to 0, 
-       and radix beging 'd', 'o', 'x' or 'X', defaulting to 'd'. 
+       and radix being 'd', 'o', 'x' or 'X', defaulting to 'd'. 
 
        The width is zero-padded, so if the counter is at 1, the offset is 15, with is 3, and the radix is 'x',
        output will be '010', from the input of ${15,3,x}
@@ -271,8 +271,7 @@ pair<string,int> ZoneParserTNG::getLineNumAndFile()
   return {d_filestates.top().d_filename, d_filestates.top().d_lineno};
 }
 
-// ODD: this function never fills out the prio field! rest of pdns compensates though
-bool ZoneParserTNG::get(DNSResourceRecord& rr, std::string* comment) 
+bool ZoneParserTNG::get(DNSResourceRecord& rr, std::string* comment)
 {
  retry:;
   if(!getTemplateLine() && !getLine())
@@ -370,6 +369,8 @@ bool ZoneParserTNG::get(DNSResourceRecord& rr, std::string* comment)
     }
     if(!haveTTL && !haveQTYPE && isTimeSpec(nextpart)) {
       rr.ttl=makeTTLFromZone(nextpart);
+      if(!d_havedollarttl)
+        d_defaultttl = rr.ttl;
       haveTTL=true;
       // cout<<"ttl is probably: "<<rr.ttl<<endl;
       continue;
@@ -421,8 +422,13 @@ bool ZoneParserTNG::get(DNSResourceRecord& rr, std::string* comment)
   case QType::MX:
     stringtok(recparts, rr.content);
     if(recparts.size()==2) {
-      if (recparts[1]!=".")
-        recparts[1] = toCanonic(d_zonename, recparts[1]).toStringRootDot();
+      if (recparts[1]!=".") {
+        try {
+          recparts[1] = toCanonic(d_zonename, recparts[1]).toStringRootDot();
+        } catch (std::exception &e) {
+          throw PDNSException("Error in record '" + rr.qname.toString() + " " + rr.qtype.getName() + "': " + e.what());
+        }
+      }
       rr.content=recparts[0]+" "+recparts[1];
     }
     break;
@@ -439,8 +445,13 @@ bool ZoneParserTNG::get(DNSResourceRecord& rr, std::string* comment)
   case QType::SRV:
     stringtok(recparts, rr.content);
     if(recparts.size()==4) {
-      if(recparts[3]!=".")
-        recparts[3] = toCanonic(d_zonename, recparts[3]).toStringRootDot();
+      if(recparts[3]!=".") {
+        try {
+          recparts[3] = toCanonic(d_zonename, recparts[3]).toStringRootDot();
+        } catch (std::exception &e) {
+          throw PDNSException("Error in record '" + rr.qname.toString() + " " + rr.qtype.getName() + "': " + e.what());
+        }
+      }
       rr.content=recparts[0]+" "+recparts[1]+" "+recparts[2]+" "+recparts[3];
     }
     break;
@@ -451,7 +462,11 @@ bool ZoneParserTNG::get(DNSResourceRecord& rr, std::string* comment)
   case QType::DNAME:
   case QType::PTR:
   case QType::AFSDB:
-    rr.content=toCanonic(d_zonename, rr.content).toStringRootDot();
+    try {
+      rr.content = toCanonic(d_zonename, rr.content).toStringRootDot();
+    } catch (std::exception &e) {
+      throw PDNSException("Error in record '" + rr.qname.toString() + " " + rr.qtype.getName() + "': " + e.what());
+    }
     break;
 
   case QType::SOA:
@@ -462,8 +477,8 @@ bool ZoneParserTNG::get(DNSResourceRecord& rr, std::string* comment)
       try {
         recparts[0]=toCanonic(d_zonename, recparts[0]).toStringRootDot();
         recparts[1]=toCanonic(d_zonename, recparts[1]).toStringRootDot();
-      } catch (runtime_error &re) {
-        throw PDNSException(re.what());
+      } catch (std::exception &e) {
+        throw PDNSException("Error in record '" + rr.qname.toString() + " " + rr.qtype.getName() + "': " + e.what());
       }
     }
     rr.content.clear();
@@ -475,15 +490,10 @@ bool ZoneParserTNG::get(DNSResourceRecord& rr, std::string* comment)
         rr.content+=std::to_string(makeTTLFromZone(recparts[n]));
       else
         rr.content+=recparts[n];
-
-      if(n==6 && !d_havedollarttl)
-        d_defaultttl=makeTTLFromZone(recparts[n]);
     }
     break;
   default:;
   }
-
-  rr.d_place=DNSResourceRecord::ANSWER;
   return true;
 }
 

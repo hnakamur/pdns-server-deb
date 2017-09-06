@@ -55,6 +55,13 @@ public:
     ED448=16
   };
 
+  enum dsdigestalgorithm_t : uint8_t {
+    SHA1=1,
+    SHA256=2,
+    GOST=3,
+    SHA384=4
+  };
+
   struct KeyMetaData
   {
     string fname;
@@ -166,8 +173,8 @@ public:
   keyset_t getEntryPoints(const DNSName& zname);
   keyset_t getKeys(const DNSName& zone, bool useCache = true);
   DNSSECPrivateKey getKeyById(const DNSName& zone, unsigned int id);
-  bool addKey(const DNSName& zname, bool setSEPBit, int algorithm, int bits=0, bool active=true);
-  bool addKey(const DNSName& zname, const DNSSECPrivateKey& dpk, bool active=true);
+  bool addKey(const DNSName& zname, bool setSEPBit, int algorithm, int64_t& id, int bits=0, bool active=true);
+  bool addKey(const DNSName& zname, const DNSSECPrivateKey& dpk, int64_t& id, bool active=true);
   bool removeKey(const DNSName& zname, unsigned int id);
   bool activateKey(const DNSName& zname, unsigned int id);
   bool deactivateKey(const DNSName& zname, unsigned int id);
@@ -178,7 +185,7 @@ public:
   bool unsetNSEC3PARAM(const DNSName& zname);
   void clearAllCaches();
   void clearCaches(const DNSName& name);
-  bool getPreRRSIGs(UeberBackend& db, const DNSName& signer, const DNSName& qname, const DNSName& wildcardname, const QType& qtype, DNSResourceRecord::Place, vector<DNSResourceRecord>& rrsigs, uint32_t signTTL);
+  bool getPreRRSIGs(UeberBackend& db, const DNSName& signer, const DNSName& qname, const DNSName& wildcardname, const QType& qtype, DNSResourceRecord::Place, vector<DNSZoneRecord>& rrsigs, uint32_t signTTL);
   bool isPresigned(const DNSName& zname);
   bool setPresigned(const DNSName& zname);
   bool unsetPresigned(const DNSName& zname);
@@ -261,14 +268,24 @@ private:
   static pthread_rwlock_t s_keycachelock;
   static AtomicCounter s_ops;
   static time_t s_last_prune;
+
+public:
+  void preRemoval(const KeyCacheEntry&)
+  {
+  }
+  void preRemoval(const METACacheEntry&)
+  {
+  }
 };
 
 class DNSPacket;
 uint32_t localtime_format_YYYYMMDDSS(time_t t, uint32_t seq);
 // for SOA-EDIT
-uint32_t calculateEditSOA(SOAData sd, const string& kind);
+uint32_t calculateEditSOA(const DNSZoneRecord& rr, const string& kind);
+uint32_t calculateEditSOA(const SOAData& sd, const string& kind);
 bool editSOA(DNSSECKeeper& dk, const DNSName& qname, DNSPacket* dp);
-bool editSOARecord(DNSResourceRecord& rr, const string& kind, const DNSName& qname);
+bool editSOARecord(DNSZoneRecord& rr, const string& kind);
 // for SOA-EDIT-DNSUPDATE/API
 uint32_t calculateIncreaseSOA(SOAData sd, const string& increaseKind, const string& editKind);
 bool increaseSOARecord(DNSResourceRecord& rr, const string& increaseKind, const string& editKind);
+bool increaseSOARecord(DNSZoneRecord& rr, const string& increaseKind, const string& editKind);

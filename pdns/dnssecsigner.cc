@@ -33,10 +33,59 @@
 #include "statbag.hh"
 extern StatBag S;
 
+static pthread_rwlock_t g_signatures_lock = PTHREAD_RWLOCK_INITIALIZER;
+typedef map<pair<string, string>, string> signaturecache_t;
+static signaturecache_t g_signatures;
+static int g_cacheweekno;
+
+AtomicCounter* g_signatureCount;
+
+static void fillOutRRSIG(DNSSECPrivateKey& dpk, const DNSName& signQName, RRSIGRecordContent& rrc, vector<shared_ptr<DNSRecordContent> >& toSign)
+{
+  if(!g_signatureCount)
+    g_signatureCount = S.getPointer("signatures");
+
+  DNSKEYRecordContent drc = dpk.getDNSKEY();
+  const std::shared_ptr<DNSCryptoKeyEngine> rc = dpk.getKey();
+  rrc.d_tag = drc.getTag();
+  rrc.d_algorithm = drc.d_algorithm;
+
+  string msg=getMessageForRRSET(signQName, rrc, toSign); // this is what we will hash & sign
+  pair<string, string> lookup(rc->getPubKeyHash(), pdns_md5sum(msg));  // this hash is a memory saving exercise
+
+  bool doCache=1;
+  if(doCache)
+  {
+    ReadLock l(&g_signatures_lock);
+    signaturecache_t::const_iterator iter = g_signatures.find(lookup);
+    if(iter != g_signatures.end()) {
+      rrc.d_signature=iter->second;
+      return;
+    }
+    // else cerr<<"Miss!"<<endl;
+  }
+
+  rrc.d_signature = rc->sign(msg);
+  (*g_signatureCount)++;
+  if(doCache) {
+    /* we add some jitter here so not all your slaves start pruning their caches at the very same millisecond */
+    int weekno = (time(0) - dns_random(3600)) / (86400*7);  // we just spent milliseconds doing a signature, microsecond more won't kill us
+    const static int maxcachesize=::arg().asNum("max-signature-cache-entries", INT_MAX);
+
+    WriteLock l(&g_signatures_lock);
+    if(g_cacheweekno < weekno || g_signatures.size() >= (uint) maxcachesize) {  // blunt but effective (C) Habbie, mind04
+      L<<Logger::Warning<<"Cleared signature cache."<<endl;
+      g_signatures.clear();
+      g_cacheweekno = weekno;
+    }
+    g_signatures[lookup] = rrc.d_signature;
+  }
+}
+
 /* this is where the RRSIGs begin, keys are retrieved,
    but the actual signing happens in fillOutRRSIG */
-int getRRSIGsForRRSET(DNSSECKeeper& dk, const DNSName& signer, const DNSName signQName, uint16_t signQType, uint32_t signTTL,
-                     vector<shared_ptr<DNSRecordContent> >& toSign, vector<RRSIGRecordContent>& rrcs)
+static int getRRSIGsForRRSET(DNSSECKeeper& dk, const DNSName& signer, const DNSName signQName, uint16_t signQType, uint32_t signTTL,
+                             vector<shared_ptr<DNSRecordContent> >& toSign, vector<RRSIGRecordContent>& rrcs)
 {
   if(toSign.empty())
     return -1;
@@ -69,9 +118,9 @@ int getRRSIGsForRRSET(DNSSECKeeper& dk, const DNSName& signer, const DNSName sig
 }
 
 // this is the entrypoint from DNSPacket
-void addSignature(DNSSECKeeper& dk, UeberBackend& db, const DNSName& signer, const DNSName signQName, const DNSName& wildcardname, uint16_t signQType,
-  uint32_t signTTL, DNSResourceRecord::Place signPlace,
-  vector<shared_ptr<DNSRecordContent> >& toSign, vector<DNSResourceRecord>& outsigned, uint32_t origTTL)
+static void addSignature(DNSSECKeeper& dk, UeberBackend& db, const DNSName& signer, const DNSName signQName, const DNSName& wildcardname, uint16_t signQType,
+                         uint32_t signTTL, DNSResourceRecord::Place signPlace,
+                         vector<shared_ptr<DNSRecordContent> >& toSign, vector<DNSZoneRecord>& outsigned, uint32_t origTTL)
 {
   //cerr<<"Asked to sign '"<<signQName<<"'|"<<DNSRecordContent::NumberToType(signQType)<<", "<<toSign.size()<<" records\n";
   if(toSign.empty())
@@ -87,29 +136,22 @@ void addSignature(DNSSECKeeper& dk, UeberBackend& db, const DNSName& signer, con
       return;
     } 
   
-    DNSResourceRecord rr;
-    rr.qname=signQName;
-    rr.qtype=QType::RRSIG;
+    DNSZoneRecord rr;
+    rr.dr.d_name=signQName;
+    rr.dr.d_type=QType::RRSIG;
     if(origTTL)
-      rr.ttl=origTTL;
+      rr.dr.d_ttl=origTTL;
     else
-      rr.ttl=signTTL;
+      rr.dr.d_ttl=signTTL;
     rr.auth=false;
-    rr.d_place = signPlace;
+    rr.dr.d_place = signPlace;
     for(RRSIGRecordContent& rrc :  rrcs) {
-      rr.content = rrc.getZoneRepresentation();
+      rr.dr.d_content = std::make_shared<RRSIGRecordContent>(rrc);
       outsigned.push_back(rr);
     }
   }
   toSign.clear();
 }
-
-static pthread_rwlock_t g_signatures_lock = PTHREAD_RWLOCK_INITIALIZER;
-typedef map<pair<string, string>, string> signaturecache_t;
-static signaturecache_t g_signatures;
-static int g_cacheweekno;
-
-AtomicCounter* g_signatureCount;
 
 uint64_t signatureCacheSize(const std::string& str)
 {
@@ -117,51 +159,9 @@ uint64_t signatureCacheSize(const std::string& str)
   return g_signatures.size();
 }
 
-void fillOutRRSIG(DNSSECPrivateKey& dpk, const DNSName& signQName, RRSIGRecordContent& rrc, vector<shared_ptr<DNSRecordContent> >& toSign) 
+static bool rrsigncomp(const DNSZoneRecord& a, const DNSZoneRecord& b)
 {
-  if(!g_signatureCount)
-    g_signatureCount = S.getPointer("signatures");
-    
-  DNSKEYRecordContent drc = dpk.getDNSKEY(); 
-  const std::shared_ptr<DNSCryptoKeyEngine> rc = dpk.getKey();
-  rrc.d_tag = drc.getTag();
-  rrc.d_algorithm = drc.d_algorithm;
-  
-  string msg=getMessageForRRSET(signQName, rrc, toSign); // this is what we will hash & sign
-  pair<string, string> lookup(rc->getPubKeyHash(), pdns_md5sum(msg));  // this hash is a memory saving exercise
-  
-  bool doCache=1;
-  if(doCache)
-  {
-    ReadLock l(&g_signatures_lock);
-    signaturecache_t::const_iterator iter = g_signatures.find(lookup);
-    if(iter != g_signatures.end()) {
-      rrc.d_signature=iter->second;
-      return;
-    }
-    // else cerr<<"Miss!"<<endl;  
-  }
-  
-  rrc.d_signature = rc->sign(msg);
-  (*g_signatureCount)++;
-  if(doCache) {
-    /* we add some jitter here so not all your slaves start pruning their caches at the very same millisecond */
-    int weekno = (time(0) - dns_random(3600)) / (86400*7);  // we just spent milliseconds doing a signature, microsecond more won't kill us
-    const static int maxcachesize=::arg().asNum("max-signature-cache-entries", INT_MAX);
-
-    WriteLock l(&g_signatures_lock);
-    if(g_cacheweekno < weekno || g_signatures.size() >= (uint) maxcachesize) {  // blunt but effective (C) Habbie, mind04
-      L<<Logger::Warning<<"Cleared signature cache."<<endl;
-      g_signatures.clear();
-      g_cacheweekno = weekno;
-    }
-    g_signatures[lookup] = rrc.d_signature;
-  }
-}
-
-static bool rrsigncomp(const DNSResourceRecord& a, const DNSResourceRecord& b)
-{
-  return tie(a.d_place, a.qtype) < tie(b.d_place, b.qtype);
+  return tie(a.dr.d_place, a.dr.d_type) < tie(b.dr.d_place, b.dr.d_type);
 }
 
 static bool getBestAuthFromSet(const set<DNSName>& authSet, const DNSName& name, DNSName& auth)
@@ -179,7 +179,7 @@ static bool getBestAuthFromSet(const set<DNSName>& authSet, const DNSName& name,
   return false;
 }
 
-void addRRSigs(DNSSECKeeper& dk, UeberBackend& db, const set<DNSName>& authSet, vector<DNSResourceRecord>& rrs)
+void addRRSigs(DNSSECKeeper& dk, UeberBackend& db, const set<DNSName>& authSet, vector<DNSZoneRecord>& rrs)
 {
   stable_sort(rrs.begin(), rrs.end(), rrsigncomp);
   
@@ -191,38 +191,30 @@ void addRRSigs(DNSSECKeeper& dk, UeberBackend& db, const set<DNSName>& authSet, 
   DNSResourceRecord::Place signPlace=DNSResourceRecord::ANSWER;
   vector<shared_ptr<DNSRecordContent> > toSign;
 
-  vector<DNSResourceRecord> signedRecords;
+  vector<DNSZoneRecord> signedRecords;
   signedRecords.reserve(rrs.size()*1.5);
-  //  cout<<rrs.size()<<", "<<sizeof(DNSResourceRecord)<<endl;
+  //  cout<<rrs.size()<<", "<<sizeof(DNSZoneRecord)<<endl;
   DNSName signer;
-  for(vector<DNSResourceRecord>::const_iterator pos = rrs.begin(); pos != rrs.end(); ++pos) {
-    if(pos != rrs.begin() && (signQType != pos->qtype.getCode()  || signQName != pos->qname)) {
+  for(auto pos = rrs.cbegin(); pos != rrs.cend(); ++pos) {
+    if(pos != rrs.cbegin() && (signQType != pos->dr.d_type  || signQName != pos->dr.d_name)) {
       if(getBestAuthFromSet(authSet, signQName, signer))
         addSignature(dk, db, signer, signQName, wildcardQName, signQType, signTTL, signPlace, toSign, signedRecords, origTTL);
     }
     signedRecords.push_back(*pos);
-    signQName= pos->qname.makeLowerCase();
+    signQName= pos->dr.d_name.makeLowerCase();
     if(!pos->wildcardname.empty())
       wildcardQName = pos->wildcardname.makeLowerCase();
     else
       wildcardQName.clear();
-    signQType = pos ->qtype.getCode();
+    signQType = pos->dr.d_type;
     if(pos->signttl)
       signTTL = pos->signttl;
     else
-      signTTL = pos->ttl;
-    origTTL = pos->ttl;
-    signPlace = pos->d_place;
-    if(pos->auth || pos->qtype.getCode() == QType::DS) {
-      string content = pos->content;
-      if(!pos->content.empty() && pos->qtype.getCode()==QType::TXT && pos->content[0]!='"') {
-        content="\""+pos->content+"\"";
-      }
-      if(pos->content.empty())  // empty contents confuse the MOADNS setup
-        content=".";
-      
-      shared_ptr<DNSRecordContent> drc(DNSRecordContent::mastermake(pos->qtype.getCode(), 1, content)); 
-      toSign.push_back(drc);
+      signTTL = pos->dr.d_ttl;
+    origTTL = pos->dr.d_ttl;
+    signPlace = pos->dr.d_place;
+    if(pos->auth || pos->dr.d_type == QType::DS) {
+      toSign.push_back(pos->dr.d_content); // so ponder.. should this be a deep copy perhaps?
     }
   }
   if(getBestAuthFromSet(authSet, signQName, signer))

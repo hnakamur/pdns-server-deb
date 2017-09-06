@@ -159,7 +159,6 @@ public:
     d_masterschanged=d_slaveschanged=true;
     d_nsock4 = -1;
     d_nsock6 = -1;
-    d_havepriosuckrequest = false;
     d_preventSelfNotification = false;
   }
   time_t doNotifications();    
@@ -188,14 +187,14 @@ public:
   }
   bool notifyDomain(const DNSName &domain);
 private:
+  void loadArgsIntoSet(const char *listname, set<string> &listset);
   void makeNotifySockets();
-  void queueNotifyDomain(const DNSName &domain, UeberBackend *B);
+  void queueNotifyDomain(const DomainInfo& di, UeberBackend* B);
   int d_nsock4, d_nsock6;
   map<pair<DNSName,string>,time_t>d_holes;
   pthread_mutex_t d_holelock;
-  void launchRetrievalThreads();
   void suck(const DNSName &domain, const string &remote);
-  void ixfrSuck(const DNSName &domain, const TSIGTriplet& tt, const ComboAddress& laddr, const ComboAddress& remote, boost::scoped_ptr<AuthLua>& pdl,
+  void ixfrSuck(const DNSName &domain, const TSIGTriplet& tt, const ComboAddress& laddr, const ComboAddress& remote, boost::scoped_ptr<AuthLua4>& pdl,
                 ZoneStatus& zs, vector<DNSRecord>* axfr);
 
   void slaveRefresh(PacketHandler *P);
@@ -213,9 +212,13 @@ private:
   set<string> d_alsoNotify;
   NotificationQueue d_nq;
   NetmaskGroup d_onlyNotify;
-  bool d_havepriosuckrequest;
   bool d_masterschanged, d_slaveschanged;
   bool d_preventSelfNotification;
+
+  // Used to keep some state on domains that failed their freshness checks.
+  // uint64_t == counter of the number of failures (increased by 1 every consecutive slave-cycle-interval that the domain fails)
+  // time_t == wait at least until this time before attempting a new check
+  map<DNSName, pair<uint64_t, time_t> > d_failedSlaveRefresh;
 
   struct RemoveSentinel
   {
@@ -241,7 +244,7 @@ private:
 class FindNS
 {
 public:
-  vector<string> lookup(const DNSName &name, DNSBackend *b)
+  vector<string> lookup(const DNSName &name, UeberBackend *b)
   {
     vector<string> addresses;
 
@@ -249,26 +252,10 @@ public:
     
     if(b) {
         b->lookup(QType(QType::ANY),name);
-        DNSResourceRecord rr;
+        DNSZoneRecord rr;
         while(b->get(rr))
-          if(rr.qtype.getCode() == QType::A || rr.qtype.getCode()==QType::AAAA)
-            addresses.push_back(rr.content);   // SOL if you have a CNAME for an NS
-    }
-    return addresses;
-  }
-
-  vector<string> lookup(const DNSName &name, UeberBackend *b)
-  {
-    vector<string> addresses;
-
-    this->resolve_name(&addresses, name);
-
-    if(b) {
-        b->lookup(QType(QType::ANY),name);
-        DNSResourceRecord rr;
-        while(b->get(rr))
-          if(rr.qtype.getCode() == QType::A || rr.qtype.getCode()==QType::AAAA)
-             addresses.push_back(rr.content);   // SOL if you have a CNAME for an NS
+          if(rr.dr.d_type == QType::A || rr.dr.d_type==QType::AAAA)
+            addresses.push_back(rr.dr.d_content->getZoneRepresentation());   // SOL if you have a CNAME for an NS
     }
     return addresses;
   }
@@ -279,7 +266,7 @@ private:
     struct addrinfo* res;
     struct addrinfo hints;
     memset(&hints, 0, sizeof(hints));
-
+    hints.ai_socktype = SOCK_DGRAM; // otherwise we get everything in triplicate (!)
     for(int n = 0; n < 2; ++n) {
       hints.ai_family = n ? AF_INET : AF_INET6;
       ComboAddress remote;

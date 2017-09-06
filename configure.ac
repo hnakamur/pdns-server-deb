@@ -120,7 +120,7 @@ PDNS_ENABLE_REPRODUCIBLE
 
 PDNS_WITH_SQLITE3
 
-PDNS_CHECK_PANDOC
+PDNS_CHECK_VIRTUALENV
 PDNS_FROM_GIT
 
 dnl Checks for library functions.
@@ -206,7 +206,7 @@ for a in $modules $dynmodules; do
       AS_IF([test "x$with_lua" = "xno"],
         AC_MSG_ERROR([Lua backend needs lua, run ./configure --with-lua])
       )
-      AS_IF([test "x$LUAPC" = "x"],
+      AS_IF([test "x$LUAPC" = "x" -a "x$LUAJITPC" = "x"],
         AC_MSG_ERROR([Lua backend needs lua but we cannot find it])
       )
       ;;

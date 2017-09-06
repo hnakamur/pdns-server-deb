@@ -253,7 +253,7 @@ bool Bind2Backend::abortTransaction()
   return true;
 }
 
-bool Bind2Backend::feedRecord(const DNSResourceRecord &rr, string *ordername)
+bool Bind2Backend::feedRecord(const DNSResourceRecord &rr, const DNSName &ordername)
 {
   BB2DomainInfo bbd;
   safeGetBBDomainInfo(d_transaction_id, &bbd);
@@ -287,7 +287,7 @@ bool Bind2Backend::feedRecord(const DNSResourceRecord &rr, string *ordername)
   case QType::DNAME:
   case QType::NS:
     stripDomainSuffix(&content, name);
-    // falltrough
+    // fallthrough
   default:
     *d_of<<qname<<"\t"<<rr.ttl<<"\t"<<rr.qtype.getName()<<"\t"<<content<<endl;
   }
@@ -356,8 +356,11 @@ void Bind2Backend::getAllDomains(vector<DomainInfo> *domains, bool include_disab
       domains->push_back(di);
     };
   }
- 
+
   for(DomainInfo &di :  *domains) {
+    // do not corrupt di if domain supplied by another backend.
+    if (di.backend != this)
+      continue;
     this->getSOA(di.zone, soadata);
     di.serial=soadata.serial;
   }
@@ -610,6 +613,7 @@ Bind2Backend::Bind2Backend(const string &suffix, bool loadZones)
   d_getDomainKeysQuery_stmt = NULL;
   d_deleteDomainKeyQuery_stmt = NULL;
   d_insertDomainKeyQuery_stmt = NULL;
+  d_GetLastInsertedKeyIdQuery_stmt = NULL;
   d_activateDomainKeyQuery_stmt = NULL;
   d_deactivateDomainKeyQuery_stmt = NULL;
   d_getTSIGKeyQuery_stmt = NULL;
@@ -664,7 +668,6 @@ void Bind2Backend::reload()
 void Bind2Backend::fixupOrderAndAuth(BB2DomainInfo& bbd, bool nsec3zone, NSEC3PARAMRecordContent ns3pr)
 {
   shared_ptr<recordstorage_t> records = bbd.d_records.getWRITABLE();
-  recordstorage_t::const_iterator iter;
 
   bool skip;
   DNSName shorter;
@@ -806,12 +809,9 @@ void Bind2Backend::loadConfig(string* status)
         i!=domains.end();
         ++i) 
       {
-        if(i->type == "") {
-          L<<Logger::Warning<<d_logprefix<<" Warning! Skipping zone '"<<i->name<<"' because it has no type specified"<<endl;
-          rejected++;
-          continue;
-        }
-        if(i->type!="master" && i->type!="slave") {
+        if(i->type == "")
+          L<<Logger::Notice<<d_logprefix<<" Zone '"<<i->name<<"' has no type specified, assuming 'native'"<<endl;
+        if(i->type!="master" && i->type!="slave" && i->type != "native" && i->type != "") {
           L<<Logger::Warning<<d_logprefix<<" Warning! Skipping zone '"<<i->name<<"' because type '"<<i->type<<"' is invalid"<<endl;
           rejected++;
           continue;
@@ -924,100 +924,76 @@ void Bind2Backend::queueReloadAndStore(unsigned int id)
   }
 }
 
-bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const DNSName& qname, DNSName& unhashed, string& before, string& after)
+bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const DNSName& qname, DNSName& unhashed, DNSName& before, DNSName& after)
 {
   shared_ptr<const recordstorage_t> records = bbd.d_records.get();
-  recordstorage_t::const_iterator iter = records->upper_bound(qname);
 
-  if (before.empty()){
-    //cout<<"starting before for: '"<<domain<<"'"<<endl;
-    iter = records->upper_bound(qname);
+  // for(const auto& record: *records)
+  //   cerr<<record.qname<<"\t"<<makeHexDump(record.qname.toDNSString())<<endl;
 
-    while(iter == records->end() || (qname.canonCompare(iter->qname)) || (!(iter->auth) && (!(iter->qtype == QType::NS))) || (!(iter->qtype)))
-      iter--;
+  recordstorage_t::const_iterator iterBefore, iterAfter;
 
-    if(iter->qname.empty())
-      before.clear();
-    else {
-      before=iter->qname.labelReverse().toString(" ",false);
-    }
-  }
-  else {
-    if(qname.empty())
-      before.clear();
-    else
-      before=qname.labelReverse().toString(" ",false);
-  }
+  iterBefore = iterAfter = records->upper_bound(qname.makeLowerCase());
 
-  //cerr<<"Now after"<<endl;
-  iter = records->upper_bound(qname);
+  if(iterBefore != records->begin())
+    --iterBefore;
+  while((!iterBefore->auth && iterBefore->qtype != QType::NS) || !iterBefore->qtype)
+    --iterBefore;
+  before=iterBefore->qname;
 
-  if(iter == records->end()) {
-    //cerr<<"\tFound the end, begin storage: '"<<bbd.d_records->begin()->qname<<"', '"<<bbd.d_name<<"'"<<endl;
-    after.clear(); // this does the right thing (i.e. point to apex, which is sure to have auth records)
+  if(iterAfter == records->end()) {
+    iterAfter = records->begin();
   } else {
-    //cerr<<"\tFound: '"<<(iter->qname)<<"' (nsec3hash='"<<(iter->nsec3hash)<<"')"<<endl;
-    // this iteration is theoretically unnecessary - glue always sorts right behind a delegation
-    // so we will never get here. But let's do it anyway.
-    while((!(iter->auth) && (!(iter->qtype == QType::NS))) || (!(iter->qtype)))
-    {
-      iter++;
-      if(iter == records->end())
-      {
-        after.clear();
+    while((!iterAfter->auth && iterAfter->qtype != QType::NS) || !iterAfter->qtype) {
+      ++iterAfter;
+      if(iterAfter == records->end()) {
+        iterAfter = records->begin();
         break;
       }
     }
-    if(iter != records->end())
-      after = (iter)->qname.labelReverse().toString(" ",false);
   }
+  after = iterAfter->qname;
 
-  // cerr<<"Before: '"<<before<<"', after: '"<<after<<"'\n";
   return true;
 }
 
-bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, DNSName& unhashed, std::string& before, std::string& after)
+bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const DNSName& qname, DNSName& unhashed, DNSName& before, DNSName& after)
 {
   BB2DomainInfo bbd;
   safeGetBBDomainInfo(id, &bbd);
 
   NSEC3PARAMRecordContent ns3pr;
-  DNSName auth=bbd.d_name;
-    
+
   bool nsec3zone;
   if (d_hybrid) {
     DNSSECKeeper dk;
-    nsec3zone=dk.getNSEC3PARAM(auth, &ns3pr);
+    nsec3zone=dk.getNSEC3PARAM(bbd.d_name, &ns3pr);
   } else
-    nsec3zone=getNSEC3PARAM(auth, &ns3pr);
+    nsec3zone=getNSEC3PARAM(bbd.d_name, &ns3pr);
 
   if(!nsec3zone) {
-    DNSName dqname = DNSName(labelReverse(qname));
-    //cerr<<"in bind2backend::getBeforeAndAfterAbsolute: no nsec3 for "<<auth<<endl;
-    return findBeforeAndAfterUnhashed(bbd, dqname, unhashed, before, after);
+    return findBeforeAndAfterUnhashed(bbd, qname, unhashed, before, after);
   }
   else {
-    typedef recordstorage_t::index<HashedTag>::type records_by_hashindex_t;
-    records_by_hashindex_t& hashindex=boost::multi_index::get<HashedTag>(*bbd.d_records.getWRITABLE());
-
-    records_by_hashindex_t::const_iterator iter, first;
-    first = hashindex.upper_bound(""); // skip records without a hash
+    auto& hashindex=boost::multi_index::get<NSEC3Tag>(*bbd.d_records.getWRITABLE());
 
     // for(auto iter = first; iter != hashindex.end(); iter++)
-    //   cerr<<iter->nsec3hash<<endl;
+    //  cerr<<iter->nsec3hash<<endl;
 
-    iter = hashindex.upper_bound(toLower(qname));
+    auto first = hashindex.upper_bound("");
+    auto iter = hashindex.upper_bound(qname.toStringNoDot());
+
     if (iter == hashindex.end()) {
       --iter;
-      before = iter->nsec3hash;
-      after = first->nsec3hash;
+      before = DNSName(iter->nsec3hash);
+      after = DNSName(first->nsec3hash);
     } else {
-      after = iter->nsec3hash;
+      after = DNSName(iter->nsec3hash);
       if (iter != first)
         --iter;
       else
         iter = --hashindex.end();
-      before = iter->nsec3hash;
+      before = DNSName(iter->nsec3hash);
     }
     unhashed = iter->qname+bbd.d_name;
 
@@ -1080,20 +1056,17 @@ void Bind2Backend::lookup(const QType &qtype, const DNSName &qname, DNSPacket *p
   if(d_handle.d_records->empty())
     DLOG(L<<"Query with no results"<<endl);
 
-  pair<recordstorage_t::const_iterator, recordstorage_t::const_iterator> range;
-
-  range = d_handle.d_records->equal_range(d_handle.qname);
-  //cout<<"End equal range"<<endl;
   d_handle.mustlog = mustlog;
+
+  auto& hashedidx = boost::multi_index::get<UnorderedNameTag>(*d_handle.d_records);
+  auto range = hashedidx.equal_range(d_handle.qname);
   
   if(range.first==range.second) {
-    // cerr<<"Found nothing!"<<endl;
     d_handle.d_list=false;
     d_handle.d_iter = d_handle.d_end_iter  = range.first;
     return;
   }
   else {
-    // cerr<<"Found something!"<<endl;
     d_handle.d_iter=range.first;
     d_handle.d_end_iter=range.second;
   }

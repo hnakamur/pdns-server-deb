@@ -28,7 +28,6 @@
 #include "pdns/utility.hh"
 #include "pdns/dnspacket.hh"
 #include "pdns/dnsbackend.hh"
-#include "pdns/ueberbackend.hh"
 #include "pdns/pdnsexception.hh"
 #include "pdns/arguments.hh"
 #include "pdns/logger.hh"
@@ -77,10 +76,10 @@ public:
         OdbxBackend( const string& suffix="" );
         ~OdbxBackend();
 
-        void lookup( const QType& qtype, const DNSName& qdomain, DNSPacket* p = 0, int zoneid = -1 );
-        bool getSOA( const DNSName& domain, SOAData& sd, DNSPacket* p );
-        bool list( const DNSName& target, int domain_id, bool include_disabled=false );
-        bool get( DNSResourceRecord& rr );
+        void lookup( const QType& qtype, const DNSName& qdomain, DNSPacket* p = 0, int zoneid = -1 ) override;
+        bool getSOA( const DNSName& domain, SOAData& sd ) override;
+        bool list( const DNSName& target, int domain_id, bool include_disabled=false ) override;
+        bool get( DNSResourceRecord& rr ) override;
 
         bool startTransaction( const DNSName& domain, int domain_id ) override;
         bool commitTransaction() override;
@@ -88,15 +87,15 @@ public:
 
         bool isMaster( const DNSName& domain, const string& ip ) override;
         bool getDomainInfo( const DNSName& domain, DomainInfo& di ) override;
-        bool feedRecord( const DNSResourceRecord& rr, string *ordername=0 ) override;
+        bool feedRecord( const DNSResourceRecord& rr, const DNSName& ordername ) override;
         bool createSlaveDomain( const string& ip, const DNSName& domain, const string &nameserver, const string& account ) override;
         bool superMasterBackend( const string& ip, const DNSName& domain, const vector<DNSResourceRecord>& nsset, string *nameserver, string* account, DNSBackend** ddb ) override;
 
-        void getUpdatedMasters( vector<DomainInfo>* updated );
-        void getUnfreshSlaveInfos( vector<DomainInfo>* unfresh );
+        void getUpdatedMasters( vector<DomainInfo>* updated ) override;
+        void getUnfreshSlaveInfos( vector<DomainInfo>* unfresh ) override;
 
-        void setFresh( uint32_t domain_id );
-        void setNotified( uint32_t domain_id, uint32_t serial );
+        void setFresh( uint32_t domain_id ) override;
+        void setNotified( uint32_t domain_id, uint32_t serial ) override;
 };
 
 

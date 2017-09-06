@@ -113,6 +113,7 @@ public:
   //! lookup() initiates a lookup. A lookup without results should not throw!
   virtual void lookup(const QType &qtype, const DNSName &qdomain, DNSPacket *pkt_p=0, int zoneId=-1)=0; 
   virtual bool get(DNSResourceRecord &)=0; //!< retrieves one DNSResource record, returns false if no more were available
+  virtual bool get(DNSZoneRecord &r);
 
   //! Initiates a list of the specified domain
   /** Once initiated, DNSResourceRecord objects can be retrieved using get(). Should return false
@@ -124,7 +125,7 @@ public:
   virtual ~DNSBackend(){};
 
   //! fills the soadata struct with the SOA details. Returns false if there is no SOA.
-  virtual bool getSOA(const DNSName &name, SOAData &soadata, DNSPacket *p=0);
+  virtual bool getSOA(const DNSName &name, SOAData &soadata);
 
   //! Calculates a SOA serial for the zone and stores it in the third argument.
   virtual bool calculateSOASerial(const DNSName& domain, const SOAData& sd, time_t& serial);
@@ -168,7 +169,7 @@ public:
   virtual void getAllDomains(vector<DomainInfo> *domains, bool include_disabled=false) { }
 
   /** Determines if we are authoritative for a zone, and at what level */
-  virtual bool getAuth(DNSPacket *p, SOAData *sd, const DNSName &target);
+  virtual bool getAuth(const DNSName &target, SOAData *sd);
 
   struct KeyData {
     std::string content;
@@ -177,9 +178,9 @@ public:
     bool active;
   };
 
-  virtual bool getDomainKeys(const DNSName& name, unsigned int kind, std::vector<KeyData>& keys) { return false;}
+  virtual bool getDomainKeys(const DNSName& name, std::vector<KeyData>& keys) { return false;}
   virtual bool removeDomainKey(const DNSName& name, unsigned int id) { return false; }
-  virtual int addDomainKey(const DNSName& name, const KeyData& key){ return -1; }
+  virtual bool addDomainKey(const DNSName& name, const KeyData& key, int64_t& id){ return false; }
   virtual bool activateDomainKey(const DNSName& name, unsigned int id) { return false; }
   virtual bool deactivateDomainKey(const DNSName& name, unsigned int id) { return false; }
 
@@ -188,7 +189,7 @@ public:
   virtual bool deleteTSIGKey(const DNSName& name) { return false; }
   virtual bool getTSIGKeys(std::vector< struct TSIGKey > &keys) { return false; }
 
-  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const string& qname, DNSName& unhashed, string& before, string& after)
+  virtual bool getBeforeAndAfterNamesAbsolute(uint32_t id, const DNSName& qname, DNSName& unhashed, DNSName& before, DNSName& after)
   {
     std::cerr<<"Default beforeAndAfterAbsolute called!"<<std::endl;
     abort();
@@ -197,12 +198,12 @@ public:
 
   virtual bool getBeforeAndAfterNames(uint32_t id, const DNSName& zonename, const DNSName& qname, DNSName& before, DNSName& after);
 
-  virtual bool updateDNSSECOrderNameAndAuth(uint32_t domain_id, const DNSName& zonename, const DNSName& qname, const DNSName& ordername, bool auth, const uint16_t qtype=QType::ANY)
+  virtual bool updateDNSSECOrderNameAndAuth(uint32_t domain_id, const DNSName& qname, const DNSName& ordername, bool auth, const uint16_t qtype=QType::ANY)
   {
     return false;
   }
 
-  virtual bool updateEmptyNonTerminals(uint32_t domain_id, const DNSName& zonename, set<DNSName>& insert, set<DNSName>& erase, bool remove)
+  virtual bool updateEmptyNonTerminals(uint32_t domain_id, set<DNSName>& insert, set<DNSName>& erase, bool remove)
   {
     return false;
   }
@@ -267,7 +268,7 @@ public:
   }
 
   //! feeds a record to a zone, needs a call to startTransaction first
-  virtual bool feedRecord(const DNSResourceRecord &rr, string *ordername=0)
+  virtual bool feedRecord(const DNSResourceRecord &rr, const DNSName &ordername)
   {
     return false; // no problem!
   }
@@ -425,11 +426,14 @@ extern BackendMakerClass &BackendMakers();
 class DBException : public PDNSException
 {
 public:
-  DBException(const string &reason) : PDNSException(reason){}
+  DBException(const string &reason_) : PDNSException(reason_){}
 };
 
 /** helper function for both DNSPacket and addSOARecord() - converts a line into a struct, for easier parsing */
 void fillSOAData(const string &content, SOAData &data);
-
+// same but more karmic
+void fillSOAData(const DNSZoneRecord& in, SOAData& data);
+// the reverse
+std::shared_ptr<DNSRecordContent> makeSOAContent(const SOAData& sd);
 
 #endif

@@ -141,9 +141,9 @@ std::string DNSCryptoKeyEngine::convertToISC() const
 
 shared_ptr<DNSCryptoKeyEngine> DNSCryptoKeyEngine::make(unsigned int algo)
 {
-  makers_t& makers = getMakers();
+  const makers_t& makers = getMakers();
   makers_t::const_iterator iter = makers.find(algo);
-  if(iter != makers.end())
+  if(iter != makers.cend())
     return (iter->second)(algo);
   else {
     throw runtime_error("Request to create key object for unknown algorithm number "+std::to_string(algo));
@@ -320,7 +320,7 @@ shared_ptr<DNSCryptoKeyEngine> DNSCryptoKeyEngine::makeFromPublicKeyString(unsig
 shared_ptr<DNSCryptoKeyEngine> DNSCryptoKeyEngine::makeFromPEMString(DNSKEYRecordContent& drc, const std::string& raw)
 {
   
-  for(makers_t::value_type& val :  getMakers())
+  for(const makers_t::value_type& val : getMakers())
   {
     shared_ptr<DNSCryptoKeyEngine> ret=nullptr;
     try {
@@ -336,9 +336,9 @@ shared_ptr<DNSCryptoKeyEngine> DNSCryptoKeyEngine::makeFromPEMString(DNSKEYRecor
 }
 
 
-bool sharedDNSSECCompare(const shared_ptr<DNSRecordContent>& a, const shared_ptr<DNSRecordContent>& b)
+static bool sharedDNSSECCompare(const shared_ptr<DNSRecordContent>& a, const shared_ptr<DNSRecordContent>& b)
 {
-  return a->serialize(DNSName("."), true, true) < b->serialize(DNSName("."), true, true);
+  return a->serialize(g_rootdnsname, true, true) < b->serialize(g_rootdnsname, true, true);
 }
 
 /**
@@ -359,7 +359,7 @@ string getMessageForRRSET(const DNSName& qname, const RRSIGRecordContent& rrc, v
   sort(signRecords.begin(), signRecords.end(), sharedDNSSECCompare);
 
   string toHash;
-  toHash.append(const_cast<RRSIGRecordContent&>(rrc).serialize(DNSName("."), true, true));
+  toHash.append(const_cast<RRSIGRecordContent&>(rrc).serialize(g_rootdnsname, true, true));
   toHash.resize(toHash.size() - rrc.d_signature.length()); // chop off the end, don't sign the signature!
 
   string nameToHash(qname.toDNSStringLC());
@@ -389,7 +389,7 @@ string getMessageForRRSET(const DNSName& qname, const RRSIGRecordContent& rrc, v
     uint32_t ttl=htonl(rrc.d_originalttl);
     toHash.append((char*)&ttl, 4);
     // for NSEC signatures, we should not lowercase the rdata section
-    string rdata=add->serialize(DNSName("."), true, (add->getType() == QType::NSEC) ? false : true);  // RFC 6840, 5.1
+    string rdata=add->serialize(g_rootdnsname, true, (add->getType() == QType::NSEC) ? false : true);  // RFC 6840, 5.1
     tmp=htons(rdata.length());
     toHash.append((char*)&tmp, 2);
     toHash.append(rdata);
@@ -398,35 +398,60 @@ string getMessageForRRSET(const DNSName& qname, const RRSIGRecordContent& rrc, v
   return toHash;
 }
 
-DSRecordContent makeDSFromDNSKey(const DNSName& qname, const DNSKEYRecordContent& drc, int digest)
+bool DNSCryptoKeyEngine::isAlgorithmSupported(unsigned int algo)
+{
+  const makers_t& makers = getMakers();
+  makers_t::const_iterator iter = makers.find(algo);
+  return iter != makers.cend();
+}
+
+static unsigned int digestToAlgorithmNumber(uint8_t digest)
+{
+  switch(digest) {
+  case DNSSECKeeper::SHA1:
+    return DNSSECKeeper::RSASHA1;
+  case DNSSECKeeper::SHA256:
+    return DNSSECKeeper::RSASHA256;
+  case DNSSECKeeper::GOST:
+    return DNSSECKeeper::ECCGOST;
+  case DNSSECKeeper::SHA384:
+    return DNSSECKeeper::ECDSA384;
+  default:
+    throw std::runtime_error("Unknown digest type " + std::to_string(digest));
+  }
+  return 0;
+}
+
+bool DNSCryptoKeyEngine::isDigestSupported(uint8_t digest)
+{
+  try {
+    unsigned int algo = digestToAlgorithmNumber(digest);
+    return isAlgorithmSupported(algo);
+  }
+  catch(const std::exception& e) {
+    return false;
+  }
+}
+
+DSRecordContent makeDSFromDNSKey(const DNSName& qname, const DNSKEYRecordContent& drc, uint8_t digest)
 {
   string toHash;
   toHash.assign(qname.toDNSStringLC()); 
   toHash.append(const_cast<DNSKEYRecordContent&>(drc).serialize(DNSName(), true, true));
   
   DSRecordContent dsrc;
-  if(digest==1) {
-    shared_ptr<DNSCryptoKeyEngine> dpk(DNSCryptoKeyEngine::make(5)); // gives us SHA1
+  try {
+    unsigned int algo = digestToAlgorithmNumber(digest);
+    shared_ptr<DNSCryptoKeyEngine> dpk(DNSCryptoKeyEngine::make(algo));
     dsrc.d_digest = dpk->hash(toHash);
   }
-  else if(digest == 2) {
-    shared_ptr<DNSCryptoKeyEngine> dpk(DNSCryptoKeyEngine::make(8)); // gives us SHA256
-    dsrc.d_digest = dpk->hash(toHash);
-  }
-  else if(digest == 3) {
-    shared_ptr<DNSCryptoKeyEngine> dpk(DNSCryptoKeyEngine::make(12)); // gives us GOST
-    dsrc.d_digest = dpk->hash(toHash);
-  }
-  else if(digest == 4) {
-    shared_ptr<DNSCryptoKeyEngine> dpk(DNSCryptoKeyEngine::make(14)); // gives us ECDSAP384
-    dsrc.d_digest = dpk->hash(toHash);
-  }
-  else 
+  catch(const std::exception& e) {
     throw std::runtime_error("Asked to a DS of unknown digest type " + std::to_string(digest)+"\n");
+  }
   
-  dsrc.d_algorithm= drc.d_algorithm;
-  dsrc.d_digesttype=digest;
-  dsrc.d_tag=const_cast<DNSKEYRecordContent&>(drc).getTag();
+  dsrc.d_algorithm = drc.d_algorithm;
+  dsrc.d_digesttype = digest;
+  dsrc.d_tag = const_cast<DNSKEYRecordContent&>(drc).getTag();
 
   return dsrc;
 }
@@ -443,21 +468,6 @@ DNSKEYRecordContent makeDNSKEYFromDNSCryptoKeyEngine(const std::shared_ptr<DNSCr
   drc.d_key = pk->getPublicKeyString();
 
   return drc;
-}
-
-int countLabels(const std::string& signQName)
-{
-  if(!signQName.empty()) {
-    int count=1;
-    for(string::const_iterator pos = signQName.begin(); pos != signQName.end() ; ++pos)
-      if(*pos == '.' && pos+1 != signQName.end())
-        count++;
-
-    if(boost::starts_with(signQName, "*."))
-      count--;
-    return count;
-  }
-  return 0;
 }
 
 uint32_t getStartOfWeek()
@@ -542,35 +552,7 @@ private:
   std::string::size_type d_pos;
 };
 
-void decodeDERIntegerSequence(const std::string& input, vector<string>& output)
-{
-  output.clear();
-  DEREater de(input);
-  if(de.getByte() != 0x30) 
-    throw runtime_error("Not a DER sequence");
-  
-  unsigned int seqlen=de.getLength(); 
-  unsigned int startseq=de.getOffset();
-  unsigned int len;
-  string ret;
-  try {
-    for(;;) {
-      uint8_t kind = de.getByte();
-      if(kind != 0x02) 
-        throw runtime_error("DER Sequence contained non-INTEGER component: "+std::to_string(static_cast<unsigned int>(kind)) );
-      len = de.getLength();
-      ret = de.getBytes(len);
-      output.push_back(ret);
-    }
-  }
-  catch(DEREater::eof& eof)
-  {
-    if(de.getOffset() - startseq != seqlen)
-      throw runtime_error("DER Sequence ended before end of data");
-  }  
-}
-
-string calculateHMAC(const std::string& key, const std::string& text, TSIGHashEnum hasher) {
+static string calculateHMAC(const std::string& key, const std::string& text, TSIGHashEnum hasher) {
 
   const EVP_MD* md_type;
   unsigned int outlen;
@@ -606,7 +588,7 @@ string calculateHMAC(const std::string& key, const std::string& text, TSIGHashEn
   return string((char*) hash, outlen);
 }
 
-bool constantTimeStringEquals(const std::string& a, const std::string& b)
+static bool constantTimeStringEquals(const std::string& a, const std::string& b)
 {
   if (a.size() != b.size()) {
     return false;
@@ -627,7 +609,41 @@ bool constantTimeStringEquals(const std::string& a, const std::string& b)
 #endif
 }
 
-string makeTSIGMessageFromTSIGPacket(const string& opacket, unsigned int tsigOffset, const DNSName& keyname, const TSIGRecordContent& trc, const string& previous, bool timersonly, unsigned int dnsHeaderOffset)
+static string makeTSIGPayload(const string& previous, const char* packetBegin, size_t packetSize, const DNSName& tsigKeyName, const TSIGRecordContent& trc, bool timersonly)
+{
+  string message;
+
+  if(!previous.empty()) {
+    uint16_t len = htons(previous.length());
+    message.append(reinterpret_cast<const char*>(&len), sizeof(len));
+    message.append(previous);
+  }
+
+  message.append(packetBegin, packetSize);
+
+  vector<uint8_t> signVect;
+  DNSPacketWriter dw(signVect, DNSName(), 0);
+  auto pos=signVect.size();
+  if(!timersonly) {
+    dw.xfrName(tsigKeyName, false);
+    dw.xfr16BitInt(QClass::ANY); // class
+    dw.xfr32BitInt(0);    // TTL
+    dw.xfrName(trc.d_algoName.makeLowerCase(), false);
+  }
+  
+  uint32_t now = trc.d_time; 
+  dw.xfr48BitInt(now);
+  dw.xfr16BitInt(trc.d_fudge); // fudge
+  if(!timersonly) {
+    dw.xfr16BitInt(trc.d_eRcode); // extended rcode
+    dw.xfr16BitInt(trc.d_otherData.length()); // length of 'other' data
+    //    dw.xfrBlob(trc->d_otherData);
+  }
+  message.append(signVect.begin()+pos, signVect.end());
+  return message;
+}
+
+static string makeTSIGMessageFromTSIGPacket(const string& opacket, unsigned int tsigOffset, const DNSName& keyname, const TSIGRecordContent& trc, const string& previous, bool timersonly, unsigned int dnsHeaderOffset=0)
 {
   string message;
   string packet(opacket);
@@ -643,84 +659,67 @@ string makeTSIGMessageFromTSIGPacket(const string& opacket, unsigned int tsigOff
   uint16_t origID = htons(trc.d_origID);
   packet.replace(0, 2, (char*)&origID, 2);
 
-  if(!previous.empty()) {
-    uint16_t len = htons(previous.length());
-    message.append((char*)&len, 2);
-    message.append(previous);
-  }
-  
-  message.append(packet);
-
-  vector<uint8_t> signVect;
-  DNSPacketWriter dw(signVect, DNSName(), 0);
-  if(!timersonly) {
-    dw.xfrName(keyname, false);
-    dw.xfr16BitInt(QClass::ANY); // class
-    dw.xfr32BitInt(0);    // TTL
-    dw.xfrName(trc.d_algoName.makeLowerCase(), false);
-  }
-  
-  uint32_t now = trc.d_time; 
-  dw.xfr48BitInt(now);
-  dw.xfr16BitInt(trc.d_fudge); // fudge
-  if(!timersonly) {
-    dw.xfr16BitInt(trc.d_eRcode); // extended rcode
-    dw.xfr16BitInt(trc.d_otherData.length()); // length of 'other' data
-    //    dw.xfrBlob(trc->d_otherData);
-  }
-  const vector<uint8_t>& signRecord=dw.getRecordBeingWritten();
-  message.append(signRecord.begin(), signRecord.end());
-  return message;
+  return makeTSIGPayload(previous, packet.data(), packet.size(), keyname, trc, timersonly);
 }
 
-void addTSIG(DNSPacketWriter& pw, TSIGRecordContent* trc, const DNSName& tsigkeyname, const string& tsigsecret, const string& tsigprevious, bool timersonly)
+void addTSIG(DNSPacketWriter& pw, TSIGRecordContent& trc, const DNSName& tsigkeyname, const string& tsigsecret, const string& tsigprevious, bool timersonly)
 {
   TSIGHashEnum algo;
-  if (!getTSIGHashEnum(trc->d_algoName, algo)) {
-    throw PDNSException(string("Unsupported TSIG HMAC algorithm ") + trc->d_algoName.toString());
+  if (!getTSIGHashEnum(trc.d_algoName, algo)) {
+    throw PDNSException(string("Unsupported TSIG HMAC algorithm ") + trc.d_algoName.toString());
   }
 
-  string toSign;
-  if(!tsigprevious.empty()) {
-    uint16_t len = htons(tsigprevious.length());
-    toSign.append((char*)&len, 2);
-    
-    toSign.append(tsigprevious);
-  }
-  toSign.append(pw.getContent().begin(), pw.getContent().end());
-  
-  // now add something that looks a lot like a TSIG record, but isn't
-  vector<uint8_t> signVect;
-  DNSPacketWriter dw(signVect, DNSName(), 0);
-  if(!timersonly) {
-    dw.xfrName(tsigkeyname, false);
-    dw.xfr16BitInt(QClass::ANY); // class
-    dw.xfr32BitInt(0);    // TTL
-    dw.xfrName(trc->d_algoName, false);
-  }  
-  uint32_t now = trc->d_time; 
-  dw.xfr48BitInt(now);
-  dw.xfr16BitInt(trc->d_fudge); // fudge
-  
-  if(!timersonly) {
-    dw.xfr16BitInt(trc->d_eRcode); // extended rcode
-    dw.xfr16BitInt(trc->d_otherData.length()); // length of 'other' data
-    //    dw.xfrBlob(trc->d_otherData);
-  }
-  
-  const vector<uint8_t>& signRecord=dw.getRecordBeingWritten();
-  toSign.append(signRecord.begin(), signRecord.end());
+  string toSign = makeTSIGPayload(tsigprevious, reinterpret_cast<const char*>(pw.getContent().data()), pw.getContent().size(), tsigkeyname, trc, timersonly);
 
   if (algo == TSIG_GSS) {
-    if (!gss_add_signature(tsigkeyname, toSign, trc->d_mac)) {
+    if (!gss_add_signature(tsigkeyname, toSign, trc.d_mac)) {
       throw PDNSException(string("Could not add TSIG signature with algorithm 'gss-tsig' and key name '")+tsigkeyname.toString()+string("'"));
     }
   } else {
-    trc->d_mac = calculateHMAC(tsigsecret, toSign, algo);
-    //  d_trc->d_mac[0]++; // sabotage
+    trc.d_mac = calculateHMAC(tsigsecret, toSign, algo);
+    //  trc.d_mac[0]++; // sabotage
   }
   pw.startRecord(tsigkeyname, QType::TSIG, 0, QClass::ANY, DNSResourceRecord::ADDITIONAL, false);
-  trc->toPacket(pw);
+  trc.toPacket(pw);
   pw.commit();
 }
 
+bool validateTSIG(const std::string& packet, size_t sigPos, const TSIGTriplet& tt, const TSIGRecordContent& trc, const std::string& previousMAC, const std::string& theirMAC, bool timersOnly, unsigned int dnsHeaderOffset)
+{
+  uint64_t delta = std::abs((int64_t)trc.d_time - (int64_t)time(nullptr));
+  if(delta > trc.d_fudge) {
+    throw std::runtime_error("Invalid TSIG time delta " + std::to_string(delta) + " >  fudge " + std::to_string(trc.d_fudge));
+  }
+
+  TSIGHashEnum algo;
+  if (!getTSIGHashEnum(trc.d_algoName, algo)) {
+    throw std::runtime_error("Unsupported TSIG HMAC algorithm " + trc.d_algoName.toString());
+  }
+
+  TSIGHashEnum expectedAlgo;
+  if (!getTSIGHashEnum(tt.algo, expectedAlgo)) {
+    throw std::runtime_error("Unsupported TSIG HMAC algorithm expected " + tt.algo.toString());
+  }
+
+  if (algo != expectedAlgo) {
+    throw std::runtime_error("Signature with TSIG key '"+tt.name.toString()+"' does not match the expected algorithm (" + tt.algo.toString() + " / " + trc.d_algoName.toString() + ")");
+  }
+
+  string tsigMsg;
+  tsigMsg = makeTSIGMessageFromTSIGPacket(packet, sigPos, tt.name, trc, previousMAC, timersOnly, dnsHeaderOffset);
+
+  if (algo == TSIG_GSS) {
+    GssContext gssctx(tt.name);
+    if (!gss_verify_signature(tt.name, tsigMsg, theirMAC)) {
+      throw std::runtime_error("Signature with TSIG key '"+tt.name.toString()+"' failed to validate");
+    }
+  } else {
+    string ourMac = calculateHMAC(tt.secret, tsigMsg, algo);
+
+    if(!constantTimeStringEquals(ourMac, theirMAC)) {
+      throw std::runtime_error("Signature with TSIG key '"+tt.name.toString()+"' failed to validate");
+    }
+  }
+
+  return true;
+}

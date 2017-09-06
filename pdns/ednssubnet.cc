@@ -37,20 +37,20 @@ namespace {
 
 bool getEDNSSubnetOptsFromString(const string& options, EDNSSubnetOpts* eso)
 {
+  //cerr<<"options.size:"<<options.size()<<endl;
   return getEDNSSubnetOptsFromString(options.c_str(), options.length(), eso);
 }
 bool getEDNSSubnetOptsFromString(const char* options, unsigned int len, EDNSSubnetOpts* eso)
 {
-  //cerr<<"options.size:"<<options.size()<<endl;
   EDNSSubnetOptsWire esow;
   static_assert (sizeof(esow) == 4, "sizeof(EDNSSubnetOptsWire) must be 4 bytes");
-  if(len <= sizeof(esow))
+  if(len < sizeof(esow))
     return false;
   memcpy(&esow, options, sizeof(esow));
   esow.family = ntohs(esow.family);
   //cerr<<"Family when parsing from string: "<<esow.family<<endl;
   ComboAddress address;
-  unsigned int octetsin = ((esow.sourceMask - 1)>> 3)+1;
+  unsigned int octetsin = esow.sourceMask > 0 ? (((esow.sourceMask - 1)>> 3)+1) : 0;
   //cerr<<"octetsin:"<<octetsin<<endl;
   if(esow.family == 1) {
     if(len != sizeof(esow)+octetsin)
@@ -59,7 +59,8 @@ bool getEDNSSubnetOptsFromString(const char* options, unsigned int len, EDNSSubn
       return false;
     memset(&address, 0, sizeof(address));
     address.sin4.sin_family = AF_INET;
-    memcpy(&address.sin4.sin_addr.s_addr, options+sizeof(esow), octetsin);
+    if(octetsin > 0)
+      memcpy(&address.sin4.sin_addr.s_addr, options+sizeof(esow), octetsin);
   } else if(esow.family == 2) {
     if(len != sizeof(esow)+octetsin)
       return false;
@@ -67,13 +68,19 @@ bool getEDNSSubnetOptsFromString(const char* options, unsigned int len, EDNSSubn
       return false;
     memset(&address, 0, sizeof(address));
     address.sin4.sin_family = AF_INET6;
-    memcpy(&address.sin6.sin6_addr.s6_addr, options+sizeof(esow), octetsin);
+    if(octetsin > 0)
+      memcpy(&address.sin6.sin6_addr.s6_addr, options+sizeof(esow), octetsin);
   }
   else
     return false;
- // cerr<<"Source address: "<<address.toString()<<", mask: "<<(int)esow.sourceMask<<endl;
+  //cerr<<"Source address: "<<address.toString()<<", mask: "<<(int)esow.sourceMask<<endl;
   eso->source = Netmask(address, esow.sourceMask);
+  /* 'address' has more bits set (potentially) than scopeMask. This leads to odd looking netmasks that promise
+     more precision than they have. For this reason we truncate the address to scopeMask bits */
+  
+  address.truncate(esow.scopeMask); // truncate will not throw for odd scopeMasks
   eso->scope = Netmask(address, esow.scopeMask);
+
   return true;
 }
 
@@ -88,10 +95,13 @@ string makeEDNSSubnetOptsString(const EDNSSubnetOpts& eso)
   ret.assign((const char*)&esow, sizeof(esow));
   int octetsout = ((esow.sourceMask - 1)>> 3)+1;
 
+  ComboAddress src=eso.source.getNetwork();
+  src.truncate(esow.sourceMask);
+  
   if(family == htons(1)) 
-    ret.append((const char*) &eso.source.getNetwork().sin4.sin_addr.s_addr, octetsout);
+    ret.append((const char*) &src.sin4.sin_addr.s_addr, octetsout);
   else
-    ret.append((const char*) &eso.source.getNetwork().sin6.sin6_addr.s6_addr, octetsout);
+    ret.append((const char*) &src.sin6.sin6_addr.s6_addr, octetsout);
   return ret;
 }
 

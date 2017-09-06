@@ -33,9 +33,9 @@
 #include "dnspacket.hh"
 #include "dns.hh"
 
-bool DNSBackend::getAuth(DNSPacket *p, SOAData *sd, const DNSName &target)
+bool DNSBackend::getAuth(const DNSName &target, SOAData *sd)
 {
-  return this->getSOA(target, *sd, p);
+  return this->getSOA(target, *sd);
 }
 
 void DNSBackend::setArgPrefix(const string &prefix)
@@ -214,9 +214,9 @@ vector<DNSBackend *>BackendMakerClass::all(bool metadataOnly)
     \param domain Domain we want to get the SOA details of
     \param sd SOAData which is filled with the SOA details
 */
-bool DNSBackend::getSOA(const DNSName &domain, SOAData &sd, DNSPacket *p)
+bool DNSBackend::getSOA(const DNSName &domain, SOAData &sd)
 {
-  this->lookup(QType(QType::SOA),domain,p);
+  this->lookup(QType(QType::SOA),domain);
 
   DNSResourceRecord rr;
   rr.auth = true;
@@ -263,15 +263,59 @@ bool DNSBackend::getSOA(const DNSName &domain, SOAData &sd, DNSPacket *p)
   return true;
 }
 
+bool DNSBackend::get(DNSZoneRecord& dzr)
+{
+  //  cout<<"DNSBackend::get(DNSZoneRecord&) called - translating into DNSResourceRecord query"<<endl;
+  DNSResourceRecord rr;
+  if(!this->get(rr))
+    return false;
+  dzr.auth = rr.auth;
+  dzr.domain_id = rr.domain_id;
+  dzr.scopeMask = rr.scopeMask;
+  if(rr.qtype.getCode() == QType::TXT && !rr.content.empty() && rr.content[0]!='"')
+    rr.content = "\""+ rr.content + "\"";
+  if(rr.qtype.getCode() == QType::SOA) {
+    try {
+      dzr.dr = DNSRecord(rr);
+    } catch(...) {
+      vector<string> parts;
+      stringtok(parts, rr.content, " \t");
+      if(parts.size() < 1)
+        rr.content = arg()["default-soa-name"];
+      if(parts.size() < 2)
+        rr.content += " " +arg()["default-soa-mail"];
+      if(parts.size() < 3)
+        rr.content += " 0";
+      if(parts.size() < 4)
+        rr.content += " " + ::arg()["soa-refresh-default"];
+      if(parts.size() < 5)
+        rr.content += " " + ::arg()["soa-retry-default"];
+      if(parts.size() < 6)
+        rr.content += " " + ::arg()["soa-expire-default"];
+      if(parts.size() < 7)
+        rr.content += " " + ::arg()["soa-minimum-ttl"];
+      dzr.dr = DNSRecord(rr);
+    }
+  }
+  else {
+    try {
+      dzr.dr = DNSRecord(rr);
+    }
+    catch(...) {
+      while(this->get(rr));
+      throw;
+    }
+  }
+  return true;
+}
+
 bool DNSBackend::getBeforeAndAfterNames(uint32_t id, const DNSName& zonename, const DNSName& qname, DNSName& before, DNSName& after)
 {
   DNSName unhashed;
-  string sbefore, safter;
-  string srelqname=qname.makeRelative(zonename).makeLowerCase().labelReverse().toString(" ", false);
-
-  bool ret = this->getBeforeAndAfterNamesAbsolute(id, srelqname, unhashed, sbefore, safter);
-  before = (DNSName(labelReverse(sbefore)) + zonename).makeLowerCase();
-  after = (DNSName(labelReverse(safter)) + zonename).makeLowerCase();
+  bool ret = this->getBeforeAndAfterNamesAbsolute(id, qname.makeRelative(zonename).makeLowerCase(), unhashed, before, after);
+  DNSName lczonename = zonename.makeLowerCase();
+  before += lczonename;
+  after += lczonename;
   return ret;
 }
 
@@ -307,6 +351,32 @@ bool DNSBackend::calculateSOASerial(const DNSName& domain, const SOAData& sd, ti
 
     return true;
 }
+void fillSOAData(const DNSZoneRecord& in, SOAData& sd)
+{
+  sd.domain_id = in.domain_id;
+  sd.ttl = in.dr.d_ttl;
+
+  auto src=getRR<SOARecordContent>(in.dr);
+  sd.nameserver = src->d_mname;
+  sd.hostmaster = src->d_rname;
+  sd.serial = src->d_st.serial;
+  sd.refresh = src->d_st.refresh;
+  sd.retry = src->d_st.retry;
+  sd.expire = src->d_st.expire;
+  sd.default_ttl = src->d_st.minimum;
+}
+
+std::shared_ptr<DNSRecordContent> makeSOAContent(const SOAData& sd)
+{
+    struct soatimes st;
+    st.serial = sd.serial;
+    st.refresh = sd.refresh;
+    st.retry = sd.retry;
+    st.expire = sd.expire;
+    st.minimum = sd.default_ttl;
+    return std::make_shared<SOARecordContent>(sd.nameserver, sd.hostmaster, st);
+}
+
 
 void fillSOAData(const string &content, SOAData &data)
 {

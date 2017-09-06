@@ -103,7 +103,7 @@ LuaConfigItems::LuaConfigItems()
 {
   for (const auto &dsRecord : rootDSs) {
     auto ds=unique_ptr<DSRecordContent>(dynamic_cast<DSRecordContent*>(DSRecordContent::make(dsRecord)));
-    dsAnchors[DNSName(".")].insert(*ds);
+    dsAnchors[g_rootdnsname].insert(*ds);
   }
 }
 
@@ -139,7 +139,7 @@ try
     numsigs+= csp.second.signatures.size();
   }
    
-  set<DNSKEYRecordContent> keys;
+  skeyset_t keys;
   cspmap_t validrrsets;
 
   if(numsigs) {

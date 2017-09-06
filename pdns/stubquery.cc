@@ -43,19 +43,19 @@ try
     exit(EXIT_FAILURE);
   }
 
-  ::arg().set("recursor","If recursion is desired, IP address of a recursing nameserver")="no"; 
+  ::arg().set("resolver","Use this resolver for ALIAS and the internal stub resolver")="no"; 
 
   reportAllTypes();
   dns_random_init("0123456789abcdef");
   stubParseResolveConf();
 
-  vector<DNSResourceRecord> ret;
+  vector<DNSZoneRecord> ret;
 
-  int res=stubDoResolve(argv[1], DNSRecordContent::TypeToNumber(argv[2]), ret);
+  int res=stubDoResolve(DNSName(argv[1]), DNSRecordContent::TypeToNumber(argv[2]), ret);
 
   cout<<"res: "<<res<<endl;
   for(const auto& r : ret) {
-    cout<<r.getZoneRepresentation()<<endl;
+    cout<<r.dr.d_content->getZoneRepresentation()<<endl;
   }
 }
 catch(std::exception &e)

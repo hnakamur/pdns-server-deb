@@ -51,9 +51,9 @@ public:
   {
   }
   QType &operator=(uint16_t);  //!< Assigns integers to us
-  QType &operator=(const char *); //!< Assings strings to us
-  QType &operator=(const string &); //!< Assings strings to us
-  QType &operator=(const QType&rhs)  //!< Assings strings to us
+  QType &operator=(const char *); //!< Assigns strings to us
+  QType &operator=(const string &); //!< Assigns strings to us
+  QType &operator=(const QType&rhs)  //!< Assigns strings to us
   {
     code=rhs.code;
     return *this;
@@ -64,12 +64,6 @@ public:
     return code < rhs.code;
   }
 
-  template<class Archive>
-  void serialize(Archive &ar, const unsigned int version)
-  {
-    ar & code;
-  }
-
   const string getName() const; //!< Get a string representation of this type
   uint16_t getCode() const; //!< Get the integer representation of this type
   bool isSupportedType();
@@ -77,6 +71,7 @@ public:
 
   static int chartocode(const char *p); //!< convert a character string to a code
   enum typeenum : uint16_t {
+    ENT=0,
     A=1,
     NS=2,
     CNAME=5,
@@ -111,6 +106,7 @@ public:
     NSEC3=50,
     NSEC3PARAM=51,
     TLSA=52,
+    SMIMEA=53,
     RKEY=57,
     CDS=59,
     CDNSKEY=60,

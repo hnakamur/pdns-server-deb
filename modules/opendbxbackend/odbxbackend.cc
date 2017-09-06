@@ -179,7 +179,7 @@ bool OdbxBackend::getDomainInfo( const DNSName& domain, DomainInfo& di )
 
 
 
-bool OdbxBackend::getSOA( const DNSName& domain, SOAData& sd, DNSPacket* p )
+bool OdbxBackend::getSOA( const DNSName& domain, SOAData& sd)
 {
         const char* tmp;
 
@@ -660,7 +660,7 @@ bool OdbxBackend::createSlaveDomain( const string& ip, const DNSName& domain, co
 
 
 
-bool OdbxBackend::feedRecord( const DNSResourceRecord& rr, string *ordername )
+bool OdbxBackend::feedRecord( const DNSResourceRecord& rr, const DNSName& ordername )
 {
         try
         {

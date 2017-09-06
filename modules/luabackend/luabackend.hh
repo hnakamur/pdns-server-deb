@@ -54,17 +54,17 @@ public:
 
     LUABackend(const string &suffix="");
     ~LUABackend();
-    bool list(const DNSName &target, int domain_id, bool include_disabled=false);
-    void lookup(const QType &qtype, const DNSName &qname, DNSPacket *p, int domain_id);
-    bool get(DNSResourceRecord &rr);
+    bool list(const DNSName &target, int domain_id, bool include_disabled=false) override;
+    void lookup(const QType &qtype, const DNSName &qname, DNSPacket *p, int domain_id) override;
+    bool get(DNSResourceRecord &rr) override;
     //! fills the soadata struct with the SOA details. Returns false if there is no SOA.
-    bool getSOA(const DNSName &name, SOAData &soadata, DNSPacket *p=0);
+    bool getSOA(const DNSName &name, SOAData &soadata) override;
 
 
 //  MASTER BACKEND
 
-    void getUpdatedMasters(vector<DomainInfo>* domains);
-    void setNotifed(int id, uint32_t serial);
+    void getUpdatedMasters(vector<DomainInfo>* domains) override;
+    void setNotified(uint32_t id, uint32_t serial) override;
 
 
 //  SLAVE BACKEND
@@ -77,7 +77,7 @@ public:
     bool startTransaction(const DNSName &qname, int id) override;
     bool commitTransaction() override;
     bool abortTransaction() override;
-    bool feedRecord(const DNSResourceRecord &rr, string *ordername=0) override;
+    bool feedRecord(const DNSResourceRecord &rr, const DNSName &ordername) override;
 
 
 //  SUPERMASTER BACKEND
@@ -93,15 +93,15 @@ public:
     bool getDomainMetadata(const DNSName& name, const std::string& kind, std::vector<std::string>& meta) override;
     bool setDomainMetadata(const DNSName& name, const std::string& kind, const std::vector<std::string>& meta) override;
 
-    bool getDomainKeys(const DNSName& name, unsigned int kind, std::vector<KeyData>& keys) override ;
+    bool getDomainKeys(const DNSName& name, std::vector<KeyData>& keys) override ;
     bool removeDomainKey(const DNSName& name, unsigned int id) override ;
     bool activateDomainKey(const DNSName& name, unsigned int id) override ;
     bool deactivateDomainKey(const DNSName& name, unsigned int id) override ;
     bool getTSIGKey(const DNSName& name, DNSName* algorithm, string* content) override ;
-    int addDomainKey(const DNSName& name, const KeyData& key) override ;
+    bool addDomainKey(const DNSName& name, const KeyData& key, int64_t& id) override ;
     bool updateDNSSECOrderAndAuthAbsolute(uint32_t domain_id, const DNSName& qname, const std::string& ordername, bool auth);
-    bool getBeforeAndAfterNamesAbsolute(uint32_t id, const      string& qname, DNSName& unhashed, string& before, string& after) override;
-    bool updateDNSSECOrderNameAndAuth(uint32_t domain_id, const DNSName& zonename, const DNSName& qname, const DNSName& ordername, bool auth, const uint16_t qtype=QType::ANY) override;
+    bool getBeforeAndAfterNamesAbsolute(uint32_t id, const DNSName& qname, DNSName& unhashed, DNSName& before, DNSName& after) override;
+    bool updateDNSSECOrderNameAndAuth(uint32_t domain_id, const DNSName& qname, const DNSName& ordername, bool auth, const uint16_t qtype=QType::ANY) override;
     bool updateDNSSECOrderAndAuth(uint32_t domain_id, const DNSName& zonename, const DNSName& qname, bool auth);
 //  OTHER
     void reload() override ;
@@ -131,7 +131,7 @@ private:
 
     //master functions....
     int f_lua_getupdatedmasters;
-    int f_lua_setnotifed;
+    int f_lua_setnotified;
 
     //slave functions....
     int f_lua_getdomaininfo;

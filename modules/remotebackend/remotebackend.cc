@@ -214,8 +214,8 @@ bool RemoteBackend::list(const DNSName& target, int domain_id, bool include_disa
      { "method", "list" },
      { "parameters", Json::object{
        { "zonename", target.toString() },
-       { "domain-id", domain_id },
-       { "include-disabled", include_disabled }
+       { "domain_id", domain_id },
+       { "include_disabled", include_disabled }
      }}
    };
 
@@ -252,7 +252,7 @@ bool RemoteBackend::get(DNSResourceRecord &rr) {
    return true;
 }
 
-bool RemoteBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::string& qname, DNSName& unhashed, std::string& before, std::string& after) {
+bool RemoteBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const DNSName& qname, DNSName& unhashed, DNSName& before, DNSName& after) {
    // no point doing dnssec if it's not supported
    if (d_dnssec == false) return false;
 
@@ -260,7 +260,7 @@ bool RemoteBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::strin
      { "method", "getBeforeAndAfterNamesAbsolute" },
      { "parameters", Json::object {
        { "id", Json(static_cast<double>(id)) },
-       { "qname", qname }
+       { "qname", qname.toString() }
      }}
    };
    Json answer;
@@ -269,12 +269,12 @@ bool RemoteBackend::getBeforeAndAfterNamesAbsolute(uint32_t id, const std::strin
      return false;
 
    unhashed = DNSName(stringFromJson(answer["result"], "unhashed"));
-   before = "";
-   after = "";
+   before.clear();
+   after.clear();
    if (answer["result"]["before"] != Json())
-     before = stringFromJson(answer["result"], "before");
+     before = DNSName(stringFromJson(answer["result"], "before"));
    if (answer["result"]["after"] != Json())
-     after = stringFromJson(answer["result"], "after");
+     after = DNSName(stringFromJson(answer["result"], "after"));
 
    return true;
 }
@@ -356,15 +356,14 @@ bool RemoteBackend::setDomainMetadata(const DNSName& name, const std::string& ki
 }
 
 
-bool RemoteBackend::getDomainKeys(const DNSName& name, unsigned int kind, std::vector<DNSBackend::KeyData>& keys) {
+bool RemoteBackend::getDomainKeys(const DNSName& name, std::vector<DNSBackend::KeyData>& keys) {
    // no point doing dnssec if it's not supported
    if (d_dnssec == false) return false;
 
    Json query = Json::object{
      { "method", "getDomainKeys" },
      { "parameters", Json::object{
-       { "name", name.toString() },
-       { "kind", static_cast<int>(kind) }
+       { "name", name.toString() }
      }}
    };
 
@@ -405,7 +404,7 @@ bool RemoteBackend::removeDomainKey(const DNSName& name, unsigned int id) {
    return true;
 }
 
-int RemoteBackend::addDomainKey(const DNSName& name, const KeyData& key) {
+bool RemoteBackend::addDomainKey(const DNSName& name, const KeyData& key, int64_t& id) {
    // no point doing dnssec if it's not supported
    if (d_dnssec == false) return false;
 
@@ -425,7 +424,8 @@ int RemoteBackend::addDomainKey(const DNSName& name, const KeyData& key) {
    if (this->send(query) == false || this->recv(answer) == false)
      return false;
 
-   return answer["result"].int_value();
+   id = answer["result"].int_value();
+   return id >= 0;
 }
 
 bool RemoteBackend::activateDomainKey(const DNSName& name, unsigned int id) {
@@ -716,7 +716,7 @@ bool RemoteBackend::replaceRRSet(uint32_t domain_id, const DNSName& qname, const
    return true;
 }
 
-bool RemoteBackend::feedRecord(const DNSResourceRecord &rr, string *ordername) {
+bool RemoteBackend::feedRecord(const DNSResourceRecord &rr, const DNSName &ordername) {
    Json query = Json::object{
      { "method", "feedRecord" },
      { "parameters", Json::object{
@@ -727,7 +727,7 @@ bool RemoteBackend::feedRecord(const DNSResourceRecord &rr, string *ordername) {
           { "content", rr.content },
           { "ttl", static_cast<int>(rr.ttl) },
           { "auth", rr.auth },
-          { "ordername", (ordername==nullptr?Json():*ordername) }
+          { "ordername", (ordername.empty()?Json():ordername.toString()) }
         }},
         { "trxid", static_cast<double>(d_trxid) },
      }}

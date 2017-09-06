@@ -28,7 +28,6 @@
 #include "pdns/dns.hh"
 #include "pdns/dnsbackend.hh"
 #include "pdns/dnspacket.hh"
-#include "pdns/ueberbackend.hh"
 #include "pdns/pdnsexception.hh"
 #include "pdns/logger.hh"
 #include "pdns/arguments.hh"
@@ -44,7 +43,8 @@ gPgSQLBackend::gPgSQLBackend(const string &mode, const string &suffix)  : GSQLBa
         	  getArg("host"),
         	  getArg("port"),
         	  getArg("user"),
-        	  getArg("password")));
+        	  getArg("password"),
+        	  getArg("extra-connection-parameters")));
   }
 
   catch(SSqlException &e) {
@@ -52,6 +52,24 @@ gPgSQLBackend::gPgSQLBackend(const string &mode, const string &suffix)  : GSQLBa
     throw PDNSException("Unable to launch "+mode+" connection: "+e.txtReason());
   }
   L<<Logger::Info<<mode<<" Connection successful. Connected to database '"<<getArg("dbname")<<"' on '"<<getArg("host")<<"'."<<endl;
+}
+
+void gPgSQLBackend::reconnect()
+{
+  freeStatements();
+
+  if (d_db) {
+    d_db->reconnect();
+  }
+}
+
+bool gPgSQLBackend::inTransaction()
+{
+  const auto* db = dynamic_cast<SPgSQL*>(d_db);
+  if (db) {
+    return db->in_trx();
+  }
+  return false;
 }
 
 class gPgSQLFactory : public BackendFactory
@@ -66,6 +84,7 @@ public:
     declare(suffix,"host","Pdns backend host to connect to","");
     declare(suffix,"port","Database backend port to connect to","");
     declare(suffix,"password","Pdns backend password to connect with","");
+    declare(suffix,"extra-connection-parameters", "Extra parameters to add to connection string","");
 
     declare(suffix,"dnssec","Enable DNSSEC processing","no");
 
@@ -118,6 +137,7 @@ public:
     declare(suffix,"delete-names-query","","delete from records where domain_id=$1 and name=$2");
 
     declare(suffix,"add-domain-key-query","", "insert into cryptokeys (domain_id, flags, active, content) select id, $1, $2, $3 from domains where name=$4");
+    declare(suffix,"get-last-inserted-key-id-query","", "select lastval()");
     declare(suffix,"list-domain-keys-query","", "select cryptokeys.id, flags, case when active then 1 else 0 end as active, content from domains, cryptokeys where cryptokeys.domain_id=domains.id and name=$1");
     declare(suffix,"get-all-domain-metadata-query","", "select kind,content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name=$1");
     declare(suffix,"get-domain-metadata-query","", "select content from domains, domainmetadata where domainmetadata.domain_id=domains.id and name=$1 and domainmetadata.kind=$2");

@@ -106,9 +106,15 @@ size_t readn2(int fd, void* buffer, size_t len)
   return len;
 }
 
-size_t readn2WithTimeout(int fd, void* buffer, size_t len, int timeout)
+size_t readn2WithTimeout(int fd, void* buffer, size_t len, int idleTimeout, int totalTimeout)
 {
   size_t pos = 0;
+  time_t start = 0;
+  int remainingTime = totalTimeout;
+  if (totalTimeout) {
+    start = time(NULL);
+  }
+
   do {
     ssize_t got = read(fd, (char *)buffer + pos, len - pos);
     if (got > 0) {
@@ -119,7 +125,7 @@ size_t readn2WithTimeout(int fd, void* buffer, size_t len, int timeout)
     }
     else {
       if (errno == EAGAIN) {
-        int res = waitForData(fd, timeout);
+        int res = waitForData(fd, (totalTimeout == 0 || idleTimeout <= remainingTime) ? idleTimeout : remainingTime);
         if (res > 0) {
           /* there is data available */
         }
@@ -132,6 +138,16 @@ size_t readn2WithTimeout(int fd, void* buffer, size_t len, int timeout)
       else {
         unixDie("failed in readn2WithTimeout");
       }
+    }
+
+    if (totalTimeout) {
+      time_t now = time(NULL);
+      int elapsed = now - start;
+      if (elapsed >= remainingTime) {
+        throw runtime_error("Timeout while reading data");
+      }
+      start = now;
+      remainingTime -= elapsed;
     }
   }
   while (pos < len);
@@ -533,25 +549,25 @@ string makeHexDump(const string& str)
 }
 
 // shuffle, maintaining some semblance of order
-void shuffle(vector<DNSResourceRecord>& rrs)
+void shuffle(vector<DNSZoneRecord>& rrs)
 {
-  vector<DNSResourceRecord>::iterator first, second;
+  vector<DNSZoneRecord>::iterator first, second;
   for(first=rrs.begin();first!=rrs.end();++first)
-    if(first->d_place==DNSResourceRecord::ANSWER && first->qtype.getCode() != QType::CNAME) // CNAME must come first
+    if(first->dr.d_place==DNSResourceRecord::ANSWER && first->dr.d_type != QType::CNAME) // CNAME must come first
       break;
   for(second=first;second!=rrs.end();++second)
-    if(second->d_place!=DNSResourceRecord::ANSWER)
+    if(second->dr.d_place!=DNSResourceRecord::ANSWER)
       break;
 
-  if(second-first>1)
+  if(second-first > 1)
     random_shuffle(first,second);
 
   // now shuffle the additional records
   for(first=second;first!=rrs.end();++first)
-    if(first->d_place==DNSResourceRecord::ADDITIONAL && first->qtype.getCode() != QType::CNAME) // CNAME must come first
+    if(first->dr.d_place==DNSResourceRecord::ADDITIONAL && first->dr.d_type != QType::CNAME) // CNAME must come first
       break;
   for(second=first;second!=rrs.end();++second)
-    if(second->d_place!=DNSResourceRecord::ADDITIONAL)
+    if(second->dr.d_place!=DNSResourceRecord::ADDITIONAL)
       break;
 
   if(second-first>1)
@@ -688,45 +704,6 @@ string stripDot(const string& dom)
 }
 
 
-string labelReverse(const std::string& qname)
-{
-  if(qname.empty())
-    return qname;
-
-  bool dotName = qname.find('.') != string::npos;
-
-  vector<string> labels;
-  stringtok(labels, qname, ". ");
-  if(labels.size()==1)
-    return qname;
-
-  string ret;  // vv const_reverse_iter http://gcc.gnu.org/bugzilla/show_bug.cgi?id=11729
-  for(vector<string>::reverse_iterator iter = labels.rbegin(); iter != labels.rend(); ++iter) {
-    if(iter != labels.rbegin())
-      ret.append(1, dotName ? ' ' : '.');
-    ret+=*iter;
-  }
-  return ret;
-}
-
-// do NOT feed trailing dots!
-// www.powerdns.com, powerdns.com -> www
-string makeRelative(const std::string& fqdn, const std::string& zone)
-{
-  if(zone.empty())
-    return fqdn;
-  if(toLower(fqdn) != toLower(zone))
-    return fqdn.substr(0, fqdn.size() - zone.length() - 1); // strip domain name
-  return "";
-}
-
-string dotConcat(const std::string& a, const std::string &b)
-{
-  if(a.empty() || b.empty())
-    return a+b;
-  else
-    return a+"."+b;
-}
 
 int makeIPv6sockaddr(const std::string& addr, struct sockaddr_in6* ret)
 {
@@ -760,7 +737,8 @@ int makeIPv6sockaddr(const std::string& addr, struct sockaddr_in6* ret)
     hints.ai_flags = AI_NUMERICHOST;
 
     int error;
-    if((error=getaddrinfo(ourAddr.c_str(), 0, &hints, &res))) { // this is correct
+    // getaddrinfo has anomalous return codes, anything nonzero is an error, positive or negative
+    if((error=getaddrinfo(ourAddr.c_str(), 0, &hints, &res))) {
       return -1;
     }
 
@@ -1325,7 +1303,7 @@ gid_t strToGID(const string &str)
 
 unsigned int pdns_stou(const std::string& str, size_t * idx, int base)
 {
-  if (str.empty()) return 0; // compability
+  if (str.empty()) return 0; // compatibility
   unsigned long result = std::stoul(str, idx, base);
   if (result > std::numeric_limits<unsigned int>::max()) {
     throw std::out_of_range("stou");
@@ -1333,3 +1311,27 @@ unsigned int pdns_stou(const std::string& str, size_t * idx, int base)
   return static_cast<unsigned int>(result);
 }
 
+bool isSettingThreadCPUAffinitySupported()
+{
+#ifdef HAVE_PTHREAD_SETAFFINITY_NP
+  return true;
+#else
+  return false;
+#endif
+}
+
+int mapThreadToCPUList(pthread_t tid, const std::set<int>& cpus)
+{
+#ifdef HAVE_PTHREAD_SETAFFINITY_NP
+  cpu_set_t cpuset;
+  CPU_ZERO(&cpuset);
+  for (const auto cpuID : cpus) {
+    CPU_SET(cpuID, &cpuset);
+  }
+
+  return pthread_setaffinity_np(tid,
+                                sizeof(cpuset),
+                                &cpuset);
+#endif /* HAVE_PTHREAD_SETAFFINITY_NP */
+  return ENOSYS;
+}
