@@ -1,0 +1,25 @@
+From b91cfe5c069df975176f5fd944540f72fc5d01bb Mon Sep 17 00:00:00 2001
+From: Kees Monshouwer <mind04@monshouwer.org>
+Date: Wed, 3 May 2017 21:49:11 +0200
+Subject: [PATCH] auth: lowercase qname before NSEC generation
+
+[zeha@debian.org]: Patch from upstream PR #5289.
+https://github.com/PowerDNS/pdns/commit/b91cfe5c069df975176f5fd944540f72fc5d01bb
+
+---
+ pdns/dnsbackend.cc | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/pdns/dnsbackend.cc b/pdns/dnsbackend.cc
+index 4e43ffc2b1..2454d6efb8 100644
+--- a/pdns/dnsbackend.cc
++++ b/pdns/dnsbackend.cc
+@@ -273,7 +273,7 @@ bool DNSBackend::getBeforeAndAfterNames(uint32_t id, const DNSName& zonename, co
+   // lcqname=labelReverse(lcqname);
+   DNSName dnc;
+   string relqname, sbefore, safter;
+-  relqname=labelReverse(makeRelative(qname.toStringNoDot(), zonename.toStringNoDot())); // FIXME400
++  relqname=labelReverse(makeRelative(toLower(qname.toStringNoDot()), zonename.toStringNoDot()));
+   //sbefore = before.toString();
+   //safter = after.toString();
+   bool ret = this->getBeforeAndAfterNamesAbsolute(id, relqname, dnc, sbefore, safter);
