@@ -1,3 +1,9 @@
+pdns (4.0.3-1+deb9u1) stretch; urgency=medium
+
+  * Fix incorrect qname casing in NSEC3 generation (Closes: #869222)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 31 Oct 2017 07:11:29 +0000
+
 pdns (4.0.3-1) unstable; urgency=medium
 
   * New upstream version 4.0.3, fixing bug when running bindbackend
