@@ -21,8 +21,8 @@
 /* Defined if the Boost unit_test_framework library is available */
 #undef HAVE_BOOST_UNIT_TEST_FRAMEWORK
 
-/* Define to 1 if you have botan 1.10 */
-#undef HAVE_BOTAN110
+/* Define to 1 if you have botan */
+#undef HAVE_BOTAN
 
 /* Define to 1 if you have the <cdb.h> header file. */
 #undef HAVE_CDB_H

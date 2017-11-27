@@ -281,7 +281,7 @@ void AuthWebServer::indexfunction(HttpRequest* req, HttpResponse* resp)
     printtable(ret,req->getvars["ring"],S.getRingTitle(req->getvars["ring"]),100);
 
   ret<<"</div></div>"<<endl;
-  ret<<"<footer class=\"row\">"<<fullVersionString()<<"<br>&copy; 2013 - 2016 <a href=\"http://www.powerdns.com/\">PowerDNS.COM BV</a>.</footer>"<<endl;
+  ret<<"<footer class=\"row\">"<<fullVersionString()<<"<br>&copy; 2013 - 2017 <a href=\"http://www.powerdns.com/\">PowerDNS.COM BV</a>.</footer>"<<endl;
   ret<<"</body></html>"<<endl;
 
   resp->body = ret.str();
@@ -655,6 +655,7 @@ static void apiServerZones(HttpRequest* req, HttpResponse* resp) {
 
     // if records/comments are given, load and check them
     bool have_soa = false;
+    bool have_zone_ns = false;
     vector<DNSResourceRecord> new_records;
     vector<Comment> new_comments;
     vector<DNSResourceRecord> new_ptrs;
@@ -690,6 +691,9 @@ static void apiServerZones(HttpRequest* req, HttpResponse* resp) {
         increaseSOARecord(rr, soa_edit_api_kind, soa_edit_kind);
         // fixup dots after serializeSOAData/increaseSOARecord
         rr.content = makeBackendRecordContent(rr.qtype, rr.content);
+      }
+      if (rr.qtype.getCode() == QType::NS && rr.qname==zonename) {
+        have_zone_ns = true;
       }
     }
 
@@ -731,6 +735,9 @@ static void apiServerZones(HttpRequest* req, HttpResponse* resp) {
       }
       autorr.qtype = "NS";
       new_records.push_back(autorr);
+      if (have_zone_ns) {
+        throw ApiException("Nameservers list MUST NOT be mixed with zone-level NS in rrsets");
+      }
     }
 
     // no going back after this
@@ -860,7 +867,7 @@ static void apiServerZoneExport(HttpRequest* req, HttpResponse* resp) {
 static void apiServerZoneAxfrRetrieve(HttpRequest* req, HttpResponse* resp) {
   DNSName zonename = apiZoneIdToName(req->parameters["id"]);
 
-  if(req->method != "PUT")
+  if(req->method != "PUT" || ::arg().mustDo("api-readonly"))
     throw HttpMethodNotAllowedException();
 
   UeberBackend B;
@@ -879,7 +886,7 @@ static void apiServerZoneAxfrRetrieve(HttpRequest* req, HttpResponse* resp) {
 static void apiServerZoneNotify(HttpRequest* req, HttpResponse* resp) {
   DNSName zonename = apiZoneIdToName(req->parameters["id"]);
 
-  if(req->method != "PUT")
+  if(req->method != "PUT" || ::arg().mustDo("api-readonly"))
     throw HttpMethodNotAllowedException();
 
   UeberBackend B;
@@ -1191,7 +1198,7 @@ static void apiServerSearchData(HttpRequest* req, HttpResponse* resp) {
 }
 
 void apiServerCacheFlush(HttpRequest* req, HttpResponse* resp) {
-  if(req->method != "PUT")
+  if(req->method != "PUT" || ::arg().mustDo("api-readonly"))
     throw HttpMethodNotAllowedException();
 
   DNSName canon = apiNameToDNSName(req->getvars["domain"]);
