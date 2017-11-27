@@ -80,7 +80,7 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@BOTAN110_TRUE@am__append_1 = $(BOTAN110_CFLAGS)
+@BOTAN_TRUE@am__append_1 = $(BOTAN_CFLAGS)
 @PKCS11_TRUE@am__append_2 = $(P11KIT1_CFLAGS)
 @SQLITE3_TRUE@am__append_3 = $(SQLITE3_CFLAGS)
 @LUA_TRUE@am__append_4 = $(LUA_CFLAGS)
@@ -118,8 +118,8 @@ EXTRA_PROGRAMS = calidns$(EXEEXT) comfun$(EXEEXT) dnsbulktest$(EXEEXT) \
 	nsec3dig$(EXEEXT) saxfr$(EXEEXT) stubquery$(EXEEXT) \
 	sdig$(EXEEXT) speedtest$(EXEEXT) testrunner$(EXEEXT) \
 	toysdig$(EXEEXT) tsig-tests$(EXEEXT) zone2ldap$(EXEEXT)
-@BOTAN110_TRUE@am__append_9 = botan110signers.cc
-@BOTAN110_TRUE@am__append_10 = $(BOTAN110_LIBS)
+@BOTAN_TRUE@am__append_9 = botansigners.cc
+@BOTAN_TRUE@am__append_10 = $(BOTAN_LIBS)
 @LIBSODIUM_TRUE@am__append_11 = sodiumsigners.cc
 @LIBSODIUM_TRUE@am__append_12 = $(LIBSODIUM_LIBS)
 @LIBDECAF_TRUE@am__append_13 = decafsigners.cc
@@ -131,8 +131,8 @@ EXTRA_PROGRAMS = calidns$(EXEEXT) comfun$(EXEEXT) dnsbulktest$(EXEEXT) \
 @PKCS11_TRUE@am__append_19 = $(P11KIT1_LIBS)
 @LUA_TRUE@am__append_20 = $(LUA_LIBS)
 @GSS_TSIG_TRUE@am__append_21 = $(GSS_LIBS)
-@BOTAN110_TRUE@am__append_22 = botan110signers.cc
-@BOTAN110_TRUE@am__append_23 = $(BOTAN110_LIBS)
+@BOTAN_TRUE@am__append_22 = botansigners.cc
+@BOTAN_TRUE@am__append_23 = $(BOTAN_LIBS)
 @LIBSODIUM_TRUE@am__append_24 = sodiumsigners.cc
 @LIBSODIUM_TRUE@am__append_25 = $(LIBSODIUM_LIBS)
 @LIBDECAF_TRUE@am__append_26 = decafsigners.cc
@@ -158,8 +158,8 @@ EXTRA_PROGRAMS = calidns$(EXEEXT) comfun$(EXEEXT) dnsbulktest$(EXEEXT) \
 @PKCS11_TRUE@am__append_42 = $(P11KIT1_LIBS)
 @GSS_TSIG_TRUE@am__append_43 = $(GSS_LIBS)
 @GSS_TSIG_TRUE@am__append_44 = $(GSS_LIBS)
-@BOTAN110_TRUE@am__append_45 = botan110signers.cc
-@BOTAN110_TRUE@am__append_46 = $(BOTAN110_LIBS)
+@BOTAN_TRUE@am__append_45 = botansigners.cc
+@BOTAN_TRUE@am__append_46 = $(BOTAN_LIBS)
 @PKCS11_TRUE@am__append_47 = pkcs11signers.cc pkcs11signers.hh
 @PKCS11_TRUE@am__append_48 = $(P11KIT1_LIBS)
 @PKCS11_TRUE@am__append_49 = pkcs11signers.cc pkcs11signers.hh
@@ -174,8 +174,10 @@ EXTRA_PROGRAMS = calidns$(EXEEXT) comfun$(EXEEXT) dnsbulktest$(EXEEXT) \
 @PKCS11_TRUE@am__append_56 = $(P11KIT1_LIBS)
 @LIBSODIUM_TRUE@am__append_57 = sodiumsigners.cc
 @LIBSODIUM_TRUE@am__append_58 = $(LIBSODIUM_LIBS)
-@LIBDECAF_TRUE@am__append_59 = decafsigners.cc
-@LIBDECAF_TRUE@am__append_60 = $(LIBDECAF_LIBS)
+@BOTAN_TRUE@am__append_59 = botansigners.cc
+@BOTAN_TRUE@am__append_60 = $(BOTAN_LIBS)
+@LIBDECAF_TRUE@am__append_61 = decafsigners.cc
+@LIBDECAF_TRUE@am__append_62 = $(LIBDECAF_LIBS)
 @HAVE_BOOST_GE_148_TRUE@@UNIT_TESTS_TRUE@TESTS = testrunner$(EXEEXT)
 subdir = pdns
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
@@ -185,7 +187,6 @@ DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am \
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
 am__aclocal_m4_deps =  \
 	$(top_srcdir)/m4/ax_arg_default_enable_disable.m4 \
-	$(top_srcdir)/m4/ax_check_link_flag.m4 \
 	$(top_srcdir)/m4/ax_cxx_compile_stdcxx_11.m4 \
 	$(top_srcdir)/m4/boost.m4 $(top_srcdir)/m4/libtool.m4 \
 	$(top_srcdir)/m4/ltoptions.m4 $(top_srcdir)/m4/ltsugar.m4 \
@@ -362,9 +363,10 @@ am_dnsreplay_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnsparser.$(OBJEXT) \
 	dnspcap.$(OBJEXT) dnsrecords.$(OBJEXT) dnsreplay.$(OBJEXT) \
 	dnswriter.$(OBJEXT) ednssubnet.$(OBJEXT) ednsoptions.$(OBJEXT) \
-	logger.$(OBJEXT) misc.$(OBJEXT) nsecrecords.$(OBJEXT) \
-	qtype.$(OBJEXT) rcpgenerator.$(OBJEXT) sillyrecords.$(OBJEXT) \
-	statbag.$(OBJEXT) unix_utility.$(OBJEXT)
+	iputils.$(OBJEXT) logger.$(OBJEXT) misc.$(OBJEXT) \
+	nsecrecords.$(OBJEXT) qtype.$(OBJEXT) rcpgenerator.$(OBJEXT) \
+	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
+	unix_utility.$(OBJEXT)
 dnsreplay_OBJECTS = $(am_dnsreplay_OBJECTS)
 dnsreplay_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1)
 dnsreplay_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
@@ -531,11 +533,11 @@ am__pdns_server_SOURCES_DIST = arguments.cc arguments.hh \
 	ueberbackend.cc ueberbackend.hh unix_semaphore.cc \
 	unix_utility.cc utility.hh version.cc version.hh webserver.cc \
 	webserver.hh ws-api.cc ws-api.hh ws-auth.cc ws-auth.hh \
-	zoneparser-tng.cc botan110signers.cc sodiumsigners.cc \
+	zoneparser-tng.cc botansigners.cc sodiumsigners.cc \
 	decafsigners.cc ssqlite3.cc ssqlite3.hh pkcs11signers.cc \
 	pkcs11signers.hh
 am__dirstamp = $(am__leading_dot)dirstamp
-@BOTAN110_TRUE@am__objects_2 = botan110signers.$(OBJEXT)
+@BOTAN_TRUE@am__objects_2 = botansigners.$(OBJEXT)
 @LIBSODIUM_TRUE@am__objects_3 = sodiumsigners.$(OBJEXT)
 @LIBDECAF_TRUE@am__objects_4 = decafsigners.$(OBJEXT)
 @SQLITE3_TRUE@am__objects_5 = ssqlite3.$(OBJEXT)
@@ -569,7 +571,7 @@ am_pdns_server_OBJECTS = arguments.$(OBJEXT) auth-carbon.$(OBJEXT) \
 	$(am__objects_3) $(am__objects_4) $(am__objects_5) \
 	$(am__objects_1)
 pdns_server_OBJECTS = $(am_pdns_server_OBJECTS)
-@BOTAN110_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
+@BOTAN_TRUE@am__DEPENDENCIES_4 = $(am__DEPENDENCIES_1)
 @LIBSODIUM_TRUE@am__DEPENDENCIES_5 = $(am__DEPENDENCIES_1)
 @LIBDECAF_TRUE@am__DEPENDENCIES_6 = $(am__DEPENDENCIES_1)
 @SQLITE3_TRUE@am__DEPENDENCIES_7 = $(am__DEPENDENCIES_1)
@@ -597,8 +599,8 @@ am__pdnsutil_SOURCES_DIST = arguments.cc backends/gsql/gsqlbackend.cc \
 	qtype.cc randomhelper.cc rcpgenerator.cc rcpgenerator.hh \
 	serialtweaker.cc signingpipe.cc sillyrecords.cc sstuff.hh \
 	statbag.cc ueberbackend.cc unix_utility.cc zoneparser-tng.cc \
-	botan110signers.cc sodiumsigners.cc decafsigners.cc \
-	ssqlite3.cc ssqlite3.hh pkcs11signers.cc pkcs11signers.hh
+	botansigners.cc sodiumsigners.cc decafsigners.cc ssqlite3.cc \
+	ssqlite3.hh pkcs11signers.cc pkcs11signers.hh
 am_pdnsutil_OBJECTS = arguments.$(OBJEXT) \
 	backends/gsql/gsqlbackend.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
@@ -650,9 +652,9 @@ saxfr_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 am_sdig_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) dns.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnsparser.$(OBJEXT) \
 	dnsrecords.$(OBJEXT) dnswriter.$(OBJEXT) ednssubnet.$(OBJEXT) \
-	logger.$(OBJEXT) misc.$(OBJEXT) nsecrecords.$(OBJEXT) \
-	qtype.$(OBJEXT) rcpgenerator.$(OBJEXT) sdig.$(OBJEXT) \
-	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
+	iputils.$(OBJEXT) logger.$(OBJEXT) misc.$(OBJEXT) \
+	nsecrecords.$(OBJEXT) qtype.$(OBJEXT) rcpgenerator.$(OBJEXT) \
+	sdig.$(OBJEXT) sillyrecords.$(OBJEXT) statbag.$(OBJEXT) \
 	unix_utility.$(OBJEXT)
 sdig_OBJECTS = $(am_sdig_OBJECTS)
 sdig_DEPENDENCIES = $(am__DEPENDENCIES_1)
@@ -704,7 +706,7 @@ am__testrunner_SOURCES_DIST = arguments.cc base32.cc base64.cc \
 	test-statbag_cc.cc test-zoneparser_tng_cc.cc testrunner.cc \
 	ueberbackend.cc unix_utility.cc zoneparser-tng.cc \
 	zoneparser-tng.hh pkcs11signers.cc pkcs11signers.hh \
-	sodiumsigners.cc decafsigners.cc
+	sodiumsigners.cc botansigners.cc decafsigners.cc
 am_testrunner_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	base64.$(OBJEXT) bindlexer.$(OBJEXT) bindparser.$(OBJEXT) \
 	dbdnsseckeeper.$(OBJEXT) dns.$(OBJEXT) dns_random.$(OBJEXT) \
@@ -732,7 +734,7 @@ am_testrunner_OBJECTS = arguments.$(OBJEXT) base32.$(OBJEXT) \
 	test-zoneparser_tng_cc.$(OBJEXT) testrunner.$(OBJEXT) \
 	ueberbackend.$(OBJEXT) unix_utility.$(OBJEXT) \
 	zoneparser-tng.$(OBJEXT) $(am__objects_1) $(am__objects_3) \
-	$(am__objects_4)
+	$(am__objects_2) $(am__objects_4)
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@nodist_testrunner_OBJECTS =  \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	dnsmessage.pb.$(OBJEXT)
 testrunner_OBJECTS = $(am_testrunner_OBJECTS) \
@@ -742,27 +744,28 @@ testrunner_OBJECTS = $(am_testrunner_OBJECTS) \
 testrunner_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_10) $(am__DEPENDENCIES_2) \
-	$(am__DEPENDENCIES_5) $(am__DEPENDENCIES_6)
+	$(am__DEPENDENCIES_5) $(am__DEPENDENCIES_4) \
+	$(am__DEPENDENCIES_6)
 testrunner_LINK = $(LIBTOOL) $(AM_V_lt) --tag=CXX $(AM_LIBTOOLFLAGS) \
 	$(LIBTOOLFLAGS) --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(testrunner_LDFLAGS) $(LDFLAGS) -o $@
 am__toysdig_SOURCES_DIST = base32.cc base64.cc base64.hh dns_random.cc \
 	dnsname.cc dnsname.hh dnslabeltext.cc dnsparser.cc \
 	dnsparser.hh dnsrecords.cc dnssecinfra.cc dnswriter.cc \
-	dnswriter.hh ednssubnet.cc ednssubnet.hh filterpo.hh \
-	gss_context.cc gss_context.hh logger.cc misc.cc misc.hh \
-	nsecrecords.cc opensslsigners.cc opensslsigners.hh qtype.cc \
-	randomhelper.cc root-dnssec.hh rcpgenerator.cc rcpgenerator.hh \
-	rec-lua-conf.hh recursor_cache.hh sholder.hh sillyrecords.cc \
-	sortlist.hh sstuff.hh statbag.cc toysdig.cc unix_utility.cc \
-	validate.cc validate.hh botan110signers.cc pkcs11signers.cc \
-	pkcs11signers.hh
+	dnswriter.hh ednssubnet.cc ednssubnet.hh iputils.cc iputils.hh \
+	filterpo.hh gss_context.cc gss_context.hh logger.cc misc.cc \
+	misc.hh nsecrecords.cc opensslsigners.cc opensslsigners.hh \
+	qtype.cc randomhelper.cc root-dnssec.hh rcpgenerator.cc \
+	rcpgenerator.hh rec-lua-conf.hh recursor_cache.hh sholder.hh \
+	sillyrecords.cc sortlist.hh sstuff.hh statbag.cc toysdig.cc \
+	unix_utility.cc validate.cc validate.hh botansigners.cc \
+	pkcs11signers.cc pkcs11signers.hh
 am_toysdig_OBJECTS = base32.$(OBJEXT) base64.$(OBJEXT) \
 	dns_random.$(OBJEXT) dnsname.$(OBJEXT) dnslabeltext.$(OBJEXT) \
 	dnsparser.$(OBJEXT) dnsrecords.$(OBJEXT) dnssecinfra.$(OBJEXT) \
-	dnswriter.$(OBJEXT) ednssubnet.$(OBJEXT) gss_context.$(OBJEXT) \
-	logger.$(OBJEXT) misc.$(OBJEXT) nsecrecords.$(OBJEXT) \
-	opensslsigners.$(OBJEXT) qtype.$(OBJEXT) \
+	dnswriter.$(OBJEXT) ednssubnet.$(OBJEXT) iputils.$(OBJEXT) \
+	gss_context.$(OBJEXT) logger.$(OBJEXT) misc.$(OBJEXT) \
+	nsecrecords.$(OBJEXT) opensslsigners.$(OBJEXT) qtype.$(OBJEXT) \
 	randomhelper.$(OBJEXT) rcpgenerator.$(OBJEXT) \
 	sillyrecords.$(OBJEXT) statbag.$(OBJEXT) toysdig.$(OBJEXT) \
 	unix_utility.$(OBJEXT) validate.$(OBJEXT) $(am__objects_2) \
@@ -1184,8 +1187,8 @@ BOOST_ROOT = @BOOST_ROOT@
 BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS = @BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS@
 BOOST_UNIT_TEST_FRAMEWORK_LDPATH = @BOOST_UNIT_TEST_FRAMEWORK_LDPATH@
 BOOST_UNIT_TEST_FRAMEWORK_LIBS = @BOOST_UNIT_TEST_FRAMEWORK_LIBS@
-BOTAN110_CFLAGS = @BOTAN110_CFLAGS@
-BOTAN110_LIBS = @BOTAN110_LIBS@
+BOTAN_CFLAGS = @BOTAN_CFLAGS@
+BOTAN_LIBS = @BOTAN_LIBS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CDB_CFLAGS = @CDB_CFLAGS@
@@ -1572,6 +1575,7 @@ sdig_SOURCES = \
 	dnsrecords.cc \
 	dnswriter.cc dnswriter.hh \
 	ednssubnet.cc \
+	iputils.hh iputils.cc \
 	logger.cc \
 	misc.cc misc.hh \
 	nsecrecords.cc \
@@ -1709,13 +1713,14 @@ nsec3dig_LDFLAGS = $(AM_LDFLAGS) $(LIBCRYPTO_LDFLAGS)
 toysdig_SOURCES = base32.cc base64.cc base64.hh dns_random.cc \
 	dnsname.cc dnsname.hh dnslabeltext.cc dnsparser.cc \
 	dnsparser.hh dnsrecords.cc dnssecinfra.cc dnswriter.cc \
-	dnswriter.hh ednssubnet.cc ednssubnet.hh filterpo.hh \
-	gss_context.cc gss_context.hh logger.cc misc.cc misc.hh \
-	nsecrecords.cc opensslsigners.cc opensslsigners.hh qtype.cc \
-	randomhelper.cc root-dnssec.hh rcpgenerator.cc rcpgenerator.hh \
-	rec-lua-conf.hh recursor_cache.hh sholder.hh sillyrecords.cc \
-	sortlist.hh sstuff.hh statbag.cc toysdig.cc unix_utility.cc \
-	validate.cc validate.hh $(am__append_45) $(am__append_47)
+	dnswriter.hh ednssubnet.cc ednssubnet.hh iputils.cc iputils.hh \
+	filterpo.hh gss_context.cc gss_context.hh logger.cc misc.cc \
+	misc.hh nsecrecords.cc opensslsigners.cc opensslsigners.hh \
+	qtype.cc randomhelper.cc root-dnssec.hh rcpgenerator.cc \
+	rcpgenerator.hh rec-lua-conf.hh recursor_cache.hh sholder.hh \
+	sillyrecords.cc sortlist.hh sstuff.hh statbag.cc toysdig.cc \
+	unix_utility.cc validate.cc validate.hh $(am__append_45) \
+	$(am__append_47)
 toysdig_LDFLAGS = $(AM_LDFLAGS) \
 	$(LIBCRYPTO_LDFLAGS)
 
@@ -1862,6 +1867,7 @@ dnsreplay_SOURCES = \
 	dnswriter.cc dnswriter.hh \
 	ednssubnet.cc ednssubnet.hh \
 	ednsoptions.cc ednsoptions.hh \
+	iputils.hh iputils.cc \
 	logger.cc \
 	misc.cc \
 	nsecrecords.cc \
@@ -2081,7 +2087,7 @@ testrunner_SOURCES = arguments.cc base32.cc base64.cc bindlexer.l \
 	test-statbag_cc.cc test-zoneparser_tng_cc.cc testrunner.cc \
 	ueberbackend.cc unix_utility.cc zoneparser-tng.cc \
 	zoneparser-tng.hh $(am__append_55) $(am__append_57) \
-	$(am__append_59)
+	$(am__append_59) $(am__append_61)
 testrunner_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(LIBCRYPTO_LDFLAGS) \
@@ -2089,7 +2095,7 @@ testrunner_LDFLAGS = \
 
 testrunner_LDADD = $(LIBCRYPTO_LIBS) $(BOOST_UNIT_TEST_FRAMEWORK_LIBS) \
 	$(RT_LIBS) $(LIBDL) $(am__append_54) $(am__append_56) \
-	$(am__append_58) $(am__append_60)
+	$(am__append_58) $(am__append_60) $(am__append_62)
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@nodist_testrunner_SOURCES = \
 @HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@	dnsmessage.pb.cc dnsmessage.pb.h
 
@@ -2394,7 +2400,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/base64.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bindlexer.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/bindparser.Po@am__quote@
-@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/botan110signers.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/botansigners.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/calidns.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/comfun.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/common_startup.Po@am__quote@

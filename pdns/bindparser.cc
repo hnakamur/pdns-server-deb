@@ -154,6 +154,8 @@ void BindParser::setVerbose(bool verbose)
 
 void BindParser::commit(BindDomainInfo DI)
 {
+  DI.hadFileDirective = (DI.filename != "");
+
   if(DI.filename[0]!='/')
     DI.filename=d_dir+"/"+DI.filename;
 
@@ -164,7 +166,7 @@ void BindParser::commit(BindDomainInfo DI)
 }
 
 
-#line 168 "bindparser.cc" /* yacc.c:339  */
+#line 170 "bindparser.cc" /* yacc.c:339  */
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -249,7 +251,7 @@ int yyparse (void);
 
 /* Copy the second part of user declarations.  */
 
-#line 253 "bindparser.cc" /* yacc.c:358  */
+#line 255 "bindparser.cc" /* yacc.c:358  */
 
 #ifdef short
 # undef short
@@ -548,12 +550,12 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   108,   108,   110,   113,   113,   113,   113,   116,   118,
-     122,   126,   134,   145,   147,   152,   152,   155,   158,   160,
-     164,   167,   169,   172,   172,   175,   175,   178,   185,   188,
-     190,   193,   199,   201,   204,   204,   204,   207,   211,   214,
-     216,   222,   222,   222,   226,   226,   226,   229,   232,   235,
-     237,   240,   247,   249,   252,   260,   269,   278,   284
+       0,   110,   110,   112,   115,   115,   115,   115,   118,   120,
+     124,   128,   136,   147,   149,   154,   154,   157,   160,   162,
+     166,   169,   171,   174,   174,   177,   177,   180,   187,   190,
+     192,   195,   201,   203,   206,   206,   206,   209,   213,   216,
+     218,   224,   224,   224,   228,   228,   228,   231,   234,   237,
+     239,   242,   249,   251,   254,   262,   271,   280,   286
 };
 #endif
 
@@ -1387,92 +1389,92 @@ yyreduce:
   switch (yyn)
     {
         case 11:
-#line 127 "bindparser.yy" /* yacc.c:1646  */
+#line 129 "bindparser.yy" /* yacc.c:1646  */
     {
 		s_di.name=DNSName((yyvsp[-1]));
 		free((yyvsp[-1]));
 		parent->commit(s_di);
 		s_di.clear();
 	}
-#line 1398 "bindparser.cc" /* yacc.c:1646  */
+#line 1400 "bindparser.cc" /* yacc.c:1646  */
     break;
 
   case 12:
-#line 135 "bindparser.yy" /* yacc.c:1646  */
+#line 137 "bindparser.yy" /* yacc.c:1646  */
     {
 	        s_di.name=DNSName((yyvsp[-2]));
 		free((yyvsp[-2]));
 		parent->commit(s_di);
 		s_di.clear();
 	}
-#line 1409 "bindparser.cc" /* yacc.c:1646  */
+#line 1411 "bindparser.cc" /* yacc.c:1646  */
     break;
 
   case 27:
-#line 179 "bindparser.yy" /* yacc.c:1646  */
+#line 181 "bindparser.yy" /* yacc.c:1646  */
     {
 		parent->setDirectory((yyvsp[0]));
 		free((yyvsp[0]));
 	}
-#line 1418 "bindparser.cc" /* yacc.c:1646  */
+#line 1420 "bindparser.cc" /* yacc.c:1646  */
     break;
 
   case 31:
-#line 194 "bindparser.yy" /* yacc.c:1646  */
+#line 196 "bindparser.yy" /* yacc.c:1646  */
     {
 		parent->addAlsoNotify((yyvsp[0]));
 		free((yyvsp[0]));
 	}
-#line 1427 "bindparser.cc" /* yacc.c:1646  */
+#line 1429 "bindparser.cc" /* yacc.c:1646  */
     break;
 
   case 51:
-#line 241 "bindparser.yy" /* yacc.c:1646  */
+#line 243 "bindparser.yy" /* yacc.c:1646  */
     {
                 s_di.alsoNotify.insert((yyvsp[0]));
                 free((yyvsp[0]));
         }
-#line 1436 "bindparser.cc" /* yacc.c:1646  */
+#line 1438 "bindparser.cc" /* yacc.c:1646  */
     break;
 
   case 54:
-#line 253 "bindparser.yy" /* yacc.c:1646  */
+#line 255 "bindparser.yy" /* yacc.c:1646  */
     {
 		s_di.masters.push_back((yyvsp[0]));
 		free((yyvsp[0]));
 	}
-#line 1445 "bindparser.cc" /* yacc.c:1646  */
+#line 1447 "bindparser.cc" /* yacc.c:1646  */
     break;
 
   case 55:
-#line 261 "bindparser.yy" /* yacc.c:1646  */
+#line 263 "bindparser.yy" /* yacc.c:1646  */
     {
 	  //		printf("Found a filename: '%s'\n",$2);
 		s_di.filename=(yyvsp[0]);
 		free((yyvsp[0]));
 	}
-#line 1455 "bindparser.cc" /* yacc.c:1646  */
+#line 1457 "bindparser.cc" /* yacc.c:1646  */
     break;
 
   case 56:
-#line 270 "bindparser.yy" /* yacc.c:1646  */
+#line 272 "bindparser.yy" /* yacc.c:1646  */
     {
 		s_di.type=(yyvsp[0]);
 		free((yyvsp[0]));
 	}
-#line 1464 "bindparser.cc" /* yacc.c:1646  */
+#line 1466 "bindparser.cc" /* yacc.c:1646  */
     break;
 
   case 57:
-#line 279 "bindparser.yy" /* yacc.c:1646  */
+#line 281 "bindparser.yy" /* yacc.c:1646  */
     {
 		(yyval)=(yyvsp[0]);
 	}
-#line 1472 "bindparser.cc" /* yacc.c:1646  */
+#line 1474 "bindparser.cc" /* yacc.c:1646  */
     break;
 
 
-#line 1476 "bindparser.cc" /* yacc.c:1646  */
+#line 1478 "bindparser.cc" /* yacc.c:1646  */
       default: break;
     }
   /* User semantic actions sometimes alter yychar, and that requires
