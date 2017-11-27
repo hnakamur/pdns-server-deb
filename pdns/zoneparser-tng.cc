@@ -195,11 +195,11 @@ bool ZoneParserTNG::getTemplateLine()
         char radix='d';
         sscanf(spec.c_str(), "%d,%d,%c", &offset, &width, &radix);  // parse format specifier
 
-        char format[12];
-        snprintf(format, sizeof(format) - 1, "%%0%d%c", width, radix); // make into printf-style format
+        char sformat[12];
+        snprintf(sformat, sizeof(sformat) - 1, "%%0%d%c", width, radix); // make into printf-style format
 
         char tmp[80];
-        snprintf(tmp, sizeof(tmp)-1, format, d_templatecounter + offset); // and do the actual printing
+        snprintf(tmp, sizeof(tmp)-1, sformat, d_templatecounter + offset); // and do the actual printing
         outpart+=tmp;
       }
       else
@@ -461,14 +461,31 @@ bool ZoneParserTNG::get(DNSResourceRecord& rr, std::string* comment)
   case QType::CNAME:
   case QType::DNAME:
   case QType::PTR:
-  case QType::AFSDB:
     try {
       rr.content = toCanonic(d_zonename, rr.content).toStringRootDot();
     } catch (std::exception &e) {
       throw PDNSException("Error in record '" + rr.qname.toString() + " " + rr.qtype.getName() + "': " + e.what());
     }
     break;
+  case QType::AFSDB:
+    stringtok(recparts, rr.content);
+    if(recparts.size() == 2) {
+      try {
+        recparts[1]=toCanonic(d_zonename, recparts[1]).toStringRootDot();
+      } catch (std::exception &e) {
+        throw PDNSException("Error in record '" + rr.qname.toString() + " " + rr.qtype.getName() + "': " + e.what());
+      }
+    } else {
+      throw PDNSException("AFSDB record for "+rr.qname.toString()+" invalid");
+    }
+    rr.content.clear();
+    for(string::size_type n = 0; n < recparts.size(); ++n) {
+      if(n)
+        rr.content.append(1,' ');
 
+      rr.content+=recparts[n];
+    }
+    break;
   case QType::SOA:
     stringtok(recparts, rr.content);
     if(recparts.size() > 7)

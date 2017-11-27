@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "PDNSUTIL" "1" "Aug 31, 2017" "4.1" "PowerDNS Recursor"
+.TH "PDNSUTIL" "1" "Nov 16, 2017" "4.1" "PowerDNS Recursor"
 .SH NAME
 pdnsutil \- 
 .
@@ -137,13 +137,13 @@ the command line. \fIHASH\-ALGORITHM\fP must be 1 (SHA\-1). Setting
 know you need it. For \fIITERATIONS\fP, please consult RFC 5155, section
 10.3. And be aware that a high number might overload validating
 resolvers. The \fISALT\fP is a hexadecimal string encoding the bits for
-the salt. Setting \fBnarrow\fP will make PowerDNS send out “white
-lies” about the next secure record. Instead of looking it up in the
-database, it will send out the hash + 1 as the next secure record. A
-sample commandline is: “pdnsutil set\-nsec3 powerdnssec.org ‘1 1 1
-ab’ narrow”. \fBWARNING\fP: If running in RSASHA1 mode (algorithm 5 or
-7), switching from NSEC to NSEC3 will require a DS update in the
-parent zone.
+the salt, or \- to use no salt. Setting \fBnarrow\fP will make PowerDNS
+send out “white lies” about the next secure record. Instead of
+looking it up in the database, it will send out the hash + 1 as the
+next secure record. A sample commandline is: “pdnsutil set\-nsec3
+powerdnssec.org ‘1 1 1 ab’ narrow”. \fBWARNING\fP: If running in
+RSASHA1 mode (algorithm 5 or 7), switching from NSEC to NSEC3 will
+require a DS update in the parent zone.
 .TP
 .B unset\-nsec3 \fIZONE\fP
 Converts \fIZONE\fP to NSEC operations. \fBWARNING\fP: If running in
@@ -202,12 +202,23 @@ Generate new TSIG key with name \fINAME\fP and the specified algorithm.
 .TP
 .B import\-tsig\-key \fINAME\fP \fIALGORITHM\fP \fIKEY\fP
 Import \fIKEY\fP of the specified algorithm as \fINAME\fP\&.
+.TP
+.B list\-tsig\-keys
+Show a list of all configured TSIG keys.
 .UNINDENT
 .SH ZONE MANIPULATION COMMANDS
 .INDENT 0.0
 .TP
 .B create\-zone \fIZONE\fP
 Create an empty zone named \fIZONE\fP\&.
+.TP
+.B create\-slave\-zone \fIZONE\fP \fIMASTER\fP [\fIMASTER\fP]..
+Create a new slave zone \fIZONE\fP with masters \fIMASTER\fP\&. All \fIMASTER\fPs
+need to to be IP addresses with an optional port.
+.TP
+.B change\-slave\-zone\-master \fIZONE\fP \fIMASTER\fP [\fIMASTER\fP]..
+Change the masters for slave zone \fIZONE\fP to new masters \fIMASTER\fP\&. All
+\fIMASTER\fPs need to to be IP addresses with an optional port.
 .TP
 .B check\-all\-zones
 Check all zones for correctness.
@@ -275,7 +286,12 @@ Change the kind of \fIZONE\fP to \fIKIND\fP (master, slave, native).
 .B set\-account \fIZONE\fP \fIACCOUNT\fP
 Change the account (owner) of \fIZONE\fP to \fIACCOUNT\fP\&.
 .TP
-.B set\-meta \fIZONE\fP \fIATTRIBUTE\fP [\fIVALUE\fP]
+.B add\-meta \fIZONE\fP \fIATTRIBUTE\fP \fIVALUE\fP [\fIVALUE\fP]…
+Append \fIVALUE\fP to the existing \fIATTRIBUTE\fP metadata for \fIZONE\fP\&.
+Will return an error if \fIATTRIBUTE\fP does not support multiple values, use
+\fBset\-meta\fP for these values.
+.TP
+.B set\-meta \fIZONE\fP \fIATTRIBUTE\fP [\fIVALUE\fP]…
 Set domainmetadata \fIATTRIBUTE\fP for \fIZONE\fP to \fIVALUE\fP\&. An empty value
 clears it.
 .TP

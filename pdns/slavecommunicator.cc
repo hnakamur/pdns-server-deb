@@ -22,7 +22,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include "packetcache.hh"
+
 #include "utility.hh"
 #include "dnssecinfra.hh"
 #include "dnsseckeeper.hh"
@@ -38,7 +38,7 @@
 #include "logger.hh"
 #include "dns.hh"
 #include "arguments.hh"
-#include "packetcache.hh"
+#include "auth-caches.hh"
 
 #include "base64.hh"
 #include "inflighter.cc"
@@ -415,6 +415,7 @@ void CommunicatorClass::suck(const DNSName &domain, const string &remote)
         }
         else {
           L<<Logger::Warning<<"Done with IXFR of '"<<domain<<"' from remote '"<<remote<<"', got "<<zs.numDeltas<<" delta"<<addS(zs.numDeltas)<<", serial now "<<zs.soa_serial<<endl;
+          purgeAuthCaches(domain.toString()+"$");
           return;
         }
       }
@@ -581,7 +582,7 @@ void CommunicatorClass::suck(const DNSName &domain, const string &remote)
     di.backend->commitTransaction();
     transaction = false;
     di.backend->setFresh(zs.domain_id);
-    PC.purge(domain.toString()+"$");
+    purgeAuthCaches(domain.toString()+"$");
 
 
     L<<Logger::Error<<"AXFR done for '"<<domain<<"', zone committed with serial number "<<zs.soa_serial<<endl;
@@ -787,8 +788,14 @@ void CommunicatorClass::slaveRefresh(PacketHandler *P)
 
       if(dk.getTSIGForAccess(di.zone, sr.master, &dni.tsigkeyname)) {
         string secret64;
-        B->getTSIGKey(dni.tsigkeyname, &dni.tsigalgname, &secret64);
-        B64Decode(secret64, dni.tsigsecret);
+        if(!B->getTSIGKey(dni.tsigkeyname, &dni.tsigalgname, &secret64)) {
+          L<<Logger::Error<<"TSIG key '"<<dni.tsigkeyname<<"' for domain '"<<di.zone<<"' not found, can not AXFR."<<endl;
+          continue;
+        }
+        if (B64Decode(secret64, dni.tsigsecret) == -1) {
+          L<<Logger::Error<<"Unable to Base-64 decode TSIG key '"<<dni.tsigkeyname<<"' for domain '"<<di.zone<<"', can not AXFR."<<endl;
+          continue;
+        }
       }
 
       localaddr.clear();

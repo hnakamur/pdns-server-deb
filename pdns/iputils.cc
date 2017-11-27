@@ -143,11 +143,11 @@ bool HarvestTimestamp(struct msghdr* msgh, struct timeval* tv)
 #endif
   return false;
 }
-bool HarvestDestinationAddress(struct msghdr* msgh, ComboAddress* destination)
+bool HarvestDestinationAddress(const struct msghdr* msgh, ComboAddress* destination)
 {
   memset(destination, 0, sizeof(*destination));
-  struct cmsghdr *cmsg;
-  for (cmsg = CMSG_FIRSTHDR(msgh); cmsg != NULL; cmsg = CMSG_NXTHDR(msgh,cmsg)) {
+  const struct cmsghdr* cmsg;
+  for (cmsg = CMSG_FIRSTHDR(msgh); cmsg != NULL; cmsg = CMSG_NXTHDR(const_cast<struct msghdr*>(msgh), const_cast<struct cmsghdr*>(cmsg))) {
 #if defined(IP_PKTINFO)
      if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_PKTINFO)) {
         struct in_pktinfo *i = (struct in_pktinfo *) CMSG_DATA(cmsg);
@@ -425,7 +425,7 @@ bool isTCPSocketUsable(int sock)
       return false;
     }
     else {
-      int err = errno;
+      err = errno;
 
       if (err == EAGAIN || err == EWOULDBLOCK) {
         /* socket is usable, no data waiting */

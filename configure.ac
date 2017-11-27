@@ -357,6 +357,10 @@ AS_IF([test "x$LIBDECAF_LIBS" != "x"],
   [AC_MSG_NOTICE([ed448: yes])],
   [AC_MSG_NOTICE([ed448: no])]
 )
+AS_IF([test "x$BOTAN_LIBS" != "x"],
+  [AC_MSG_NOTICE([gost: yes])],
+  [AC_MSG_NOTICE([gost: no])]
+)
 AS_IF([test "x$needsqlite3" != "x"],
   [AC_MSG_NOTICE([SQLite3: yes])],
   [AC_MSG_NOTICE([SQLite3: no])]
@@ -367,6 +371,9 @@ AS_IF([test "x$LUAPC" != "x"],
     [AC_MSG_NOTICE([LuaJit: $LUAJITPC])],
     [AC_MSG_NOTICE([Lua/LuaJit: no])])
 ])
+AS_IF([test "x$enable_experimental_pkcs11" = "xyes"],
+  [AC_MSG_NOTICE([PKCS-11: yes])]
+)
 AS_IF([test "x$enable_experimental_gss_tsig" = "xyes"],
   [AC_MSG_NOTICE([GSS-TSIG: yes])]
 )

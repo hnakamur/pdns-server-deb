@@ -174,7 +174,8 @@ void Bind2Backend::safePutBBDomainInfo(const BB2DomainInfo& bbd)
 void Bind2Backend::setNotified(uint32_t id, uint32_t serial)
 {
   BB2DomainInfo bbd;
-  safeGetBBDomainInfo(id, &bbd);
+  if (!safeGetBBDomainInfo(id, &bbd))
+    return;
   bbd.d_lastnotified = serial;
   safePutBBDomainInfo(bbd);
 }
@@ -193,7 +194,7 @@ bool Bind2Backend::startTransaction(const DNSName &qname, int id)
   if(id < 0) {
     d_transaction_tmpname.clear();
     d_transaction_id=id;
-    return true;
+    return false;
   }
   if(id == 0) {
     throw DBException("domain_id 0 is invalid for this backend.");
@@ -203,12 +204,11 @@ bool Bind2Backend::startTransaction(const DNSName &qname, int id)
   BB2DomainInfo bbd;
   if(safeGetBBDomainInfo(id, &bbd)) {
     d_transaction_tmpname=bbd.d_filename+"."+itoa(random());
-    d_of=new ofstream(d_transaction_tmpname.c_str());
+    d_of=std::unique_ptr<ofstream>(new ofstream(d_transaction_tmpname.c_str()));
     if(!*d_of) {
-      throw DBException("Unable to open temporary zonefile '"+d_transaction_tmpname+"': "+stringerror());
       unlink(d_transaction_tmpname.c_str());
-      delete d_of;
-      d_of=0;
+      d_of.reset();
+      throw DBException("Unable to open temporary zonefile '"+d_transaction_tmpname+"': "+stringerror());
     }
     
     *d_of<<"; Written by PowerDNS, don't edit!"<<endl;
@@ -222,9 +222,8 @@ bool Bind2Backend::startTransaction(const DNSName &qname, int id)
 bool Bind2Backend::commitTransaction()
 {
   if(d_transaction_id < 0)
-    return true;
-  delete d_of;
-  d_of=0;
+    return false;
+  d_of.reset();
 
   BB2DomainInfo bbd;
   if(safeGetBBDomainInfo(d_transaction_id, &bbd)) {
@@ -244,9 +243,8 @@ bool Bind2Backend::abortTransaction()
   // 0  = invalid transact
   // >0 = actual transaction
   if(d_transaction_id > 0) {
-    delete d_of;
-    d_of=0;
     unlink(d_transaction_tmpname.c_str());
+    d_of.reset();
     d_transaction_id=0;
   }
 
@@ -256,7 +254,8 @@ bool Bind2Backend::abortTransaction()
 bool Bind2Backend::feedRecord(const DNSResourceRecord &rr, const DNSName &ordername)
 {
   BB2DomainInfo bbd;
-  safeGetBBDomainInfo(d_transaction_id, &bbd);
+  if (!safeGetBBDomainInfo(d_transaction_id, &bbd))
+    return false;
 
   string qname;
   string name = bbd.d_name.toString();
@@ -289,7 +288,9 @@ bool Bind2Backend::feedRecord(const DNSResourceRecord &rr, const DNSName &ordern
     stripDomainSuffix(&content, name);
     // fallthrough
   default:
-    *d_of<<qname<<"\t"<<rr.ttl<<"\t"<<rr.qtype.getName()<<"\t"<<content<<endl;
+    if (d_of && *d_of) {
+      *d_of<<qname<<"\t"<<rr.ttl<<"\t"<<rr.qtype.getName()<<"\t"<<content<<endl;
+    }
   }
   return true;
 }
@@ -301,7 +302,7 @@ void Bind2Backend::getUpdatedMasters(vector<DomainInfo> *changedDomains)
     ReadLock rl(&s_state_lock);
 
     for(state_t::const_iterator i = s_state.begin(); i != s_state.end() ; ++i) {
-      if(!i->d_masters.empty() && this->alsoNotify.empty() && i->d_also_notify.empty())
+      if(i->d_kind != DomainInfo::Master && this->alsoNotify.empty() && i->d_also_notify.empty())
         continue;
 
       DomainInfo di;
@@ -351,7 +352,8 @@ void Bind2Backend::getAllDomains(vector<DomainInfo> *domains, bool include_disab
       di.id=i->d_id;
       di.zone=i->d_name;
       di.last_check=i->d_lastcheck;
-      di.kind=i->d_masters.empty() ? DomainInfo::Master : DomainInfo::Slave; //TODO: what about Native?
+      di.kind=i->d_kind;
+      di.masters=i->d_masters;
       di.backend=this;
       domains->push_back(di);
     };
@@ -372,7 +374,7 @@ void Bind2Backend::getUnfreshSlaveInfos(vector<DomainInfo> *unfreshDomains)
   {
     ReadLock rl(&s_state_lock);
     for(state_t::const_iterator i = s_state.begin(); i != s_state.end() ; ++i) {
-      if(i->d_masters.empty())
+      if(i->d_kind != DomainInfo::Slave)
         continue;
       DomainInfo sd;
       sd.id=i->d_id;
@@ -410,7 +412,7 @@ bool Bind2Backend::getDomainInfo(const DNSName& domain, DomainInfo &di)
   di.masters=bbd.d_masters;
   di.last_check=bbd.d_lastcheck;
   di.backend=this;
-  di.kind=bbd.d_masters.empty() ? DomainInfo::Master : DomainInfo::Slave;
+  di.kind=bbd.d_kind;
   di.serial=0;
   try {
     SOAData sd;
@@ -522,8 +524,10 @@ string Bind2Backend::DLReloadNowHandler(const vector<string>&parts, Utility::pid
     if(safeGetBBDomainInfo(zone, &bbd)) {
       Bind2Backend bb2;
       bb2.queueReloadAndStore(bbd.d_id);
-      safeGetBBDomainInfo(zone, &bbd); // Read the *new* domain status
-      ret<< *i << ": "<< (bbd.d_wasRejectedLastReload ? "[rejected]": "") <<"\t"<<bbd.d_status<<"\n";
+      if (!safeGetBBDomainInfo(zone, &bbd)) // Read the *new* domain status
+          ret << *i << ": [missing]\n";
+      else
+          ret<< *i << ": "<< (bbd.d_wasRejectedLastReload ? "[rejected]": "") <<"\t"<<bbd.d_status<<"\n";
     }
     else
       ret<< *i << " no such domain\n";
@@ -809,6 +813,12 @@ void Bind2Backend::loadConfig(string* status)
         i!=domains.end();
         ++i) 
       {
+        if (!(i->hadFileDirective)) {
+          L<<Logger::Warning<<d_logprefix<<" Zone '"<<i->name<<"' has no 'file' directive set in "<<getArg("config")<<endl;
+          rejected++;
+          continue;
+        }
+
         if(i->type == "")
           L<<Logger::Notice<<d_logprefix<<" Zone '"<<i->name<<"' has no type specified, assuming 'native'"<<endl;
         if(i->type!="master" && i->type!="slave" && i->type != "native" && i->type != "") {
@@ -834,6 +844,12 @@ void Bind2Backend::loadConfig(string* status)
         bbd.d_filename=i->filename;
         bbd.d_masters=i->masters;
         bbd.d_also_notify=i->alsoNotify;
+
+        bbd.d_kind = DomainInfo::Native;
+        if (i->type == "master")
+          bbd.d_kind = DomainInfo::Master;
+        if (i->type == "slave")
+          bbd.d_kind = DomainInfo::Slave;
 
         newnames.insert(bbd.d_name);
         if(filenameChanged || !bbd.d_loaded || !bbd.current()) {
@@ -960,7 +976,8 @@ bool Bind2Backend::findBeforeAndAfterUnhashed(BB2DomainInfo& bbd, const DNSName&
 bool Bind2Backend::getBeforeAndAfterNamesAbsolute(uint32_t id, const DNSName& qname, DNSName& unhashed, DNSName& before, DNSName& after)
 {
   BB2DomainInfo bbd;
-  safeGetBBDomainInfo(id, &bbd);
+  if (!safeGetBBDomainInfo(id, &bbd))
+    return false;
 
   NSEC3PARAMRecordContent ns3pr;
 
@@ -1191,6 +1208,9 @@ bool Bind2Backend::isMaster(const DNSName& name, const string &ip)
   if(!safeGetBBDomainInfo(name, &bbd))
     return false;
 
+  if(bbd.d_kind != DomainInfo::Slave)
+    return false;
+
   for(vector<string>::const_iterator iter = bbd.d_masters.begin(); iter != bbd.d_masters.end(); ++iter)
     if(*iter==ip)
       return true;
@@ -1281,6 +1301,7 @@ bool Bind2Backend::createSlaveDomain(const string &ip, const DNSName& domain, co
   }
 
   BB2DomainInfo bbd = createDomainEntry(domain, filename);
+  bbd.d_kind = DomainInfo::Slave;
   bbd.d_masters.push_back(ip);
   safePutBBDomainInfo(bbd);
   return true;
@@ -1299,9 +1320,9 @@ bool Bind2Backend::searchRecords(const string &pattern, int maxResults, vector<D
     for(state_t::const_iterator i = s_state.begin(); i != s_state.end() ; ++i) {
       BB2DomainInfo h;
       safeGetBBDomainInfo(i->d_id, &h);
-      shared_ptr<const recordstorage_t> handle = h.d_records.get();
+      shared_ptr<const recordstorage_t> rhandle = h.d_records.get();
 
-      for(recordstorage_t::const_iterator ri = handle->begin(); result.size() < static_cast<vector<DNSResourceRecord>::size_type>(maxResults) && ri != handle->end(); ri++) {
+      for(recordstorage_t::const_iterator ri = rhandle->begin(); result.size() < static_cast<vector<DNSResourceRecord>::size_type>(maxResults) && ri != rhandle->end(); ri++) {
         DNSName name = ri->qname.empty() ? i->d_name : (ri->qname+i->d_name);
         if (sm.match(name) || sm.match(ri->content)) {
           DNSResourceRecord r;

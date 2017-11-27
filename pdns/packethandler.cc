@@ -544,37 +544,6 @@ void PacketHandler::addNSECX(DNSPacket *p, DNSPacket *r, const DNSName& target, 
   }
 }
 
-static void incrementHash(std::string& raw) // I wonder if this is correct, cmouse? ;-)
-{
-  if(raw.empty())
-    return;
-    
-  for(string::size_type pos=raw.size(); pos; ) {
-    --pos;
-    unsigned char c = (unsigned char)raw[pos];
-    ++c;
-    raw[pos] = (char) c;
-    if(c)
-      break;
-  }
-}
-
-static void decrementHash(std::string& raw) // I wonder if this is correct, cmouse? ;-)
-{
-  if(raw.empty())
-    return;
-    
-  for(string::size_type pos=raw.size(); pos; ) {
-    --pos;
-    unsigned char c = (unsigned char)raw[pos];
-    --c;
-    raw[pos] = (char) c;
-    if(c != 0xff)
-      break;
-  }
-}
-
-
 bool getNSEC3Hashes(bool narrow, DNSBackend* db, int id, const std::string& hashed, bool decrement, DNSName& unhashed, std::string& before, std::string& after, int mode)
 {
   bool ret;
@@ -613,7 +582,6 @@ void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const DNSName& target, 
   bool doNextcloser = false;
   string before, after, hashed;
   DNSName unhashed, closest;
-  DNSZoneRecord rr;
 
   if (mode == 2 || mode == 3 || mode == 4) {
     closest=wildcard;
@@ -653,8 +621,7 @@ void PacketHandler::addNSEC3(DNSPacket *p, DNSPacket *r, const DNSName& target, 
     if (!after.empty()) {
       DLOG(L<<"Done calling for matching, hashed: '"<<toBase32Hex(hashed)<<"' before='"<<toBase32Hex(before)<<"', after='"<<toBase32Hex(after)<<"'"<<endl);
       emitNSEC3(r, sd, ns3rc, unhashed, before, after, mode);
-    } else if(!before.empty())
-      r->addRecord(rr);
+    }
   }
 
   // add covering NSEC3 RR
@@ -1413,10 +1380,10 @@ DNSPacket *PacketHandler::doQuestion(DNSPacket *p)
     }
                                        
     if(weRedirected) {
-      for(auto& rr: rrset) {
-        if(rr.dr.d_type == QType::CNAME) {
-          r->addRecord(rr);
-          target = getRR<CNAMERecordContent>(rr.dr)->getTarget();
+      for(auto& loopRR: rrset) {
+        if(loopRR.dr.d_type == QType::CNAME) {
+          r->addRecord(loopRR);
+          target = getRR<CNAMERecordContent>(loopRR.dr)->getTarget();
           retargetcount++;
           goto retargeted;
         }
@@ -1424,9 +1391,9 @@ DNSPacket *PacketHandler::doQuestion(DNSPacket *p)
     }
     else if(weDone) {
       bool haveRecords = false;
-      for(const auto& rr: rrset) {
-        if((p->qtype.getCode() == QType::ANY || rr.dr.d_type == p->qtype.getCode()) && rr.dr.d_type && rr.dr.d_type != QType::ALIAS && rr.auth) {
-          r->addRecord(rr);
+      for(const auto& loopRR: rrset) {
+        if((p->qtype.getCode() == QType::ANY || loopRR.dr.d_type == p->qtype.getCode()) && loopRR.dr.d_type && loopRR.dr.d_type != QType::ALIAS && loopRR.auth) {
+          r->addRecord(loopRR);
           haveRecords = true;
         }
       }
@@ -1464,8 +1431,8 @@ DNSPacket *PacketHandler::doQuestion(DNSPacket *p)
 
     editSOA(d_dk, sd.qname, r);
     
-    for(const auto& rr: r->getRRS()) {
-      if(rr.scopeMask) {
+    for(const auto& loopRR: r->getRRS()) {
+      if(loopRR.scopeMask) {
         noCache=true;
         break;
       }

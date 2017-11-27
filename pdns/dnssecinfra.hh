@@ -106,7 +106,10 @@ class DNSCryptoKeyEngine
 
 struct DNSSECPrivateKey
 {
-  uint16_t getTag();
+  uint16_t getTag() const
+  {
+    return getDNSKEY().getTag();
+  }
   
   const shared_ptr<DNSCryptoKeyEngine> getKey() const
   {
@@ -154,6 +157,9 @@ uint32_t getStartOfWeek();
 
 string hashQNameWithSalt(const NSEC3PARAMRecordContent& ns3prc, const DNSName& qname);
 string hashQNameWithSalt(const std::string& salt, unsigned int iterations, const DNSName& qname);
+
+void incrementHash(std::string& raw);
+void decrementHash(std::string& raw);
 
 void addRRSigs(DNSSECKeeper& dk, UeberBackend& db, const std::set<DNSName>& authMap, vector<DNSZoneRecord>& rrs);
 
