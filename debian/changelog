@@ -1,3 +1,10 @@
+pdns (3.4.1-4+deb8u8) jessie; urgency=medium
+
+  * Add patch fixing security issue:
+  * Missing check on API operations: CVE-2017-15091
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Mon, 27 Nov 2017 21:19:19 +0000
+
 pdns (3.4.1-4+deb8u7) jessie-security; urgency=high
 
   * Security upload.
