@@ -350,6 +350,9 @@ void WebServer::go()
     while(true) {
       try {
         auto client = d_server->accept();
+        if (!client) {
+          continue;
+        }
         if (client->acl(acl)) {
           std::thread webHandler(WebServerConnectionThreadStart, this, client);
           webHandler.detach();
@@ -379,5 +382,5 @@ void WebServer::go()
   catch(...) {
     L<<Logger::Error<<"Unknown exception in main webserver thread"<<endl;
   }
-  exit(1);
+  _exit(1);
 }

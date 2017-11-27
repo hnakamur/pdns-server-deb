@@ -210,8 +210,8 @@ BOOST_ROOT = @BOOST_ROOT@
 BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS = @BOOST_UNIT_TEST_FRAMEWORK_LDFLAGS@
 BOOST_UNIT_TEST_FRAMEWORK_LDPATH = @BOOST_UNIT_TEST_FRAMEWORK_LDPATH@
 BOOST_UNIT_TEST_FRAMEWORK_LIBS = @BOOST_UNIT_TEST_FRAMEWORK_LIBS@
-BOTAN110_CFLAGS = @BOTAN110_CFLAGS@
-BOTAN110_LIBS = @BOTAN110_LIBS@
+BOTAN_CFLAGS = @BOTAN_CFLAGS@
+BOTAN_LIBS = @BOTAN_LIBS@
 CC = @CC@
 CCDEPMODE = @CCDEPMODE@
 CDB_CFLAGS = @CDB_CFLAGS@
@@ -695,7 +695,7 @@ uninstall-man: uninstall-man1
 @HAVE_VIRTUALENV_TRUE@	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./html-docs.tar.bz2 web1.powerdns.com:/srv/www/doc.powerdns.com/authoritative/
 @HAVE_VIRTUALENV_TRUE@	rsync -crv --no-p --chmod=g=rwX --exclude '*~' ./PowerDNS-Authoritative.pdf web1.powerdns.com:/srv/www/doc.powerdns.com/authoritative/
 
-@HAVE_VIRTUALENV_FALSE@$(dist_MANS):
+@HAVE_VIRTUALENV_FALSE@$(MANPAGES_DIST):
 @HAVE_VIRTUALENV_FALSE@	echo "You need virtualenv to generate the manpages"
 @HAVE_VIRTUALENV_FALSE@	exit 1
 

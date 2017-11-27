@@ -181,6 +181,7 @@ public:
   bool checkKeys(const DNSName& zname);
 
   bool getNSEC3PARAM(const DNSName& zname, NSEC3PARAMRecordContent* n3p=0, bool* narrow=0);
+  bool checkNSEC3PARAM(const NSEC3PARAMRecordContent& ns3p, string& msg);
   bool setNSEC3PARAM(const DNSName& zname, const NSEC3PARAMRecordContent& n3p, const bool& narrow=false);
   bool unsetNSEC3PARAM(const DNSName& zname);
   void clearAllCaches();
@@ -209,6 +210,8 @@ public:
   
   void getFromMeta(const DNSName& zname, const std::string& key, std::string& value);
   void getSoaEdit(const DNSName& zname, std::string& value);
+  bool unSecureZone(const DNSName& zone, std::string& error, std::string& info);
+  bool rectifyZone(const DNSName& zone, std::string& error, std::string& info, bool doTransaction);
 private:
 
 

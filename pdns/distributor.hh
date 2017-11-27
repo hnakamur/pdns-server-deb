@@ -130,11 +130,11 @@ template<class Answer, class Question, class Backend>SingleThreadDistributor<Ans
   }
   catch(const PDNSException &AE) {
     L<<Logger::Error<<"Distributor caught fatal exception: "<<AE.reason<<endl;
-    exit(1);
+    _exit(1);
   }
   catch(...) {
     L<<Logger::Error<<"Caught an unknown exception when creating backend, probably"<<endl;
-    exit(1);
+    _exit(1);
   }
 }
 
@@ -158,7 +158,7 @@ template<class Answer, class Question, class Backend>MultiThreadDistributor<Answ
   
   if (n<1) {
     L<<Logger::Error<<"Asked for fewer than 1 threads, nothing to do"<<endl;
-    exit(1);
+    _exit(1);
   }
 
   L<<Logger::Warning<<"About to create "<<n<<" backend threads for UDP"<<endl;
@@ -220,7 +220,7 @@ retry:
 
           delete QD->Q;
         } else {
-          L<<Logger::Error<<"Backend error (retry once): "<<e.reason<<endl;
+          L<<Logger::Notice<<"Backend error (retry once): "<<e.reason<<endl;
           goto retry;
         }
       }
@@ -237,7 +237,7 @@ retry:
 
           delete QD->Q;
         } else {
-          L<<Logger::Error<<"Caught unknown exception in Distributor thread "<<(long)pthread_self()<<" (retry once)"<<endl;
+          L<<Logger::Warning<<"Caught unknown exception in Distributor thread "<<(long)pthread_self()<<" (retry once)"<<endl;
           goto retry;
         }
       }
@@ -250,11 +250,11 @@ retry:
   }
   catch(const PDNSException &AE) {
     L<<Logger::Error<<"Distributor caught fatal exception: "<<AE.reason<<endl;
-    exit(1);
+    _exit(1);
   }
   catch(...) {
     L<<Logger::Error<<"Caught an unknown exception when creating backend, probably"<<endl;
-    exit(1);
+    _exit(1);
   }
   return 0;
 }
@@ -282,7 +282,7 @@ retry:
       S.inc("servfail-packets");
       S.ringAccount("servfail-queries",q->qdomain.toLogString());
     } else {
-      L<<Logger::Error<<"Backend error (retry once): "<<e.reason<<endl;
+      L<<Logger::Notice<<"Backend error (retry once): "<<e.reason<<endl;
       goto retry;
     }
   }
@@ -297,7 +297,7 @@ retry:
       S.inc("servfail-packets");
       S.ringAccount("servfail-queries",q->qdomain.toLogString());
     } else {
-      L<<Logger::Error<<"Caught unknown exception in Distributor thread "<<(unsigned long)pthread_self()<<" (retry once)"<<endl;
+      L<<Logger::Warning<<"Caught unknown exception in Distributor thread "<<(unsigned long)pthread_self()<<" (retry once)"<<endl;
       goto retry;
     }
   }

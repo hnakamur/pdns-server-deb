@@ -6,6 +6,9 @@
 /* Define to 1 if you want to enable GSS-TSIG support */
 #undef ENABLE_GSS_TSIG
 
+/* Define to 1 if you have the `accept4' function. */
+#undef HAVE_ACCEPT4
+
 /* Defined if the requested minimum BOOST version is satisfied */
 #undef HAVE_BOOST
 
@@ -21,8 +24,8 @@
 /* Defined if the Boost unit_test_framework library is available */
 #undef HAVE_BOOST_UNIT_TEST_FRAMEWORK
 
-/* Define to 1 if you have botan 1.10 */
-#undef HAVE_BOTAN110
+/* Define to 1 if you have botan */
+#undef HAVE_BOTAN
 
 /* Define to 1 if you have the <cdb.h> header file. */
 #undef HAVE_CDB_H
@@ -126,6 +129,9 @@
 
 /* Define to 1 if __sanitizer_finish_switch_fiber takes three pointers */
 #undef HAVE_SANITIZER_FINISH_SWITCH_FIBER_THREE_PTRS
+
+/* Define to 1 if you have the `sendmmsg' function. */
+#undef HAVE_SENDMMSG
 
 /* Define to 1 if you have sqlite3 */
 #undef HAVE_SQLITE3
