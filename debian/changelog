@@ -1,7 +1,7 @@
 pdns (4.1.0~rc3-1) experimental; urgency=medium
 
   * New upstream version 4.1.0~rc3
-  * Update upsteam signing key
+  * Update upstream signing key
   * Bump Standards-Version to 4.1.1 (no changes)
 
  -- Christian Hofstaedtler <zeha@debian.org>  Mon, 27 Nov 2017 18:24:16 +0000
@@ -15,7 +15,7 @@ pdns (4.1.0~rc1-1) experimental; urgency=medium
 pdns (4.0.5-1) unstable; urgency=medium
 
   * New upstream version 4.0.5, fixes CVE-2017-15091
-  * Update upsteam signing key
+  * Update upstream signing key
 
  -- Chris Hofstaedtler <zeha@debian.org>  Mon, 27 Nov 2017 21:40:00 +0000
 

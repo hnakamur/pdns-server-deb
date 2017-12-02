@@ -3,7 +3,7 @@ Section: net
 Priority: extra
 Standards-Version: 4.1.1
 Maintainer: Debian DNS Packaging <pkg-dns-devel@lists.alioth.debian.org>
-Uploaders: Christian Hofstaedtler <zeha@debian.org>,
+Uploaders: Chris Hofstaedtler <zeha@debian.org>,
            Marc Haber <mh+debian-packages@zugschlus.de>
 Build-Depends: autoconf,
                automake,
