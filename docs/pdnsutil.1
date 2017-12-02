@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "PDNSUTIL" "1" "Nov 16, 2017" "4.1" "PowerDNS Recursor"
+.TH "PDNSUTIL" "1" "Nov 30, 2017" "4.1" "PowerDNS Recursor"
 .SH NAME
 pdnsutil \- 
 .
@@ -208,6 +208,10 @@ Show a list of all configured TSIG keys.
 .UNINDENT
 .SH ZONE MANIPULATION COMMANDS
 .INDENT 0.0
+.TP
+.B add\-record \fIZONE\fP \fINAME\fP \fITYPE\fP [\fITTL\fP] \fICONTENT\fP
+Add one or more records of \fINAME\fP and \fITYPE\fP to \fIZONE\fP with \fICONTENT\fP
+and optional \fITTL\fP\&. If \fITTL\fP is not set, default will be used.
 .TP
 .B create\-zone \fIZONE\fP
 Create an empty zone named \fIZONE\fP\&.
