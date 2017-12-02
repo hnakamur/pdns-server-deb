@@ -70,7 +70,7 @@ endif
 # Verbose tests (shows used compiler/linker and their flags)
 override_dh_auto_test:
 	echo Skipping make test, as dependencies are missing.
-	#dh_auto_test
+	make check
 
 override_dh_fixperms:
 	dh_fixperms
