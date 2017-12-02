@@ -1,3 +1,13 @@
+pdns (4.1.0-1) unstable; urgency=medium
+
+  * New upstream version 4.1.0, upload to unstable.
+  * Update dbconfig-common schema definitions.
+  * Remove libbotan1.10-dev dependency, upstream has dropped support.
+  * Remove obsolete --with-pgsql-includes configure argument.
+  * Run make check at build time.
+
+ -- Chris Hofstaedtler <zeha@debian.org>  Sat, 02 Dec 2017 20:51:27 +0000
+
 pdns (4.1.0~rc3-1) experimental; urgency=medium
 
   * New upstream version 4.1.0~rc3
