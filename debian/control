@@ -37,8 +37,8 @@ Build-Depends: autoconf,
                po-debconf,
                ragel,
                unixodbc-dev (>= 2.3.1)
-Vcs-Git: https://anonscm.debian.org/git/pkg-dns/pdns.git
-Vcs-Browser: https://anonscm.debian.org/cgit/pkg-dns/pdns.git
+Vcs-Git: https://salsa.debian.org/dns-team/pdns.git
+Vcs-Browser: https://salsa.debian.org/dns-team/pdns
 Homepage: https://www.powerdns.com/
 
 Package: pdns-server
