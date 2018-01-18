@@ -1,3 +1,11 @@
+pdns (4.1.0-2) unstable; urgency=medium
+
+  * Update Maintainer: as alioth is going away
+  * Update Vcs-* URLs to point to salsa.debian.org
+  * Bump Standards-Version to 4.1.3 (no changes)
+
+ -- Chris Hofstaedtler <zeha@debian.org>  Thu, 18 Jan 2018 20:44:07 +0000
+
 pdns (4.1.0-1) unstable; urgency=medium
 
   * New upstream version 4.1.0, upload to unstable.
