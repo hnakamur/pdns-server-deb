@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "DNSSCOPE" "1" "Nov 30, 2017" "4.1" "PowerDNS Recursor"
+.TH "DNSSCOPE" "1" "Feb 16, 2018" "4.1" "PowerDNS Recursor"
 .SH NAME
 dnsscope \- 
 .
@@ -34,7 +34,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 \fBdnsscope\fP \- A PowerDNS nameserver debugging tool
 .SH SYNOPSIS
 .sp
-\fBdnsscope\fP [\fIOPTION\fP]… \fIINFILE\fP
+\fBdnsscope\fP [\fIOPTION\fP]... \fIINFILE\fP
 .SH DESCRIPTION
 .sp
 \fBdnsscope\fP takes an \fIINFILE\fP in PCAP format. It generates some simple
@@ -55,10 +55,10 @@ Only process packets in \fIINFILE\fP with the RD (Recursion Desired)
 flag set. By default, we process all DNS packets in \fIINFILE\fP\&.
 .TP
 .BI \-\-ipv4\fB= <state>
-Process IPv4 packets. On by default, disable with \fB–ipv4 false\fP\&.
+Process IPv4 packets. On by default, disable with \fB\-\-ipv4 false\fP\&.
 .TP
 .BI \-\-ipv6\fB= <state>
-Process IPv6 packets. On by default, disable with \fB–ipv6 false\fP\&.
+Process IPv6 packets. On by default, disable with \fB\-\-ipv6 false\fP\&.
 .TP
 .B \-\-servfail\-tree
 Figure out subtrees that generate servfails.
