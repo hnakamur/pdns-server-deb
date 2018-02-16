@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "PDNSUTIL" "1" "Nov 30, 2017" "4.1" "PowerDNS Recursor"
+.TH "PDNSUTIL" "1" "Feb 16, 2018" "4.1" "PowerDNS Recursor"
 .SH NAME
 pdnsutil \- 
 .
@@ -34,7 +34,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 pdnsutil \- PowerDNS dnssec command and control
 .SH SYNOPSIS
 .sp
-pdnsutil [OPTION]… \fICOMMAND\fP
+pdnsutil [OPTION]... \fICOMMAND\fP
 .SH DESCRIPTION
 .sp
 \fBpdnsutil\fP (formerly pdnssec) is a powerful command that is the
@@ -128,7 +128,7 @@ the added key.
 .B remove\-zone\-key \fIZONE\fP \fIKEY\-ID\fP
 Remove a key with id \fIKEY\-ID\fP from a zone called \fIZONE\fP\&.
 .TP
-set\-nsec3 \fIZONE\fP ‘\fIHASH\-ALGORITHM\fP \fIFLAGS\fP \fIITERATIONS\fP \fISALT\fP’ [\fBnarrow\fP]
+set\-nsec3 \fIZONE\fP \(aq\fIHASH\-ALGORITHM\fP \fIFLAGS\fP \fIITERATIONS\fP \fISALT\fP\(aq [\fBnarrow\fP]
 Sets NSEC3 parameters for this zone. The quoted parameters are 4
 values that are used for the the NSEC3PARAM record and decide how
 NSEC3 records are created. The NSEC3 parameters must be quoted on
@@ -138,10 +138,10 @@ know you need it. For \fIITERATIONS\fP, please consult RFC 5155, section
 10.3. And be aware that a high number might overload validating
 resolvers. The \fISALT\fP is a hexadecimal string encoding the bits for
 the salt, or \- to use no salt. Setting \fBnarrow\fP will make PowerDNS
-send out “white lies” about the next secure record. Instead of
+send out "white lies" about the next secure record. Instead of
 looking it up in the database, it will send out the hash + 1 as the
-next secure record. A sample commandline is: “pdnsutil set\-nsec3
-powerdnssec.org ‘1 1 1 ab’ narrow”. \fBWARNING\fP: If running in
+next secure record. A sample commandline is: "pdnsutil set\-nsec3
+powerdnssec.org \(aq1 1 1 ab\(aq narrow". \fBWARNING\fP: If running in
 RSASHA1 mode (algorithm 5 or 7), switching from NSEC to NSEC3 will
 require a DS update in the parent zone.
 .TP
@@ -242,7 +242,7 @@ Opens \fIZONE\fP in zonefile format (regardless of backend it was loaded
 from) in the editor set in the environment variable \fBEDITOR\fP\&. if
 \fBEDITOR\fP is empty, \fIpdnsutil\fP falls back to using \fIeditor\fP\&.
 .TP
-.B get\-meta \fIZONE\fP [\fIATTRIBUTE\fP]…
+.B get\-meta \fIZONE\fP [\fIATTRIBUTE\fP]...
 Get zone metadata. If no \fIATTRIBUTE\fP given, lists all known.
 .TP
 .B hash\-zone\-record \fIZONE\fP \fIRNAME\fP
@@ -261,28 +261,28 @@ Show all records for \fIZONE\fP\&.
 .TP
 .B load\-zone \fIZONE\fP \fIFILE\fP
 Load records for \fIZONE\fP from \fIFILE\fP\&. If \fIZONE\fP already exists, all
-records are overwritten, this operation is atomic. If \fIZONE\fP doesn’t
+records are overwritten, this operation is atomic. If \fIZONE\fP doesn\(aqt
 exist, it is created.
 .TP
 .B rectify\-zone \fIZONE\fP
-Calculates the ‘ordername’ and ‘auth’ fields for a zone called
+Calculates the \(aqordername\(aq and \(aqauth\(aq fields for a zone called
 \fIZONE\fP so they comply with DNSSEC settings. Can be used to fix up
 migrated data. Can always safely be run, it does no harm.
 .TP
 .B rectify\-all\-zones
-Calculates the ‘ordername’ and ‘auth’ fields for all zones so they
+Calculates the \(aqordername\(aq and \(aqauth\(aq fields for all zones so they
 comply with DNSSEC settings. Can be used to fix up migrated data.
 Can always safely be run, it does no harm.
 .TP
 .B secure\-zone \fIZONE\fP
 Configures a zone called \fIZONE\fP with reasonable DNSSEC settings. You
-should manually run ‘pdnsutil rectify\-zone’ afterwards.
+should manually run \(aqpdnsutil rectify\-zone\(aq afterwards.
 .TP
 secure\-all\-zones [\fBincrease\-serial\fP]
 Configures all zones that are not currently signed with reasonable
 DNSSEC settings. Setting \fBincrease\-serial\fP will increase the
-serial of those zones too. You should manually run ‘pdnsutil
-rectify\-all\-zones’ afterwards.
+serial of those zones too. You should manually run \(aqpdnsutil
+rectify\-all\-zones\(aq afterwards.
 .TP
 .B set\-kind \fIZONE\fP \fIKIND\fP
 Change the kind of \fIZONE\fP to \fIKIND\fP (master, slave, native).
@@ -290,12 +290,12 @@ Change the kind of \fIZONE\fP to \fIKIND\fP (master, slave, native).
 .B set\-account \fIZONE\fP \fIACCOUNT\fP
 Change the account (owner) of \fIZONE\fP to \fIACCOUNT\fP\&.
 .TP
-.B add\-meta \fIZONE\fP \fIATTRIBUTE\fP \fIVALUE\fP [\fIVALUE\fP]…
+.B add\-meta \fIZONE\fP \fIATTRIBUTE\fP \fIVALUE\fP [\fIVALUE\fP]...
 Append \fIVALUE\fP to the existing \fIATTRIBUTE\fP metadata for \fIZONE\fP\&.
 Will return an error if \fIATTRIBUTE\fP does not support multiple values, use
 \fBset\-meta\fP for these values.
 .TP
-.B set\-meta \fIZONE\fP \fIATTRIBUTE\fP [\fIVALUE\fP]…
+.B set\-meta \fIZONE\fP \fIATTRIBUTE\fP [\fIVALUE\fP]...
 Set domainmetadata \fIATTRIBUTE\fP for \fIZONE\fP to \fIVALUE\fP\&. An empty value
 clears it.
 .TP

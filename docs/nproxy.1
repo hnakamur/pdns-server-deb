@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "NPROXY" "1" "Nov 30, 2017" "4.1" "PowerDNS Recursor"
+.TH "NPROXY" "1" "Feb 16, 2018" "4.1" "PowerDNS Recursor"
 .SH NAME
 nproxy \- 
 .
@@ -34,24 +34,24 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 \fBnproxy\fP \- DNS notification proxy
 .SH SYNOPSIS
 .sp
-nproxy –powerdns\-address \fIADDRESS\fP [\fIOPTION\fP]… \fIADDRESS\fP…
+nproxy \-\-powerdns\-address \fIADDRESS\fP [\fIOPTION\fP]... \fIADDRESS\fP\&...
 .SH DESCRIPTION
 .sp
 \fBnproxy\fP is a simple daemon that reads DNS NOTIFY queries on one
-address and forwards them to an ‘inner’ nameserver that will process the
+address and forwards them to an \(aqinner\(aq nameserver that will process the
 notification.
 .sp
 Its usecase is e.g. a private authoritative server inside a NAT or
 firewalled LAN where \fBnproxy\fP is deployed in the DMZ.
 .sp
 The PowerDNS Authoritative Server has the trusted\-notification\-proxy
-option that should be set to the address set with \fI–origin\-address\fP to
+option that should be set to the address set with \fI\-\-origin\-address\fP to
 accept these proxied notifications.
 .sp
 \fBnproxy\fP also has a health\-check option built in. A query for
-‘pdns.nproxy.’ with QType ‘TXT’ will be responded to with an answer of
-“OK” (inside the TXT record. When the query is for an A\-record,
-‘1.2.3.4.’ is returned.
+\(aqpdns.nproxy.\(aq with QType \(aqTXT\(aq will be responded to with an answer of
+"OK" (inside the TXT record. When the query is for an A\-record,
+\(aq1.2.3.4.\(aq is returned.
 .SH OPTIONS
 .INDENT 0.0
 .TP
@@ -68,7 +68,7 @@ setuid to this numerical \fIUID\fP\&.
 setgid to this numerical \fIGID\fP\&.
 .TP
 .BI \-\-origin\-address \ <ADDRESS>
-Set the source of the notifications sent to PowerDNS to \fIADDRESS\fP\&. By default, the best matching address (kernel’s choice) is used.
+Set the source of the notifications sent to PowerDNS to \fIADDRESS\fP\&. By default, the best matching address (kernel\(aqs choice) is used.
 .TP
 .BI \-\-listen\-address \ <ADDRESS>
 IP addresses to listen on.

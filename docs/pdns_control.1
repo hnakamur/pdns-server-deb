@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "PDNS_CONTROL" "1" "Nov 30, 2017" "4.1" "PowerDNS Recursor"
+.TH "PDNS_CONTROL" "1" "Feb 16, 2018" "4.1" "PowerDNS Recursor"
 .SH NAME
 pdns_control \- 
 .
@@ -34,7 +34,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 \fBpdns_control\fP \- Control the PowerDNS nameserver
 .SH SYNOPSIS
 .sp
-\fBpdns_control\fP [\fIOPTION\fP]… \fICOMMAND\fP
+\fBpdns_control\fP [\fIOPTION\fP]... \fICOMMAND\fP
 .SH DESCRIPTION
 .sp
 \fBpdns_control\fP is used to send commands to a running PowerDNS
@@ -72,14 +72,14 @@ Where the controlsocket lives.
 When using the bindbackend, add a zone. This zone is added in\-memory
 and served immediately. Note that this does not add the zone to the
 bind\-config file. \fIFILENAME\fP must be an absolute path.
-.SS bind\-domain\-status [\fIDOMAIN\fP…]
+.SS bind\-domain\-status [\fIDOMAIN\fP\&...]
 .sp
 When using the bindbackend, list status of all domains. Optionally,
 append \fIDOMAIN\fPs to get the status of specific zones.
 .SS bind\-list\-rejects
 .sp
 When using the bindbackend, get a list of all rejected domains.
-.SS bind\-reload\-now \fIDOMAIN\fP [\fIDOMAIN\fP…]
+.SS bind\-reload\-now \fIDOMAIN\fP [\fIDOMAIN\fP\&...]
 .sp
 When using the bindbackend, immediately reload \fIDOMAIN\fP from disk.
 .SS ccounts
@@ -88,9 +88,9 @@ Show the content of the cache.
 .SS current\-config
 .sp
 Show the currently running configuration. The output has the same
-format as \fBpdns_server \-\-config\fP\&. You’ll notice that all the are
+format as \fBpdns_server \-\-config\fP\&. You\(aqll notice that all the are
 uncommented. This is because PowerDNS simply has values, and the
-default isn’t known at runtime.
+default isn\(aqt known at runtime.
 .SS cycle
 .sp
 Restart the nameserver so it reloads its configuration. Only works
@@ -116,7 +116,7 @@ Same as above but with operator specified IP \fIADDRESS\fP as
 destination, to be used if you know better than PowerDNS.
 .SS ping, rping
 .sp
-Check if the server is still alive. Will return ‘PONG’ when it is.
+Check if the server is still alive. Will return \(aqPONG\(aq when it is.
 \fBping\fP works when running inside a guardian, whereas \fBrping\fP
 works when running without a guardian.
 .SS purge [\fIRECORD\fP]
