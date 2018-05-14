@@ -77,11 +77,12 @@ PRE_UNINSTALL = :
 POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
-@HAVE_BOOST_GE_148_TRUE@am__append_1 = dnsbulktest.1 \
+@LDAP_TRUE@am__append_1 = zone2ldap.1
+@HAVE_BOOST_GE_148_TRUE@am__append_2 = dnsbulktest.1 \
 @HAVE_BOOST_GE_148_TRUE@	dnstcpbench.1
 
-@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_2 = dnspcap2protobuf.1
-@TOOLS_TRUE@am__append_3 = $(MANPAGES_TARGET_TOOLS)
+@HAVE_PROTOBUF_TRUE@@HAVE_PROTOC_TRUE@am__append_3 = dnspcap2protobuf.1
+@TOOLS_TRUE@am__append_4 = $(MANPAGES_TARGET_TOOLS)
 subdir = docs
 DIST_COMMON = $(srcdir)/Makefile.in $(srcdir)/Makefile.am
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -404,13 +405,12 @@ MAIN_MANS = pdns_server.1 \
 	pdns_control.1 \
 	pdnsutil.1 \
 	zone2json.1 \
-	zone2ldap.1 \
 	zone2sql.1
 
 MANPAGES_INSTALL = $(MAIN_MANS) $(am__append_1) $(am__append_2) \
-	$(am__append_3)
-MANPAGES_DIST = $(MAIN_MANS) $(MANPAGES_TARGET_TOOLS) dnsbulktest.1 \
-	dnstcpbench.1 dnspcap2protobuf.1
+	$(am__append_3) $(am__append_4)
+MANPAGES_DIST = $(MAIN_MANS) zone2ldap.1 $(MANPAGES_TARGET_TOOLS) \
+	dnsbulktest.1 dnstcpbench.1 dnspcap2protobuf.1
 MANPAGES_TARGET_TOOLS = calidns.1 \
 	dnsgram.1 \
 	dnsreplay.1 \
