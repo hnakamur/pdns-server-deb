@@ -37,6 +37,7 @@ Build-Depends: autoconf,
 Vcs-Git: https://salsa.debian.org/dns-team/pdns.git
 Vcs-Browser: https://salsa.debian.org/dns-team/pdns
 Homepage: https://www.powerdns.com/
+Rules-Requires-Root: no
 
 Package: pdns-server
 Architecture: any
