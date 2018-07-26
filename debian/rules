@@ -18,12 +18,8 @@ CONFIGURE_ARGS += --disable-systemd
 endif
 
 
-# Use new build system
 %:
-	dh $@ \
-	  --with autoreconf \
-	  --with systemd \
-	  --parallel
+	dh $@
 
 override_dh_auto_configure:
 	test -f pdns/dnslabeltext.cc && mv pdns/dnslabeltext.cc debian/dnslabeltext.cc.moved || true
