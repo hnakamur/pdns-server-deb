@@ -7,6 +7,9 @@ include /usr/share/dpkg/vendor.mk
 version := $(DEB_VERSION).$(DEB_VENDOR)
 CXXFLAGS += -DPACKAGEVERSION='"$(version)"'
 
+# (Re-)Enable warnings
+CXXFLAGS += -Wall
+
 # Backends
 backends := bind ldap pipe gmysql godbc gpgsql gsqlite3 geoip lua mydns remote random opendbx tinydns
 
