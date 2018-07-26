@@ -1271,7 +1271,7 @@ pdns (2.9.16-1) unstable; urgency=low
 pdns (2.9.15-2) unstable; urgency=medium
 
   * Update missing file with current version from libtool
-  * Remove hardcoded libpq++ link in postrges backend 
+  * Remove hardcoded libpq++ link in postrges backend
   * Remove libpq++ mentions in sgml documentation
 
  -- Wichert Akkerman <wichert@wiggy.net>  Sun, 18 Jan 2004 14:06:29 +0100
@@ -1307,7 +1307,7 @@ pdns (2.9.13-1) unstable; urgency=low
 
   * New upstream release
   * Stop using my debian.org email address
-  * Change init scripts to conform to Debian policy 
+  * Change init scripts to conform to Debian policy
 
  -- Wichert Akkerman <wichert@wiggy.net>  Thu, 25 Dec 2003 13:33:40 +0100
 
@@ -1366,7 +1366,6 @@ pdns (2.9.6-1) unstable; urgency=low
 
  -- Wichert Akkerman <wakkerma@debian.org>  Sun, 16 Feb 2003 14:49:08 +0100
 
-
 pdns (2.9.5-1) unstable; urgency=low
 
   * fill in the blanks
@@ -1404,7 +1403,7 @@ pdns (2.9.2-3) unstable; urgency=low
 pdns (2.9.2-2) unstable; urgency=low
 
   * Add Build-Depends on libgdbmg1-dev, which is needed by the pipe backend
- 
+
  -- Wichert Akkerman <wakkerma@debian.org>  Mon, 16 Dec 2002 11:18:11 +0100
 
 pdns (2.9.2-1) unstable; urgency=low
@@ -1420,4 +1419,3 @@ pdns (2.9-1) unstable; urgency=low
   * Initial packaging
 
  -- Wichert Akkerman <wakkerma@debian.org>  Sun,  1 Dec 2002 15:04:52 +0100
-
