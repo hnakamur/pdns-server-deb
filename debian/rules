@@ -61,11 +61,10 @@ ifeq ($(DEB_HOST_ARCH_BITS),32)
 	perl -ni -e 'print unless /RestrictAddressFamilies/' debian/pdns-server/lib/systemd/system/*.service
 endif
 
-# Verbose tests (shows used compiler/linker and their flags)
 override_dh_auto_test:
 ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 	echo Skipping make test, as dependencies are missing.
-	make check
+	make check || (cat pdns/test-suite.log; false)
 endif
 
 override_dh_fixperms:
