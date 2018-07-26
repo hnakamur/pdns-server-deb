@@ -63,8 +63,10 @@ endif
 
 # Verbose tests (shows used compiler/linker and their flags)
 override_dh_auto_test:
+ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
 	echo Skipping make test, as dependencies are missing.
 	make check
+endif
 
 override_dh_fixperms:
 	dh_fixperms
