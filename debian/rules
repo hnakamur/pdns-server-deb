@@ -10,6 +10,9 @@ CXXFLAGS += -DPACKAGEVERSION='"$(version)"'
 # (Re-)Enable warnings
 CXXFLAGS += -Wall
 
+# Turn on all hardening flags, as we're a networked daemon.
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+
 # Backends
 backends := bind ldap pipe gmysql godbc gpgsql gsqlite3 geoip lua mydns remote random opendbx tinydns
 
