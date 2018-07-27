@@ -1,18 +1,27 @@
 Instructions on setting up MySQL as a backend for PowerDNS
 ----------------------------------------------------------
 
-PowerDNS uses dbconfig-common. The database backends offer you to
-automatically create and maintain the databases for you. If you choose
-yes, you're fine, no more action needed.
+You should create a database yourself and install the schema into
+it. On upgrades you should also upgrade the schema.
+You can find the upstream recommended schema here:
 
-Should you decide to create your databases yourself, for example, if
-you decide to use a non-standard schema, please find the database
-schema recommended by Upstream for MySQL in
-/usr/share/dbconfig-common/data/pdns-backend-mysql/install/mysql
+   /usr/share/pdns-backend-mysql/schema
 
 Just create a database (for example, named pdns) and then feed these
-SQL commands to MySQL to get some defaults to start with:
+SQL commands to MySQL to get the default schema:
 
-   mysql -u root -p <database> < /usr/share/dbconfig-common/data/pdns-backend-mysql/install/mysql
+   mysql -u root -p <database> < \
+     /usr/share/pdns-backend-mysql/schema/schema.mysql.sql
 
-Then add your data to the database.
+Then add your data to the database. An example configuration for
+PowerDNS is provided in /usr/share/doc/pdns-backend-mysql/examples/.
+
+It is probably a good idea to protect your configuration file, as
+it will contain your database password:
+
+   chmod 640 /etc/powerdns/pdns.d/pdns.local.gmysql.conf
+
+Note: in previous versions, the Debian packages used
+dbconfig-common, and you can continue to use dbconfig
+created databases, but you will have to upgrade the schema
+manually.

@@ -149,10 +149,7 @@ Description: geoip backend for PowerDNS
 
 Package: pdns-backend-mysql
 Architecture: any
-Depends: dbconfig-common,
-         dbconfig-mysql,
-         pdns-server (= ${binary:Version}),
-         ucf,
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Suggests: default-mysql-server
@@ -183,10 +180,7 @@ Description: generic UnixODBC backend for PowerDNS
 
 Package: pdns-backend-pgsql
 Architecture: any
-Depends: dbconfig-common,
-         dbconfig-pgsql,
-         pdns-server (= ${binary:Version}),
-         ucf,
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Suggests: postgresql
@@ -202,10 +196,7 @@ Description: generic PostgreSQL backend for PowerDNS
 
 Package: pdns-backend-sqlite3
 Architecture: any
-Depends: dbconfig-common,
-         dbconfig-sqlite3,
-         pdns-server (= ${binary:Version}),
-         ucf,
+Depends: pdns-server (= ${binary:Version}),
          ${misc:Depends},
          ${shlibs:Depends}
 Provides: pdns-backend

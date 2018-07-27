@@ -1,26 +1,27 @@
 Instructions on setting up PostgreSQL as a backend for PowerDNS
 ---------------------------------------------------------------
 
-PowerDNS uses dbconfig-common. The database backends offer you to
-automatically create and maintain the databases for you. If you choose
-yes, you're fine, no more action needed.
+You should create a database yourself and install the schema into
+it. On upgrades you should also upgrade the schema.
+You can find the upstream recommended schema here:
 
-Should you decide to create your databases yourself, for example, if
-you decide to use a non-standard schema, please find the database
-schema recommended by Upstream for PostgreSQL in
-/usr/share/dbconfig-common/data/pdns-backend-pgsql/install/pgsql
+   /usr/share/pdns-backend-pgsql/schema
 
-Just create a database using 'createdb' (for example named pdns) and
-then feed these SQL commands to PostgreSQL to get some defaults to
-start with:
+Just create a database (for example, named pdns) and then feed these
+SQL commands to PostgreSQL to get the default schema:
 
-   psql -h <host> -U <user> <database> -f /usr/share/dbconfig-common/data/pdns-backend-pgsql/install/pgsql
+   psql -h <host> -U <user> <database> -f \
+     /usr/share/pdns-backend-pgsql/schema/schema.pgsql.sql
 
-Then add your data to the database.
+Then add your data to the database. An example configuration for
+PowerDNS is provided in /usr/share/doc/pdns-backend-pgsql/examples/.
 
-*** SSL WARNING ***
-Please note that SSL connections to a PostgreSQL database currently do not
-work when PowerDNS is run chrooted because PowerDNS cannot access the
-libssl library from within the chroot.
-*** SSL WARNING ***
+It is probably a good idea to protect your configuration file, as
+it will contain your database password:
 
+   chmod 640 /etc/powerdns/pdns.d/pdns.local.gpgsql.conf
+
+Note: in previous versions, the Debian packages used
+dbconfig-common, and you can continue to use dbconfig
+created databases, but you will have to upgrade the schema
+manually.

@@ -2,21 +2,47 @@
 exec 2>&1
 set -ex
 
+service mysql stop || true
+trap 'kill -TERM $DB_SERVER_PID' EXIT TERM INT
+/usr/bin/mysqld_safe &
+DB_SERVER_PID=$!
+
+while ! mysqladmin ping ; do
+  sleep 0.5
+done
+
+DBNAME=pdns
+
+cat <<EOF | mysql --user=root mysql
+CREATE DATABASE $DBNAME;
+CREATE USER 'pdns'@'127.0.0.1' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON $DBNAME.* TO 'pdns'@'127.0.0.1';
+EOF
+mysql -uroot pdns < /usr/share/pdns-backend-mysql/schema/schema.mysql.sql
+
+cat /usr/share/doc/pdns-backend-mysql/examples/pdns.local.gmysql.conf | \
+sed -e '
+    s/_DBSERVER_/127.0.0.1/;
+    s/_DBPORT_/3306/;
+    s/_DBNAME_/'$DBNAME'/;
+    s/_DBUSER_/pdns/;
+    s/_DBPASS_/password/;
+' > /etc/powerdns/pdns.d/pdns.local.gmysql.conf
+chmod 640 /etc/powerdns/pdns.d/pdns.local.gmysql.conf
+
 echo /etc/powerdns/pdns.d/pdns.local.gmysql.conf follows:
 echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 cat  /etc/powerdns/pdns.d/pdns.local.gmysql.conf
 echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# gmysql-dbname=pdnsbackendmysql
-DBNAME=$(grep gmysql-dbname /etc/powerdns/pdns.d/pdns.local.gmysql.conf | awk -F= '{print $2}')
-
-cat <<EOF >/etc/powerdns/example.org
-example.org.           172800  IN      SOA     ns1.example.org. dns.example.org. 1 10800 3600 604800 3600
-example.org.           172800  IN      NS      ns1.example.org.
-smoke.example.org.     172800  IN      A       127.0.0.124
+# Other backends might be leftover from other test runs, so use a unique zone name.
+cat <<EOF >/etc/powerdns/mysql.example.org
+mysql.example.org.           172800  IN      SOA     ns1.example.org. dns.example.org. 1 10800 3600 604800 3600
+mysql.example.org.           172800  IN      NS      ns1.example.org.
+smoke.mysql.example.org.     172800  IN      A       127.0.0.124
 EOF
 
-zone2sql --gmysql --zone-name=example.org --zone=/etc/powerdns/example.org | \
+zone2sql --gmysql --zone-name=mysql.example.org --zone=/etc/powerdns/mysql.example.org | \
     mysql -uroot $DBNAME
 
 service pdns restart
@@ -28,12 +54,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-dig @127.0.0.1 smoke.example.org 2>&1 | tee "$TMPFILE"
+dig @127.0.0.1 smoke.mysql.example.org 2>&1 | tee "$TMPFILE"
 
 if grep -c '127\.0\.0\.124' "$TMPFILE"; then
     echo success
 else
-    echo smoke.example.org could not be resolved
+    echo smoke.mysql.example.org could not be resolved
     exit 1
 fi
 

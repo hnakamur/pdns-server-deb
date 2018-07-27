@@ -2,24 +2,45 @@
 exec 2>&1
 set -ex
 
+PGVERSION=$(basename $(find /etc/postgresql -maxdepth 1 -mindepth 1 -type d -print))
+service postgresql stop || true
+
+trap "pg_ctlcluster --skip-systemctl-redirect $PGVERSION main stop" EXIT TERM INT
+pg_ctlcluster --skip-systemctl-redirect $PGVERSION main start
+
+DBNAME=pdns
+DBHOST=localhost
+DBUSER=pdns
+DBPASS=password
+
+runuser -u postgres -- psql postgres -c "CREATE ROLE $DBUSER WITH LOGIN PASSWORD '$DBPASS';"
+runuser -u postgres -- createdb --echo -O $DBUSER $DBNAME
+
+runuser -u pdns -- psql $DBNAME < /usr/share/pdns-backend-pgsql/schema/schema.pgsql.sql
+
+cat /usr/share/doc/pdns-backend-pgsql/examples/pdns.local.gpgsql.conf | \
+sed -e '
+    s/_DBSERVER_/127.0.0.1/;
+    s/_DBPORT_/5432/;
+    s/_DBNAME_/'$DBNAME'/;
+    s/_DBUSER_/'$DBUSER'/;
+    s/_DBPASS_/'$DBPASS'/;
+' > /etc/powerdns/pdns.d/pdns.local.gpgsql.conf
+chmod 640 /etc/powerdns/pdns.d/pdns.local.gpgsql.conf
+
 echo /etc/powerdns/pdns.d/pdns.local.gpgsql.conf follows:
 echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 cat  /etc/powerdns/pdns.d/pdns.local.gpgsql.conf
 echo XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
 
-# gpgsql-dbname=pdnsbackendpgsql
-DBNAME=$(grep gpgsql-dbname   /etc/powerdns/pdns.d/pdns.local.gpgsql.conf | awk -F= '{print $2}')
-DBHOST=$(grep gpgsql-host     /etc/powerdns/pdns.d/pdns.local.gpgsql.conf | awk -F= '{print $2}')
-DBUSER=$(grep gpgsql-user     /etc/powerdns/pdns.d/pdns.local.gpgsql.conf | awk -F= '{print $2}')
-DBPASS=$(grep gpgsql-password /etc/powerdns/pdns.d/pdns.local.gpgsql.conf | awk -F= '{print $2}')
-
-cat <<EOF >/etc/powerdns/example.org
-example.org.           172800  IN      SOA     ns1.example.org. dns.example.org. 1 10800 3600 604800 3600
-example.org.           172800  IN      NS      ns1.example.org.
-smoke.example.org.     172800  IN      A       127.0.0.125
+# Other backends might be leftover from other test runs, so use a unique zone name.
+cat <<EOF >/etc/powerdns/pgsql.example.org
+pgsql.example.org.           172800  IN      SOA     ns1.example.org. dns.example.org. 1 10800 3600 604800 3600
+pgsql.example.org.           172800  IN      NS      ns1.example.org.
+smoke.pgsql.example.org.     172800  IN      A       127.0.0.125
 EOF
 
-zone2sql --gpgsql --zone-name=example.org --zone=/etc/powerdns/example.org | \
+zone2sql --gpgsql --zone-name=pgsql.example.org --zone=/etc/powerdns/pgsql.example.org | \
     PGPASSWORD="$DBPASS" psql -h "$DBHOST" -U "$DBUSER" "$DBNAME"
 
 service pdns restart
@@ -31,12 +52,12 @@ cleanup() {
 }
 trap cleanup EXIT
 
-dig @127.0.0.1 smoke.example.org 2>&1 | tee "$TMPFILE"
+dig @127.0.0.1 smoke.pgsql.example.org 2>&1 | tee "$TMPFILE"
 
 if grep -c '127\.0\.0\.125' "$TMPFILE"; then
     echo success
 else
-    echo smoke.example.org could not be resolved
+    echo smoke.pgsql.example.org could not be resolved
     exit 1
 fi
 

@@ -3,13 +3,13 @@ exec 2>&1
 set -ex
 
 cat <<EOF >/etc/powerdns/named.conf
-zone "example.org" { type master; file "/etc/powerdns/example.org.zone"; };
+zone "bind.example.org" { type master; file "/etc/powerdns/bind.example.org.zone"; };
 EOF
 
-cat <<EOF >/etc/powerdns/example.org.zone
-example.org.           172800  IN      SOA     ns1.example.org. dns.example.org. 1 10800 3600 604800 3600
-example.org.           172800  IN      NS      ns1.example.org.
-smoke.example.org.     172800  IN      A       127.0.0.123
+cat <<EOF >/etc/powerdns/bind.example.org.zone
+bind.example.org.           172800  IN      SOA     ns1.example.org. dns.example.org. 1 10800 3600 604800 3600
+bind.example.org.           172800  IN      NS      ns1.example.org.
+smoke.bind.example.org.     172800  IN      A       127.0.0.123
 EOF
 
 service pdns restart
@@ -21,7 +21,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-dig @127.0.0.1 smoke.example.org 2>&1 | tee "$TMPFILE"
+dig @127.0.0.1 smoke.bind.example.org 2>&1 | tee "$TMPFILE"
 
 if grep -c '127\.0\.0\.123' "$TMPFILE"; then
     echo success
