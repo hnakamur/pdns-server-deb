@@ -1,3 +1,20 @@
+pdns (4.1.3-4) unstable; urgency=medium
+
+  * Remove automatic database configuration.
+    Some database backends previously used dbconfig-common as a convenient
+    way of setting up the respective database server automatically,
+    including upgrades of the database schema. This has caused numerous
+    issues over the years, and has now been removed.
+    As we no longer know the database server credentials, drop generation
+    of configuration files.
+    Closer to the upstream packages, too.
+  * Reenable RestrictAddressFamilies on all architectures
+  * Tests: Disable ipv6-requiring tests.
+    The docker runners on salsa.d.o do not have working ::1.
+  * Tests: Remove check for ECC-GOST
+
+ -- Chris Hofstaedtler <zeha@debian.org>  Tue, 31 Jul 2018 07:42:26 +0000
+
 pdns (4.1.3-3) unstable; urgency=medium
 
   * d/rules: print make check logfile on failure
