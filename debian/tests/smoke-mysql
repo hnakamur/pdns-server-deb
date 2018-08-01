@@ -20,6 +20,9 @@ GRANT ALL PRIVILEGES ON $DBNAME.* TO 'pdns'@'127.0.0.1';
 EOF
 mysql -uroot pdns < /usr/share/pdns-backend-mysql/schema/schema.mysql.sql
 
+# cleanup possible leftovers from other tests
+find /etc/powerdns/pdns.d/ -type f -delete
+
 cat /usr/share/doc/pdns-backend-mysql/examples/pdns.local.gmysql.conf | \
 sed -e '
     s/_DBSERVER_/127.0.0.1/;

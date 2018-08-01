@@ -18,6 +18,9 @@ runuser -u postgres -- createdb --echo -O $DBUSER $DBNAME
 
 runuser -u pdns -- psql $DBNAME < /usr/share/pdns-backend-pgsql/schema/schema.pgsql.sql
 
+# cleanup possible leftovers from other tests
+find /etc/powerdns/pdns.d/ -type f -delete
+
 cat /usr/share/doc/pdns-backend-pgsql/examples/pdns.local.gpgsql.conf | \
 sed -e '
     s/_DBSERVER_/127.0.0.1/;
