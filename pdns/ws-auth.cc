@@ -369,6 +369,9 @@ static void fillZone(const DNSName& zonename, HttpResponse* resp, bool doRRSets)
         records.push_back(rr);
       }
       sort(records.begin(), records.end(), [](const DNSResourceRecord& a, const DNSResourceRecord& b) {
+              /* if you ever want to update this comparison function,
+                 please be aware that you will also need to update the conditions in the code merging
+                 the records and comments below */
               if (a.qname == b.qname) {
                   return b.qtype < a.qtype;
               }
@@ -384,6 +387,9 @@ static void fillZone(const DNSName& zonename, HttpResponse* resp, bool doRRSets)
         comments.push_back(comment);
       }
       sort(comments.begin(), comments.end(), [](const Comment& a, const Comment& b) {
+              /* if you ever want to update this comparison function,
+                 please be aware that you will also need to update the conditions in the code merging
+                 the records and comments below */
               if (a.qname == b.qname) {
                   return b.qtype < a.qtype;
               }
@@ -402,7 +408,8 @@ static void fillZone(const DNSName& zonename, HttpResponse* resp, bool doRRSets)
     auto cit = comments.begin();
 
     while (rit != records.end() || cit != comments.end()) {
-      if (cit == comments.end() || (rit != records.end() && (cit->qname.toString() <= rit->qname.toString() || cit->qtype < rit->qtype || cit->qtype == rit->qtype))) {
+      // if you think this should be rit < cit instead of cit < rit, note the b < a instead of a < b in the sort comparison functions above
+      if (cit == comments.end() || (rit != records.end() && (rit->qname == cit->qname ? (cit->qtype < rit->qtype || cit->qtype == rit->qtype) : cit->qname < rit->qname))) {
         current_qname = rit->qname;
         current_qtype = rit->qtype;
         ttl = rit->ttl;
@@ -1205,9 +1212,8 @@ static void gatherRecordsFromZone(const std::string& zonestring, vector<DNSResou
 static void checkDuplicateRecords(vector<DNSResourceRecord>& records) {
   sort(records.begin(), records.end(),
     [](const DNSResourceRecord& rec_a, const DNSResourceRecord& rec_b) -> bool {
-      return rec_a.qname.toString() > rec_b.qname.toString() || \
-        rec_a.qtype.getCode() > rec_b.qtype.getCode() || \
-        rec_a.content < rec_b.content;
+      /* we need _strict_ weak ordering */
+      return std::tie(rec_a.qname, rec_a.qtype, rec_a.content) < std::tie(rec_b.qname, rec_b.qtype, rec_b.content);
     }
   );
   DNSResourceRecord previous;
