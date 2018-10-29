@@ -1,6 +1,13 @@
 #!/bin/sh
 set -e
 
+delete_unchanged() {
+  if [ -e "$1" ] && echo "$2 $1" | md5sum --check --status; then
+    echo "Removing unchanged configuration file $1"
+    rm -f "$1"
+  fi
+}
+
 ucf_delete_unchanged() {
   # pdns-server no longer Depends: ucf, so only do this if ucf is installed.
   if which ucf >/dev/null; then
@@ -26,9 +33,7 @@ backup_conffile() {
 case "$1" in
   install|upgrade)
     # for upgrades from before 4.0.0-2, drop empty file created by previous postinst.
-    if [ -e /etc/powerdns/bindbackend.conf ] && echo "d41d8cd98f00b204e9800998ecf8427e /etc/powerdns/bindbackend.conf" | md5sum --check --status; then
-      rm -f /etc/powerdns/bindbackend.conf
-    fi
+    delete_unchanged "/etc/powerdns/bindbackend.conf" d41d8cd98f00b204e9800998ecf8427e
 
     # 4.0.0-2 moved pdns-server' configuration files back under dpkg conffile control (from ucf),
     # and bindbackend was split into its own package.
@@ -43,6 +48,12 @@ case "$1" in
       ucf_delete_unchanged "/etc/powerdns/pdns.d/pdns.simplebind.conf"
       backup_conffile "/etc/powerdns/pdns.d/pdns.simplebind.conf"
     fi
+
+    # clean up files we no longer ship
+    delete_unchanged "/etc/resolvconf/update.d/pdns" aeacd4ba822e5ad334c1794e8239d9c1
+    backup_conffile "/etc/resolvconf/update.d/pdns"
+    delete_unchanged "/etc/insserv.d/pdns-server" af60f140f00b9520efbcd3a18052905d
+    backup_conffile "/etc/insserv.d/pdns-server"
   ;;
 esac
 
