@@ -700,20 +700,21 @@ am__testrunner_SOURCES_DIST = arguments.cc auth-caches.cc \
 	dns_random.cc dnsbackend.cc dnslabeltext.cc dnsname.cc \
 	dnsname.hh dnspacket.cc dnsparser.hh dnsparser.cc \
 	dnsrecords.cc dnssecinfra.cc dnssecsigner.cc dnswriter.cc \
-	ednsoptions.cc ednsoptions.hh ednssubnet.cc gettime.cc \
-	gettime.hh gss_context.cc gss_context.hh iputils.cc ixfr.cc \
-	ixfr.hh logger.cc misc.cc nameserver.cc nsecrecords.cc \
-	opensslsigners.cc opensslsigners.hh qtype.cc rcpgenerator.cc \
-	responsestats.cc responsestats-auth.cc sillyrecords.cc \
-	statbag.cc test-arguments_cc.cc test-base32_cc.cc \
-	test-base64_cc.cc test-bindparser_cc.cc test-common.hh \
-	test-delaypipe_hh.cc test-dnsrecordcontent.cc \
-	test-distributor_hh.cc test-dns_random_hh.cc \
-	test-dnsname_cc.cc test-dnsparser_hh.cc test-dnsrecords_cc.cc \
-	test-iputils_hh.cc test-ixfr_cc.cc test-lock_hh.cc \
-	test-md5_hh.cc test-misc_hh.cc test-nameserver_cc.cc \
-	test-nmtree.cc test-packetcache_cc.cc test-rcpgenerator_cc.cc \
-	test-signers.cc test-sha_hh.cc test-statbag_cc.cc test-tsig.cc \
+	ednsoptions.cc ednsoptions.hh ednscookies.cc ednscookies.hh \
+	ednssubnet.cc gettime.cc gettime.hh gss_context.cc \
+	gss_context.hh iputils.cc ixfr.cc ixfr.hh logger.cc misc.cc \
+	nameserver.cc nsecrecords.cc opensslsigners.cc \
+	opensslsigners.hh qtype.cc rcpgenerator.cc responsestats.cc \
+	responsestats-auth.cc sillyrecords.cc statbag.cc \
+	test-arguments_cc.cc test-base32_cc.cc test-base64_cc.cc \
+	test-bindparser_cc.cc test-common.hh test-delaypipe_hh.cc \
+	test-dnsrecordcontent.cc test-distributor_hh.cc \
+	test-dns_random_hh.cc test-dnsname_cc.cc test-dnsparser_hh.cc \
+	test-dnsrecords_cc.cc test-iputils_hh.cc test-ixfr_cc.cc \
+	test-lock_hh.cc test-md5_hh.cc test-misc_hh.cc \
+	test-nameserver_cc.cc test-nmtree.cc test-packetcache_cc.cc \
+	test-packetcache_hh.cc test-rcpgenerator_cc.cc test-signers.cc \
+	test-sha_hh.cc test-statbag_cc.cc test-tsig.cc \
 	test-zoneparser_tng_cc.cc testrunner.cc tsigverifier.cc \
 	tsigverifier.hh ueberbackend.cc unix_utility.cc \
 	zoneparser-tng.cc zoneparser-tng.hh pkcs11signers.cc \
@@ -727,10 +728,11 @@ am_testrunner_OBJECTS = arguments.$(OBJEXT) auth-caches.$(OBJEXT) \
 	dnslabeltext.$(OBJEXT) dnsname.$(OBJEXT) dnspacket.$(OBJEXT) \
 	dnsparser.$(OBJEXT) dnsrecords.$(OBJEXT) dnssecinfra.$(OBJEXT) \
 	dnssecsigner.$(OBJEXT) dnswriter.$(OBJEXT) \
-	ednsoptions.$(OBJEXT) ednssubnet.$(OBJEXT) gettime.$(OBJEXT) \
-	gss_context.$(OBJEXT) iputils.$(OBJEXT) ixfr.$(OBJEXT) \
-	logger.$(OBJEXT) misc.$(OBJEXT) nameserver.$(OBJEXT) \
-	nsecrecords.$(OBJEXT) opensslsigners.$(OBJEXT) qtype.$(OBJEXT) \
+	ednsoptions.$(OBJEXT) ednscookies.$(OBJEXT) \
+	ednssubnet.$(OBJEXT) gettime.$(OBJEXT) gss_context.$(OBJEXT) \
+	iputils.$(OBJEXT) ixfr.$(OBJEXT) logger.$(OBJEXT) \
+	misc.$(OBJEXT) nameserver.$(OBJEXT) nsecrecords.$(OBJEXT) \
+	opensslsigners.$(OBJEXT) qtype.$(OBJEXT) \
 	rcpgenerator.$(OBJEXT) responsestats.$(OBJEXT) \
 	responsestats-auth.$(OBJEXT) sillyrecords.$(OBJEXT) \
 	statbag.$(OBJEXT) test-arguments_cc.$(OBJEXT) \
@@ -743,13 +745,14 @@ am_testrunner_OBJECTS = arguments.$(OBJEXT) auth-caches.$(OBJEXT) \
 	test-lock_hh.$(OBJEXT) test-md5_hh.$(OBJEXT) \
 	test-misc_hh.$(OBJEXT) test-nameserver_cc.$(OBJEXT) \
 	test-nmtree.$(OBJEXT) test-packetcache_cc.$(OBJEXT) \
-	test-rcpgenerator_cc.$(OBJEXT) test-signers.$(OBJEXT) \
-	test-sha_hh.$(OBJEXT) test-statbag_cc.$(OBJEXT) \
-	test-tsig.$(OBJEXT) test-zoneparser_tng_cc.$(OBJEXT) \
-	testrunner.$(OBJEXT) tsigverifier.$(OBJEXT) \
-	ueberbackend.$(OBJEXT) unix_utility.$(OBJEXT) \
-	zoneparser-tng.$(OBJEXT) $(am__objects_1) $(am__objects_3) \
-	$(am__objects_2) $(am__objects_4)
+	test-packetcache_hh.$(OBJEXT) test-rcpgenerator_cc.$(OBJEXT) \
+	test-signers.$(OBJEXT) test-sha_hh.$(OBJEXT) \
+	test-statbag_cc.$(OBJEXT) test-tsig.$(OBJEXT) \
+	test-zoneparser_tng_cc.$(OBJEXT) testrunner.$(OBJEXT) \
+	tsigverifier.$(OBJEXT) ueberbackend.$(OBJEXT) \
+	unix_utility.$(OBJEXT) zoneparser-tng.$(OBJEXT) \
+	$(am__objects_1) $(am__objects_3) $(am__objects_2) \
+	$(am__objects_4)
 testrunner_OBJECTS = $(am_testrunner_OBJECTS)
 testrunner_DEPENDENCIES = $(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
 	$(am__DEPENDENCIES_1) $(am__DEPENDENCIES_1) \
@@ -2094,9 +2097,9 @@ testrunner_SOURCES = arguments.cc auth-caches.cc auth-caches.hh \
 	dnsbackend.cc dnslabeltext.cc dnsname.cc dnsname.hh \
 	dnspacket.cc dnsparser.hh dnsparser.cc dnsrecords.cc \
 	dnssecinfra.cc dnssecsigner.cc dnswriter.cc ednsoptions.cc \
-	ednsoptions.hh ednssubnet.cc gettime.cc gettime.hh \
-	gss_context.cc gss_context.hh iputils.cc ixfr.cc ixfr.hh \
-	logger.cc misc.cc nameserver.cc nsecrecords.cc \
+	ednsoptions.hh ednscookies.cc ednscookies.hh ednssubnet.cc \
+	gettime.cc gettime.hh gss_context.cc gss_context.hh iputils.cc \
+	ixfr.cc ixfr.hh logger.cc misc.cc nameserver.cc nsecrecords.cc \
 	opensslsigners.cc opensslsigners.hh qtype.cc rcpgenerator.cc \
 	responsestats.cc responsestats-auth.cc sillyrecords.cc \
 	statbag.cc test-arguments_cc.cc test-base32_cc.cc \
@@ -2106,12 +2109,13 @@ testrunner_SOURCES = arguments.cc auth-caches.cc auth-caches.hh \
 	test-dnsname_cc.cc test-dnsparser_hh.cc test-dnsrecords_cc.cc \
 	test-iputils_hh.cc test-ixfr_cc.cc test-lock_hh.cc \
 	test-md5_hh.cc test-misc_hh.cc test-nameserver_cc.cc \
-	test-nmtree.cc test-packetcache_cc.cc test-rcpgenerator_cc.cc \
-	test-signers.cc test-sha_hh.cc test-statbag_cc.cc test-tsig.cc \
-	test-zoneparser_tng_cc.cc testrunner.cc tsigverifier.cc \
-	tsigverifier.hh ueberbackend.cc unix_utility.cc \
-	zoneparser-tng.cc zoneparser-tng.hh $(am__append_55) \
-	$(am__append_57) $(am__append_59) $(am__append_61)
+	test-nmtree.cc test-packetcache_cc.cc test-packetcache_hh.cc \
+	test-rcpgenerator_cc.cc test-signers.cc test-sha_hh.cc \
+	test-statbag_cc.cc test-tsig.cc test-zoneparser_tng_cc.cc \
+	testrunner.cc tsigverifier.cc tsigverifier.hh ueberbackend.cc \
+	unix_utility.cc zoneparser-tng.cc zoneparser-tng.hh \
+	$(am__append_55) $(am__append_57) $(am__append_59) \
+	$(am__append_61)
 testrunner_LDFLAGS = \
 	$(AM_LDFLAGS) \
 	$(LIBCRYPTO_LDFLAGS) \
@@ -2459,6 +2463,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynlistener.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynloader.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/dynmessenger.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ednscookies.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ednsoptions.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/ednssubnet.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/gettime.Po@am__quote@
@@ -2528,6 +2533,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-nameserver_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-nmtree.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-packetcache_cc.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-packetcache_hh.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-rcpgenerator_cc.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-sha_hh.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test-signers.Po@am__quote@
