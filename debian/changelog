@@ -1,3 +1,11 @@
+pdns (4.1.5-1) unstable; urgency=medium
+
+  * Cleanup insserv.d and resolvconf hooks that we used to install
+  * New upstream version 4.1.5 including fixes for CVE-2018-10851,
+    CVE-2018-14626 (Closes: #913163).
+
+ -- Chris Hofstaedtler <zeha@debian.org>  Fri, 09 Nov 2018 18:42:11 +0000
+
 pdns (4.1.4-1) unstable; urgency=medium
 
   * New upstream version 4.1.4
