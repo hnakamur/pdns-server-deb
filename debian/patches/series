@@ -1,5 +1,6 @@
 869222-lowercase-qname-before-NSEC-generation.patch
 889798-auth-Always-bind-the-results-array-after-executing-a.patch
+911659-auth-reanimate-backends.patch
 CVE-2017-15091-4.0.4.patch
 CVE-2018-1046.patch
 CVE-2018-10851.patch

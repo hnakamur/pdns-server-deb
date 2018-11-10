@@ -1,0 +1,228 @@
+From 8e4c354790ff43ca750a58c504ee31e570462ff8 Mon Sep 17 00:00:00 2001
+From: Chris Hofstaedtler <chris.hofstaedtler@deduktiva.com>
+Date: Sat, 10 Nov 2018 15:26:01 +0100
+Subject: [PATCH] auth: reanimate opendbx, lua, ldapbackend
+
+Minimal version of cf8c91f3d30bdab55725c4b74f7753b7bd1f3c82,
+originally by Kees Monshouwer <mind04@monshouwer.org>
+---
+ modules/ldapbackend/ldapbackend.cc    |  4 ++--
+ modules/ldapbackend/ldapbackend.hh    |  2 +-
+ modules/luabackend/luabackend.hh      |  2 +-
+ modules/luabackend/minimal.cc         |  4 ++--
+ modules/opendbxbackend/odbxbackend.cc | 26 +++++++++++---------------
+ modules/opendbxbackend/odbxbackend.hh | 12 ++++++------
+ 6 files changed, 23 insertions(+), 27 deletions(-)
+
+diff --git a/modules/ldapbackend/ldapbackend.cc b/modules/ldapbackend/ldapbackend.cc
+index 3ed7574f0..f315a7aff 100644
+--- a/modules/ldapbackend/ldapbackend.cc
++++ b/modules/ldapbackend/ldapbackend.cc
+@@ -481,7 +481,7 @@ bool LdapBackend::get( DNSResourceRecord &rr )
+ 
+ 
+ 
+- bool LdapBackend::getDomainInfo( const string& domain, DomainInfo& di )
++ bool LdapBackend::getDomainInfo( const DNSName& domain, DomainInfo& di )
+ {
+         string filter;
+         SOAData sd;
+@@ -489,7 +489,7 @@ bool LdapBackend::get( DNSResourceRecord &rr )
+ 
+ 
+         // search for SOARecord of domain
+-        filter = "(&(associatedDomain=" + toLower( m_pldap->escape( domain ) ) + ")(SOARecord=*))";
++        filter = "(&(associatedDomain=" + toLower( m_pldap->escape( domain.toStringRootDot() ) ) + ")(SOARecord=*))";
+         m_msgid = m_pldap->search( getArg( "basedn" ), LDAP_SCOPE_SUBTREE, filter, attronly );
+         m_pldap->getSearchEntry( m_msgid, m_result );
+ 
+diff --git a/modules/ldapbackend/ldapbackend.hh b/modules/ldapbackend/ldapbackend.hh
+index d2fb3bb4c..4f2656bf4 100644
+--- a/modules/ldapbackend/ldapbackend.hh
++++ b/modules/ldapbackend/ldapbackend.hh
+@@ -129,7 +129,7 @@ class LdapBackend : public DNSBackend
+         bool prepare_simple();
+         bool prepare_strict();
+ 
+-        bool getDomainInfo( const string& domain, DomainInfo& di );
++        bool getDomainInfo( const DNSName& domain, DomainInfo& di ) override;
+ 
+ public:
+ 
+diff --git a/modules/luabackend/luabackend.hh b/modules/luabackend/luabackend.hh
+index b658af576..0e95e6c84 100644
+--- a/modules/luabackend/luabackend.hh
++++ b/modules/luabackend/luabackend.hh
+@@ -58,7 +58,7 @@ public:
+     void lookup(const QType &qtype, const DNSName &qname, DNSPacket *p, int domain_id);
+     bool get(DNSResourceRecord &rr);
+     //! fills the soadata struct with the SOA details. Returns false if there is no SOA.
+-    bool getSOA(const string &name, SOAData &soadata, DNSPacket *p=0);
++    bool getSOA(const DNSName &name, SOAData &soadata, DNSPacket *p=0) override;
+ 
+ 
+ //  MASTER BACKEND
+diff --git a/modules/luabackend/minimal.cc b/modules/luabackend/minimal.cc
+index 0f8e3df48..816943b4f 100644
+--- a/modules/luabackend/minimal.cc
++++ b/modules/luabackend/minimal.cc
+@@ -172,7 +172,7 @@ bool LUABackend::get(DNSResourceRecord &rr) {
+     return !rr.content.empty();
+ }
+ 
+-bool LUABackend::getSOA(const string &name, SOAData &soadata, DNSPacket *p) {
++bool LUABackend::getSOA(const DNSName &name, SOAData &soadata, DNSPacket *p) {
+     if (logging)
+ 	L << Logger::Info << backend_name << "(getsoa) BEGIN" << endl;
+ 
+@@ -180,7 +180,7 @@ bool LUABackend::getSOA(const string &name, SOAData &soadata, DNSPacket *p) {
+ 
+     lua_rawgeti(lua, LUA_REGISTRYINDEX, f_lua_getsoa);
+ 
+-    lua_pushstring(lua, name.c_str());
++    lua_pushstring(lua, name.toString().c_str());
+ 
+     if(lua_pcall(lua, 1, 1, f_lua_exec_error) != 0) {
+ 	string e = backend_name + lua_tostring(lua, -1);
+diff --git a/modules/opendbxbackend/odbxbackend.cc b/modules/opendbxbackend/odbxbackend.cc
+index c868a8010..0bd001540 100644
+--- a/modules/opendbxbackend/odbxbackend.cc
++++ b/modules/opendbxbackend/odbxbackend.cc
+@@ -105,7 +105,7 @@ OdbxBackend::~OdbxBackend()
+ 
+ 
+ 
+-bool OdbxBackend::getDomainInfo( const string& domain, DomainInfo& di )
++bool OdbxBackend::getDomainInfo( const DNSName& domain, DomainInfo& di )
+ {
+         const char* tmp;
+ 
+@@ -115,7 +115,7 @@ bool OdbxBackend::getDomainInfo( const string& domain, DomainInfo& di )
+         	DLOG( L.log( m_myname + " getDomainInfo()", Logger::Debug ) );
+ 
+         	string stmt = getArg( "sql-zoneinfo" );
+-        	string& stmtref = strbind( ":name", escape( toLower( domain ), READ ), stmt );
++        	string& stmtref = strbind( ":name", escape( domain.makeLowerCase().toStringRootDot(), READ ), stmt );
+ 
+         	if( !execStmt( stmtref.c_str(), stmtref.size(), READ ) ) { return false; }
+         	if( !getRecord( READ ) ) { return false; }
+@@ -201,7 +201,7 @@ bool OdbxBackend::getSOA( const DNSName& domain, SOAData& sd, DNSPacket* p )
+         	DLOG( L.log( m_myname + " getSOA()", Logger::Debug ) );
+ 
+         	string stmt = getArg( "sql-lookupsoa" );
+-        	string& stmtref = strbind( ":name", escape( domain.toStringNoDot(), READ ), stmt );
++        	string& stmtref = strbind( ":name", escape( domain.makeLowerCase().toStringNoDot(), READ ), stmt );
+ 
+         	if( !execStmt( stmtref.c_str(), stmtref.size(), READ ) ) { return false; }
+         	if( !getRecord( READ ) ) { return false; }
+@@ -345,8 +345,7 @@ void OdbxBackend::lookup( const QType& qtype, const DNSName& qname, DNSPacket* d
+         		stmtref = strbind( ":id", string( m_buffer, len ), stmtref );
+         	}
+ 
+-        	string tmp = qname.toStringNoDot();
+-        	stmtref = strbind( ":name", escape( toLowerByRef( tmp ), READ ), stmtref );
++        	stmtref = strbind( ":name", escape( qname.makeLowerCase().toStringRootDot(), READ ), stmtref );
+ 
+         	if( !execStmt( stmtref.c_str(), stmtref.size(), READ ) )
+         	{
+@@ -509,14 +508,14 @@ void OdbxBackend::setNotified( uint32_t domain_id, uint32_t serial )
+ 
+ 
+ 
+-bool OdbxBackend::isMaster( const string& domain, const string& ip )
++bool OdbxBackend::isMaster( const DNSName& domain, const string& ip )
+ {
+         try
+         {
+         	DLOG( L.log( m_myname + " isMaster()", Logger::Debug ) );
+ 
+         	string stmt = getArg( "sql-master" );
+-        	string& stmtref = strbind( ":name", escape( toLower( domain ), READ ), stmt );
++        	string& stmtref = strbind( ":name", escape( domain.makeLowerCase().toStringRootDot(), READ ), stmt );
+ 
+         	if( !execStmt( stmtref.c_str(), stmtref.size(), READ ) ) { return false; }
+         	if( !getRecord( READ ) ) { return false; }
+@@ -589,7 +588,7 @@ void OdbxBackend::getUpdatedMasters( vector<DomainInfo>* updated )
+ 
+ 
+ 
+-bool OdbxBackend::superMasterBackend( const string& ip, const string& domain, const vector<DNSResourceRecord>& set, string *nameserver, string* account, DNSBackend** ddb )
++bool OdbxBackend::superMasterBackend( const string& ip, const DNSName& domain, const vector<DNSResourceRecord>& set, string *nameserver, string* account, DNSBackend** ddb )
+ {
+         try
+         {
+@@ -633,7 +632,7 @@ bool OdbxBackend::superMasterBackend( const string& ip, const string& domain, co
+ 
+ 
+ 
+-bool OdbxBackend::createSlaveDomain( const string& ip, const string& domain, const string &nameserver, const string& account )
++bool OdbxBackend::createSlaveDomain( const string& ip, const DNSName& domain, const string &nameserver, const string& account )
+ {
+         try
+         {
+@@ -645,8 +644,7 @@ bool OdbxBackend::createSlaveDomain( const string& ip, const string& domain, con
+         		return false;
+         	}
+ 
+-        	string tmp = domain;
+-        	int len = snprintf( m_buffer, sizeof( m_buffer ) - 1, getArg( "sql-insert-slave" ).c_str(), escape( toLowerByRef( tmp ), WRITE ).c_str(),
++        	int len = snprintf( m_buffer, sizeof( m_buffer ) - 1, getArg( "sql-insert-slave" ).c_str(), escape( domain.makeLowerCase().toStringRootDot(), WRITE ).c_str(),
+         		escape( ip, WRITE ).c_str(), escape( account, WRITE ).c_str() );
+ 
+         	if( len < 0 )
+@@ -686,8 +684,6 @@ bool OdbxBackend::feedRecord( const DNSResourceRecord& rr, string *ordername )
+         		return false;
+         	}
+ 
+-        	string tmp = rr.qname.toStringNoDot();
+-
+         	unsigned int priority=0;
+         	string content(rr.content);
+ 
+@@ -700,7 +696,7 @@ bool OdbxBackend::feedRecord( const DNSResourceRecord& rr, string *ordername )
+         	}
+ 
+         	int len = snprintf( m_buffer, sizeof( m_buffer ) - 1, getArg( "sql-insert-record" ).c_str(), rr.domain_id,
+-        		escape( toLowerByRef( tmp ), WRITE ).c_str(), rr.qtype.getName().c_str(), rr.ttl, priority,
++        		escape( rr.qname.makeLowerCase().toStringRootDot(), WRITE ).c_str(), rr.qtype.getName().c_str(), rr.ttl, priority,
+         		escape( content, WRITE ).c_str() );
+ 
+         	if( len < 0 )
+@@ -728,7 +724,7 @@ bool OdbxBackend::feedRecord( const DNSResourceRecord& rr, string *ordername )
+ 
+ 
+ 
+-bool OdbxBackend::startTransaction( const string& domain, int zoneid )
++bool OdbxBackend::startTransaction( const DNSName& domain, int zoneid )
+ {
+         try
+         {
+diff --git a/modules/opendbxbackend/odbxbackend.hh b/modules/opendbxbackend/odbxbackend.hh
+index 81e270348..8f9e27041 100644
+--- a/modules/opendbxbackend/odbxbackend.hh
++++ b/modules/opendbxbackend/odbxbackend.hh
+@@ -82,15 +82,15 @@ public:
+         bool list( const DNSName& target, int domain_id, bool include_disabled=false );
+         bool get( DNSResourceRecord& rr );
+ 
+-        bool startTransaction( const string& domain, int domain_id );
++        bool startTransaction( const DNSName& domain, int domain_id ) override;
+         bool commitTransaction();
+         bool abortTransaction();
+ 
+-        bool isMaster( const string& domain, const string& ip );
+-        bool getDomainInfo( const string& domain, DomainInfo& di );
+-        bool feedRecord( const DNSResourceRecord& rr, string *ordername=0 );
+-        bool createSlaveDomain( const string& ip, const string& domain, const string &nameserver, const string& account );
+-        bool superMasterBackend( const string& ip, const string& domain, const vector<DNSResourceRecord>& nsset, string *nameserver, string* account, DNSBackend** ddb );
++        bool isMaster( const DNSName& domain, const string& ip ) override;
++        bool getDomainInfo( const DNSName& domain, DomainInfo& di ) override;
++        bool feedRecord( const DNSResourceRecord& rr, string *ordername=0 ) override;
++        bool createSlaveDomain( const string& ip, const DNSName& domain, const string &nameserver, const string& account ) override;
++        bool superMasterBackend( const string& ip, const DNSName& domain, const vector<DNSResourceRecord>& nsset, string *nameserver, string* account, DNSBackend** ddb ) override;
+ 
+         void getUpdatedMasters( vector<DomainInfo>* updated );
+         void getUnfreshSlaveInfos( vector<DomainInfo>* unfresh );
+-- 
+2.19.1
+
