@@ -1,3 +1,13 @@
+pdns (4.0.3-1+deb9u3) stretch; urgency=medium
+
+  * Fix (security) bugs, partially using upstream patches:
+    * CVE-2018-1046 in dnsreplay (Closes: #898255)
+    * CVE-2018-10851 (Closes: #913163)
+    * MySQL queries with stored procedures (Closes: #889798)
+    * ldap, lua, opendbx backend not finding domains (Closes: #911659)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sat, 10 Nov 2018 13:36:22 +0000
+
 pdns (4.0.3-1+deb9u2) stretch; urgency=medium
 
   * Add upstream patch fixing security issue:
