@@ -1,0 +1,71 @@
+From 4fd90e75d47d6ec43d10c94ea260b08e50806442 Mon Sep 17 00:00:00 2001
+From: Remi Gacogne <remi.gacogne@powerdns.com>
+Date: Tue, 2 Jan 2018 17:03:47 +0100
+Subject: [PATCH] auth: Always bind the results array after executing a
+ statement
+
+We will reuse the same array most of the time, but it turns out that
+calling mysql_stmt_next_result() followed by mysql_stmt_store_result()
+invalidates the existing binding (the first one sets stmt->bind_result_done
+to false, causing the second to reset the existing binding).
+---
+ modules/gmysqlbackend/smysql.cc | 31 +++++++++++++++++++------------
+ 1 file changed, 19 insertions(+), 12 deletions(-)
+
+diff --git a/modules/gmysqlbackend/smysql.cc b/modules/gmysqlbackend/smysql.cc
+index aab16daf9..8a2a5092a 100644
+--- a/modules/gmysqlbackend/smysql.cc
++++ b/modules/gmysqlbackend/smysql.cc
+@@ -182,7 +182,7 @@ public:
+       // prepare for result
+       d_resnum = mysql_stmt_num_rows(d_stmt);
+       
+-      if (d_resnum>0 && d_res_bind == NULL) {
++      if (d_resnum > 0 && d_res_bind == nullptr) {
+         MYSQL_RES* meta = mysql_stmt_result_metadata(d_stmt);
+         d_fnum = static_cast<int>(mysql_num_fields(meta)); // ensure correct number of fields
+         d_res_bind = new MYSQL_BIND[d_fnum];
+@@ -201,12 +201,17 @@ public:
+         }
+   
+         mysql_free_result(meta);
+-  
+-        if ((err = mysql_stmt_bind_result(d_stmt, d_res_bind))) {
+-          string error(mysql_stmt_error(d_stmt));
+-          releaseStatement();
+-          throw SSqlException("Could not bind parameters to mysql statement: " + d_query + string(": ") + error);
+-        }
++      }
++
++      /* we need to bind the results array again because a call to mysql_stmt_next_result() followed
++         by a call to mysql_stmt_store_result() might have invalidated it (the first one sets
++         stmt->bind_result_done to false, causing the second to reset the existing binding),
++         and we can't bind it right after the call to mysql_stmt_store_result() if it returned
++         no rows, because then the statement 'contains no metadata' */
++      if (d_res_bind != nullptr && (err = mysql_stmt_bind_result(d_stmt, d_res_bind))) {
++        string error(mysql_stmt_error(d_stmt));
++        releaseStatement();
++        throw SSqlException("Could not bind parameters to mysql statement: " + d_query + string(": ") + error);
+       }
+     }
+ 
+@@ -252,13 +259,13 @@ public:
+         if ((err = mysql_stmt_store_result(d_stmt))) {
+           string error(mysql_stmt_error(d_stmt));
+           releaseStatement();
+-          throw SSqlException("Could not store mysql statement: " + d_query + string(": ") + error);
++          throw SSqlException("Could not store mysql statement while processing additional sets: " + d_query + string(": ") + error);
+         }
+         d_resnum = mysql_stmt_num_rows(d_stmt);
+         // XXX: For some reason mysql_stmt_result_metadata returns NULL here, so we cannot
+         // ensure row field count matches first result set.
+-        if (d_resnum>0) { // ignore empty result set
+-          if ((err = mysql_stmt_bind_result(d_stmt, d_res_bind))) {
++        if (d_resnum > 0) { // ignore empty result set
++          if (d_res_bind != nullptr && (err = mysql_stmt_bind_result(d_stmt, d_res_bind))) {
+             string error(mysql_stmt_error(d_stmt));
+             releaseStatement();
+             throw SSqlException("Could not bind parameters to mysql statement: " + d_query + string(": ") + error);
+-- 
+2.19.1
+
