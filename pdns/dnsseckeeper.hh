@@ -192,7 +192,7 @@ public:
   bool removeKey(const DNSName& zname, unsigned int id);
   bool activateKey(const DNSName& zname, unsigned int id);
   bool deactivateKey(const DNSName& zname, unsigned int id);
-  bool checkKeys(const DNSName& zname);
+  bool checkKeys(const DNSName& zname, vector<string>* errorMessages = nullptr);
 
   bool getNSEC3PARAM(const DNSName& zname, NSEC3PARAMRecordContent* n3p=0, bool* narrow=0);
   bool checkNSEC3PARAM(const NSEC3PARAMRecordContent& ns3p, string& msg);
@@ -210,7 +210,7 @@ public:
   bool unsetPublishCDS(const DNSName& zname);
 
   bool TSIGGrantsAccess(const DNSName& zone, const DNSName& keyname);
-  bool getTSIGForAccess(const DNSName& zone, const string& master, DNSName* keyname);
+  bool getTSIGForAccess(const DNSName& zone, const ComboAddress& master, DNSName* keyname);
   
   void startTransaction(const DNSName& zone, int zone_id)
   {
@@ -298,11 +298,8 @@ public:
 class DNSPacket;
 uint32_t localtime_format_YYYYMMDDSS(time_t t, uint32_t seq);
 // for SOA-EDIT
-uint32_t calculateEditSOA(const DNSZoneRecord& rr, const string& kind);
-uint32_t calculateEditSOA(const SOAData& sd, const string& kind);
-bool editSOA(DNSSECKeeper& dk, const DNSName& qname, DNSPacket* dp);
-bool editSOARecord(DNSZoneRecord& rr, const string& kind);
+uint32_t calculateEditSOA(uint32_t old_serial, DNSSECKeeper& dk, const DNSName& zonename);
+uint32_t calculateEditSOA(uint32_t old_serial, const string& kind, const DNSName& zonename);
 // for SOA-EDIT-DNSUPDATE/API
-uint32_t calculateIncreaseSOA(SOAData sd, const string& increaseKind, const string& editKind);
-bool increaseSOARecord(DNSResourceRecord& rr, const string& increaseKind, const string& editKind);
-bool increaseSOARecord(DNSZoneRecord& rr, const string& increaseKind, const string& editKind);
+bool increaseSOARecord(DNSResourceRecord& dr, const string& increaseKind, const string& editKind);
+bool makeIncreasedSOARecord(SOAData& sd, const string& increaseKind, const string& editKind, DNSResourceRecord& rrout);

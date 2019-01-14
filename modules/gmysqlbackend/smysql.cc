@@ -162,7 +162,8 @@ public:
     if (!d_stmt) return this;
 
     if (d_dolog) {
-      L<<Logger::Warning<<"Query: " << d_query <<endl;
+      g_log<<Logger::Warning<< "Query "<<((long)(void*)this)<<": " << d_query << endl;
+      d_dtime.set();
     }
 
     if ((err = mysql_stmt_bind_param(d_stmt, d_req_bind))) {
@@ -221,10 +222,16 @@ public:
       }
     }
 
+    if(d_dolog) 
+      g_log<<Logger::Warning<< "Query "<<((long)(void*)this)<<": "<<d_dtime.udiffNoReset()<<" usec to execute"<<endl;
+
     return this;
   }
 
   bool hasNextRow() {
+    if(d_dolog && d_residx == d_resnum) {
+      g_log<<Logger::Warning<< "Query "<<((long)(void*)this)<<": "<<d_dtime.udiffNoReset()<<" total usec to last row"<<endl;
+    }
     return d_residx < d_resnum;
   }
 
@@ -247,7 +254,7 @@ public:
 
     for(int i=0;i<d_fnum;i++) {
       if (err == MYSQL_DATA_TRUNCATED && *d_res_bind[i].error) {
-        L<<Logger::Warning<<"Result field at row " << d_residx << " column " << i << " has been truncated, we allocated " << d_res_bind[i].buffer_length << " bytes but at least " << *d_res_bind[i].length << " was needed" << endl;
+        g_log<<Logger::Warning<<"Result field at row " << d_residx << " column " << i << " has been truncated, we allocated " << d_res_bind[i].buffer_length << " bytes but at least " << *d_res_bind[i].length << " was needed" << endl;
       }
       if (*d_res_bind[i].is_null) {
         row.push_back("");
@@ -399,6 +406,7 @@ private:
   
   bool d_prepared;
   bool d_dolog;
+  DTime d_dtime; // only used if d_dolog is set
   int d_parnum;
   int d_paridx;
   int d_fnum;
@@ -488,7 +496,7 @@ std::unique_ptr<SSqlStatement> SMySQL::prepare(const string& query, int nparams)
 void SMySQL::execute(const string& query)
 {
   if(s_dolog)
-    L<<Logger::Warning<<"Query: "<<query<<endl;
+    g_log<<Logger::Warning<<"Query: "<<query<<endl;
 
   int err;
   if((err=mysql_query(&d_db,query.c_str())))

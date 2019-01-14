@@ -26,14 +26,14 @@
 
 #include "config.h"
 
+#include "dnsname.hh"
+#include "iputils.hh"
+
 #ifdef HAVE_PROTOBUF
 #include <boost/uuid/uuid.hpp>
 #include <boost/uuid/uuid_generators.hpp>
 #include "dnsmessage.pb.h"
 #endif /* HAVE_PROTOBUF */
-
-#include "dnsname.hh"
-#include "iputils.hh"
 
 class DNSProtoBufMessage
 {
@@ -70,6 +70,7 @@ public:
   void setResponder(const ComboAddress& responder);
   void setRequestorId(const std::string& requestorId);
   void setDeviceId(const std::string& deviceId);
+  void setServerIdentity(const std::string& serverId);
   std::string toDebugString() const;
   void addTag(const std::string& strValue);
   void addRR(const DNSName& qame, uint16_t utype, uint16_t uClass, uint32_t uTTl, const std::string& strBlob);
@@ -79,6 +80,7 @@ public:
   void update(const boost::uuids::uuid& uuid, const ComboAddress* requestor, const ComboAddress* responder, bool isTCP, uint16_t id);
   void setUUID(const boost::uuids::uuid& uuid);
   void setInitialRequestID(const boost::uuids::uuid& uuid);
+  void copyFrom(const DNSProtoBufMessage& msg);
 
 protected:
   PBDNSMessage d_message;

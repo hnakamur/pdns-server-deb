@@ -179,9 +179,7 @@ inline bool DNSName::canonCompare(const DNSName& rhs) const
   for(;;) {
     if(ourcount == 0 && rhscount != 0)
       return true;
-    if(ourcount == 0 && rhscount == 0)
-      return false;
-    if(ourcount !=0 && rhscount == 0)
+    if(rhscount == 0)
       return false;
     ourcount--;
     rhscount--;
@@ -235,12 +233,11 @@ struct SuffixMatchTree
   SuffixMatchTree(const std::string& name="", bool endNode_=false) : d_name(name), endNode(endNode_)
   {}
 
-  SuffixMatchTree(const SuffixMatchTree& rhs)
+  SuffixMatchTree(const SuffixMatchTree& rhs): d_name(rhs.d_name), children(rhs.children), endNode(rhs.endNode)
   {
-    d_name = rhs.d_name;
-    children = rhs.children;
-    endNode = rhs.endNode;
-    d_value = rhs.d_value;
+    if (endNode) {
+      d_value = rhs.d_value;
+    }
   }
   std::string d_name;
   mutable std::set<SuffixMatchTree> children;
@@ -272,8 +269,7 @@ struct SuffixMatchTree
       d_value=value;
     }
     else if(labels.size()==1) {
-      SuffixMatchTree newChild(*labels.begin(), true);
-      auto res=children.insert(newChild);
+      auto res=children.emplace(*labels.begin(), true);
       if(!res.second) {
         // we might already have had the node as an
         // intermediary one, but it's now an end node
@@ -284,8 +280,7 @@ struct SuffixMatchTree
       res.first->d_value = value;
     }
     else {
-      SuffixMatchTree newnode(*labels.rbegin(), false);
-      auto res=children.insert(newnode);
+      auto res=children.emplace(*labels.rbegin(), false);
       labels.pop_back();
       res.first->add(labels, value);
     }
