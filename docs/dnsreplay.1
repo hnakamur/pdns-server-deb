@@ -1,8 +1,8 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "DNSREPLAY" "1" "Nov 06, 2018" "4.1" "PowerDNS Recursor"
+.TH "DNSREPLAY" "1" "Dec 08, 2018" "4.2" "PowerDNS Authoritative Server"
 .SH NAME
-dnsreplay \- 
+dnsreplay \- A PowerDNS nameserver debugging tool
 .
 .nr rst2man-indent-level 0
 .
@@ -30,8 +30,6 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
-.sp
-\fBdnsreplay\fP \- A PowerDNS nameserver debugging tool
 .SH SYNOPSIS
 .sp
 \fBdnsreplay\fP [\fIOPTION\fP]... \fIFILENAME\fP \fIADDRESS\fP [\fIPORT\fP]
@@ -69,6 +67,9 @@ When EDNS forwarding an IP address, mask out first octet with this value
 .BI \-\-ecs\-stamp \ <FLAG>
 Add original IP address as EDNS Client Subnet Option when
 forwarding to reference server
+.TP
+.BI \-\-pcap\-dns\-port \ <VAL>
+Look at packets from or to this port in the PCAP. Default is 53.
 .TP
 .BI \-\-packet\-limit \ <NUM>
 Stop after replaying \fINUM\fP packets. Default for \fINUM\fP is 0, which

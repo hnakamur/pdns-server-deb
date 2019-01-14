@@ -85,11 +85,11 @@ bool DNSSECKeeper::addKey(const DNSName& name, bool setSEPBit, int algorithm, in
     if(algorithm <= 10)
       throw runtime_error("Creating an algorithm " +std::to_string(algorithm)+" ("+algorithm2name(algorithm)+") key requires the size (in bits) to be passed.");
     else {
-      if(algorithm == 12 || algorithm == 13 || algorithm == 15) // GOST, ECDSAP256SHA256, ED25519
+      if(algorithm == DNSSECKeeper::ECCGOST || algorithm == DNSSECKeeper::ECDSA256 || algorithm == DNSSECKeeper::ED25519)
         bits = 256;
-      else if(algorithm == 14) // ECDSAP384SHA384
+      else if(algorithm == DNSSECKeeper::ECDSA384)
         bits = 384;
-      else if(algorithm == 16) // ED448
+      else if(algorithm == DNSSECKeeper::ED448)
         bits = 456;
       else {
         throw runtime_error("Can not guess key size for algorithm "+std::to_string(algorithm));
@@ -163,13 +163,13 @@ DNSSECPrivateKey DNSSECKeeper::getKeyById(const DNSName& zname, unsigned int id)
     dpk.d_flags = kd.flags;
     dpk.d_algorithm = dkrc.d_algorithm;
     
-    if(dpk.d_algorithm == 5 && getNSEC3PARAM(zname)) {
-      dpk.d_algorithm += 2;
+    if(dpk.d_algorithm == DNSSECKeeper::RSASHA1 && getNSEC3PARAM(zname)) {
+      dpk.d_algorithm = DNSSECKeeper::RSASHA1NSEC3SHA1;
     }
     
     return dpk;    
   }
-  throw runtime_error("Can't find a key with id "+std::to_string(id)+" for zone '"+zname.toString()+"'");
+  throw runtime_error("Can't find a key with id "+std::to_string(id)+" for zone '"+zname.toLogString()+"'");
 }
 
 
@@ -277,10 +277,10 @@ bool DNSSECKeeper::getNSEC3PARAM(const DNSName& zname, NSEC3PARAMRecordContent* 
     *ns3p = NSEC3PARAMRecordContent(value);
     if (ns3p->d_iterations > maxNSEC3Iterations) {
       ns3p->d_iterations = maxNSEC3Iterations;
-      L<<Logger::Error<<"Number of NSEC3 iterations for zone '"<<zname<<"' is above 'max-nsec3-iterations'. Value adjusted to: "<<maxNSEC3Iterations<<endl;
+      g_log<<Logger::Error<<"Number of NSEC3 iterations for zone '"<<zname<<"' is above 'max-nsec3-iterations'. Value adjusted to: "<<maxNSEC3Iterations<<endl;
     }
     if (ns3p->d_algorithm != 1) {
-      L<<Logger::Error<<"Invalid hash algorithm for NSEC3: '"<<std::to_string(ns3p->d_algorithm)<<"', setting to 1 for zone '"<<zname<<"'."<<endl;
+      g_log<<Logger::Error<<"Invalid hash algorithm for NSEC3: '"<<std::to_string(ns3p->d_algorithm)<<"', setting to 1 for zone '"<<zname<<"'."<<endl;
       ns3p->d_algorithm = 1;
     }
   }
@@ -321,7 +321,7 @@ bool DNSSECKeeper::setNSEC3PARAM(const DNSName& zname, const NSEC3PARAMRecordCon
 {
   string error_msg = "";
   if (!checkNSEC3PARAM(ns3p, error_msg))
-    throw runtime_error("NSEC3PARAMs provided for zone '"+zname.toString()+"' are invalid: " + error_msg);
+    throw runtime_error("NSEC3PARAMs provided for zone '"+zname.toLogString()+"' are invalid: " + error_msg);
 
   clearCaches(zname);
   string descr = ns3p.getZoneRepresentation();
@@ -485,9 +485,9 @@ DNSSECKeeper::keyset_t DNSSECKeeper::getKeys(const DNSName& zone, bool useCache)
 
     dpk.d_flags = kd.flags;
     dpk.d_algorithm = dkrc.d_algorithm;
-    if(dpk.d_algorithm == 5 && getNSEC3PARAM(zone)) {
-      L<<Logger::Warning<<"Zone '"<<zone<<"' has NSEC3 semantics, but the "<< (kd.active ? "" : "in" ) <<"active key with id "<<kd.id<<" has 'Algorithm: 5'. This should be corrected to 'Algorithm: 7' in the database (or NSEC3 should be disabled)."<<endl;
-      dpk.d_algorithm+=2;
+    if(dpk.d_algorithm == DNSSECKeeper::RSASHA1 && getNSEC3PARAM(zone)) {
+      g_log<<Logger::Warning<<"Zone '"<<zone<<"' has NSEC3 semantics, but the "<< (kd.active ? "" : "in" ) <<"active key with id "<<kd.id<<" has 'Algorithm: 5'. This should be corrected to 'Algorithm: 7' in the database (or NSEC3 should be disabled)."<<endl;
+      dpk.d_algorithm = DNSSECKeeper::RSASHA1NSEC3SHA1;
     }
 
     KeyMetaData kmd;
@@ -521,20 +521,19 @@ DNSSECKeeper::keyset_t DNSSECKeeper::getKeys(const DNSName& zone, bool useCache)
   return retkeyset;
 }
 
-bool DNSSECKeeper::checkKeys(const DNSName& zone)
+bool DNSSECKeeper::checkKeys(const DNSName& zone, vector<string>* errorMessages)
 {
   vector<DNSBackend::KeyData> dbkeyset;
   d_keymetadb->getDomainKeys(zone, dbkeyset);
+  bool retval = true;
 
   for(const DNSBackend::KeyData &keydata : dbkeyset) {
     DNSKEYRecordContent dkrc;
     shared_ptr<DNSCryptoKeyEngine> dke(DNSCryptoKeyEngine::makeFromISCString(dkrc, keydata.content));
-    if (!dke->checkKey()) {
-      return false;
-    }
+    retval = dke->checkKey(errorMessages) && retval;
   }
 
-  return true;
+  return retval;
 }
 
 bool DNSSECKeeper::getPreRRSIGs(UeberBackend& db, const DNSName& signer, const DNSName& qname,
@@ -544,7 +543,7 @@ bool DNSSECKeeper::getPreRRSIGs(UeberBackend& db, const DNSName& signer, const D
   // cerr<<"Doing DB lookup for precomputed RRSIGs for '"<<(wildcardname.empty() ? qname : wildcardname)<<"'"<<endl;
         SOAData sd;
         if(!db.getSOAUncached(signer, sd)) {
-                DLOG(L<<"Could not get SOA for domain"<<endl);
+                DLOG(g_log<<"Could not get SOA for domain"<<endl);
                 return false;
         }
         db.lookup(QType(QType::RRSIG), wildcardname.countLabels() ? wildcardname : qname, NULL, sd.domain_id);
@@ -575,7 +574,7 @@ bool DNSSECKeeper::TSIGGrantsAccess(const DNSName& zone, const DNSName& keyname)
   return false;
 }
 
-bool DNSSECKeeper::getTSIGForAccess(const DNSName& zone, const string& master, DNSName* keyname)
+bool DNSSECKeeper::getTSIGForAccess(const DNSName& zone, const ComboAddress& master, DNSName* keyname)
 {
   vector<string> keynames;
   d_keymetadb->getDomainMetadata(zone, "AXFR-MASTER-TSIG", keynames);
@@ -667,20 +666,22 @@ bool DNSSECKeeper::rectifyZone(const DNSName& zone, string& error, string& info,
   }
 
   NSEC3PARAMRecordContent ns3pr;
-  bool narrow;
-  bool haveNSEC3 = getNSEC3PARAM(zone, &ns3pr, &narrow);
-  bool isOptOut = (haveNSEC3 && ns3pr.d_flags);
+  bool securedZone = isSecuredZone(zone);
+  bool haveNSEC3 = false, isOptOut = false, narrow = false;
 
-  if(isSecuredZone(zone)) {
+  if(securedZone) {
+    haveNSEC3 = getNSEC3PARAM(zone, &ns3pr, &narrow);
+    isOptOut = (haveNSEC3 && ns3pr.d_flags);
+
     if(!haveNSEC3) {
       infostream<<"Adding NSEC ordering information ";
     }
     else if(!narrow) {
       if(!isOptOut) {
-	infostream<<"Adding NSEC3 hashed ordering information for '"<<zone<<"'";
+        infostream<<"Adding NSEC3 hashed ordering information for '"<<zone<<"'";
       }
       else {
-	infostream<<"Adding NSEC3 opt-out hashed ordering information for '"<<zone<<"'";
+        infostream<<"Adding NSEC3 opt-out hashed ordering information for '"<<zone<<"'";
       }
     } else {
       infostream<<"Erasing NSEC3 ordering since we are narrow, only setting 'auth' fields";
@@ -749,7 +750,7 @@ bool DNSSECKeeper::rectifyZone(const DNSName& zone, string& error, string& info,
       } else if(!realrr)
         auth=false;
     }
-    else if (realrr) // NSEC
+    else if (realrr && securedZone) // NSEC
       ordername=qname.makeRelative(zone);
 
     sd.db->updateDNSSECOrderNameAndAuth(sd.domain_id, qname, ordername, auth);
@@ -775,7 +776,7 @@ bool DNSSECKeeper::rectifyZone(const DNSName& zone, string& error, string& info,
           {
             if(!(maxent))
             {
-              L<<Logger::Warning<<"Zone '"<<zone<<"' has too many empty non terminals."<<endl;
+              g_log<<Logger::Warning<<"Zone '"<<zone<<"' has too many empty non terminals."<<endl;
               insnonterm.clear();
               delnonterm.clear();
               doent=false;

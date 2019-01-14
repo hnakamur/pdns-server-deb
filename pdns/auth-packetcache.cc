@@ -232,7 +232,7 @@ void AuthPacketCache::cleanup()
   totErased = pruneLockedCollectionsVector(d_maps, maxCached, cacheSize);
   *d_statnumentries -= totErased;
 
-  DLOG(L<<"Done with cache clean, cacheSize: "<<(*d_statnumentries)<<", totErased"<<totErased<<endl);
+  DLOG(g_log<<"Done with cache clean, cacheSize: "<<(*d_statnumentries)<<", totErased"<<totErased<<endl);
 }
 
 /* the logic:
@@ -250,13 +250,13 @@ void AuthPacketCache::cleanupIfNeeded()
     time_t now = time(nullptr);
     int timediff = max((int)(now - d_lastclean), 1);
 
-    DLOG(L<<"cleaninterval: "<<d_cleaninterval<<", timediff: "<<timediff<<endl);
+    DLOG(g_log<<"cleaninterval: "<<d_cleaninterval<<", timediff: "<<timediff<<endl);
 
     if (d_cleaninterval == s_maxcleaninterval && timediff < 30) {
       d_cleanskipped = true;
       d_nextclean += d_cleaninterval;
 
-      DLOG(L<<"cleaning skipped, timediff: "<<timediff<<endl);
+      DLOG(g_log<<"cleaning skipped, timediff: "<<timediff<<endl);
 
       return;
     }
@@ -266,7 +266,7 @@ void AuthPacketCache::cleanupIfNeeded()
       d_cleaninterval=std::max(d_cleaninterval, s_mincleaninterval);
       d_cleaninterval=std::min(d_cleaninterval, s_maxcleaninterval);
 
-      DLOG(L<<"new cleaninterval: "<<d_cleaninterval<<endl);
+      DLOG(g_log<<"new cleaninterval: "<<d_cleaninterval<<endl);
     } else {
       d_cleanskipped = false;
     }

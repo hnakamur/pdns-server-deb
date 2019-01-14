@@ -12,9 +12,16 @@
 using namespace boost;
 using std::string;
 
-BOOST_AUTO_TEST_SUITE(dnsname_cc)
+BOOST_AUTO_TEST_SUITE(test_dnsname_cc)
 
 BOOST_AUTO_TEST_CASE(test_basic) {
+  DNSName aroot("a.root-servers.net"), broot("b.root-servers.net");
+  BOOST_CHECK(aroot < broot);
+  BOOST_CHECK(!(broot < aroot));  
+  BOOST_CHECK(aroot.canonCompare(broot));
+  BOOST_CHECK(!broot.canonCompare(aroot));  
+  
+
   string before("www.ds9a.nl.");
   DNSName b(before);
   BOOST_CHECK_EQUAL(b.getRawLabels().size(), 3);
@@ -128,15 +135,17 @@ BOOST_AUTO_TEST_CASE(test_basic) {
 
   BOOST_CHECK_EQUAL(unset.toString(), "www.powerdns\\.com.com.");
 
+  DNSName rfc4343_2_1("~!.example.");
   DNSName rfc4343_2_2(R"(Donald\032E\.\032Eastlake\0323rd.example.)");
   DNSName example("example.");
+  BOOST_CHECK(rfc4343_2_1.isPartOf(example));
   BOOST_CHECK(rfc4343_2_2.isPartOf(example));
+  BOOST_CHECK_EQUAL(rfc4343_2_1.toString(), "~!.example.");
 
   auto labels=rfc4343_2_2.getRawLabels();
   BOOST_CHECK_EQUAL(*labels.begin(), "Donald E. Eastlake 3rd");
   BOOST_CHECK_EQUAL(*labels.rbegin(), "example");
   BOOST_CHECK_EQUAL(labels.size(), 2);
-
 
   DNSName build;
   build.appendRawLabel("Donald E. Eastlake 3rd");
@@ -604,7 +613,7 @@ BOOST_AUTO_TEST_CASE(test_compare_canonical) {
   }
   sort(vec.begin(), vec.end(), CanonDNSNameCompare());
   //  for(const auto& v : vec)
-  //    cerr<<'"'<<v.toString()<<'"'<<endl;
+  //    cerr<<'"'<<v<<'"'<<endl;
 
   vector<DNSName> right;
   for(const auto& b: {"bert.com.",  "Aleph1.powerdns.com.",

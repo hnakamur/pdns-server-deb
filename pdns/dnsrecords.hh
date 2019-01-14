@@ -22,12 +22,17 @@
 #ifndef PDNS_DNSRECORDS_HH
 #define PDNS_DNSRECORDS_HH
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include "dnsparser.hh"
 #include "dnswriter.hh"
 #include "rcpgenerator.hh"
 #include <set>
 #include <bitset>
 #include "namespaces.hh"
+#include "iputils.hh"
 
 #define includeboilerplate(RNAME)   RNAME##RecordContent(const DNSRecord& dr, PacketReader& pr); \
   RNAME##RecordContent(const string& zoneData);                                                  \
@@ -45,7 +50,7 @@ class NAPTRRecordContent : public DNSRecordContent
 public:
   NAPTRRecordContent(uint16_t order, uint16_t preference, string flags, string services, string regexp, DNSName replacement);
 
-  includeboilerplate(NAPTR);
+  includeboilerplate(NAPTR)
   template<class Convertor> void xfrRecordContent(Convertor& conv);
 private:
   uint16_t d_order, d_preference;
@@ -59,7 +64,7 @@ class ARecordContent : public DNSRecordContent
 public:
   explicit ARecordContent(const ComboAddress& ca);
   explicit ARecordContent(uint32_t ip);
-  includeboilerplate(A);
+  includeboilerplate(A)
   void doRecordCheck(const DNSRecord& dr);
   ComboAddress getCA(int port=0) const;
   bool operator==(const DNSRecordContent& rhs) const override
@@ -77,7 +82,7 @@ class AAAARecordContent : public DNSRecordContent
 public:
   AAAARecordContent(std::string &val);
   explicit AAAARecordContent(const ComboAddress& ca);
-  includeboilerplate(AAAA);
+  includeboilerplate(AAAA)
   ComboAddress getCA(int port=0) const;
   bool operator==(const DNSRecordContent& rhs) const override
   {
@@ -185,6 +190,17 @@ public:
   string d_text;
 };
 
+#ifdef HAVE_LUA_RECORDS
+class LUARecordContent : public DNSRecordContent
+{
+public:
+  includeboilerplate(LUA)
+  string getCode() const;
+  uint16_t d_type;
+  string d_code;
+};
+#endif
+
 class ENTRecordContent : public DNSRecordContent
 {
 public:
@@ -195,6 +211,10 @@ class SPFRecordContent : public DNSRecordContent
 {
 public:
   includeboilerplate(SPF)
+  const std::string& getText() const
+  {
+    return d_text;
+  }
 
 private:
   string d_text;
@@ -224,6 +244,7 @@ class PTRRecordContent : public DNSRecordContent
 public:
   includeboilerplate(PTR)
   explicit PTRRecordContent(const DNSName& content) : d_content(content){}
+  const DNSName& getContent() const { return d_content; }
 private:
   DNSName d_content;
 };
@@ -254,6 +275,24 @@ public:
   DNSName d_content;
 };
 
+
+class MBRecordContent : public DNSRecordContent
+{
+public:
+  includeboilerplate(MB)
+
+private:
+  DNSName d_madname;
+};
+
+class MGRecordContent : public DNSRecordContent
+{
+public:
+  includeboilerplate(MG)
+
+private:
+  DNSName d_mgmname;
+};
 
 class MRRecordContent : public DNSRecordContent
 {
@@ -498,9 +537,9 @@ public:
   includeboilerplate(SOA)
   SOARecordContent(const DNSName& mname, const DNSName& rname, const struct soatimes& st);
 
-  struct soatimes d_st;
   DNSName d_mname;
   DNSName d_rname;
+  struct soatimes d_st;
 };
 
 class NSECRecordContent : public DNSRecordContent
@@ -726,9 +765,9 @@ RNAME##RecordContent::RNAME##RecordContent(const string& zoneData)              
     RecordTextReader rtr(zoneData);                                                                \
     xfrPacket(rtr);                                                                                \
   }                                                                                                \
-  catch(RecordTextException& rtr) {                                                                \
-    throw MOADNSException("Parsing record content (try 'pdnsutil check-zone'): "+string(rtr.what()));  \
-  }        											   \
+  catch(RecordTextException& rte) {                                                                \
+    throw MOADNSException("Parsing record content (try 'pdnsutil check-zone'): "+string(rte.what()));  \
+  }                                                                                                \
 }                                                                                                  \
                                                                                                    \
 string RNAME##RecordContent::getZoneRepresentation(bool noDot) const                               \
@@ -746,7 +785,7 @@ template<class Convertor>                                         \
 void RNAME##RecordContent::xfrPacket(Convertor& conv, bool noDot) \
 {                                                                 \
   CONV;                                                           \
-  if (conv.eof() == false) throw MOADNSException("All data was not consumed"); \
+  if (conv.eof() == false) throw MOADNSException("When parsing " #RNAME " trailing data was not parsed: '" + conv.getRemaining() + "'"); \
 }                                                                 \
 
 struct EDNSOpts
@@ -754,16 +793,17 @@ struct EDNSOpts
   enum zFlags { DNSSECOK=32768 };
   vector<pair<uint16_t, string> > d_options;
   uint16_t d_packetsize{0};
-  uint16_t d_Z{0};
+  uint16_t d_extFlags{0};
   uint8_t d_extRCode, d_version;
 };
 //! Convenience function that fills out EDNS0 options, and returns true if there are any
 
 class MOADNSParser;
 bool getEDNSOpts(const MOADNSParser& mdp, EDNSOpts* eo);
-DNSRecord makeOpt(int udpsize, int extRCode, int Z);
+DNSRecord makeOpt(const uint16_t udpsize, const uint16_t extRCode, const uint16_t extFlags);
 void reportBasicTypes();
 void reportOtherTypes();
 void reportAllTypes();
 ComboAddress getAddr(const DNSRecord& dr, uint16_t defport=0);
+void checkHostnameCorrectness(const DNSResourceRecord& rr);
 #endif 

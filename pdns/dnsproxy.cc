@@ -34,6 +34,7 @@
 #include "dns_random.hh"
 #include "stubresolver.hh"
 #include "arguments.hh"
+#include "threadname.hh"
 
 extern StatBag S;
 
@@ -46,18 +47,21 @@ DNSProxy::DNSProxy(const string &remote)
 
   vector<string> addresses;
   stringtok(addresses, remote, " ,\t");
-  ComboAddress remaddr(addresses[0], 53);
-  
-  if((d_sock=socket(remaddr.sin4.sin_family, SOCK_DGRAM,0))<0)
+  d_remote = ComboAddress(addresses[0], 53);
+
+  if((d_sock=socket(d_remote.sin4.sin_family, SOCK_DGRAM,0))<0) {
     throw PDNSException(string("socket: ")+strerror(errno));
- 
+  }
+
   ComboAddress local;
-  if(remaddr.sin4.sin_family==AF_INET)
+  if(d_remote.sin4.sin_family==AF_INET) {
     local = ComboAddress("0.0.0.0");
-  else
+  }
+  else {
     local = ComboAddress("::");
+  }
     
-  int n=0;
+  unsigned int n=0;
   for(;n<10;n++) {
     local.sin4.sin_port = htons(10000+dns_random(50000));
     
@@ -70,11 +74,12 @@ DNSProxy::DNSProxy(const string &remote)
     throw PDNSException(string("binding dnsproxy socket: ")+strerror(errno));
   }
 
-  if(connect(d_sock, (sockaddr *)&remaddr, remaddr.getSocklen())<0) 
-    throw PDNSException("Unable to UDP connect to remote nameserver "+remaddr.toStringWithPort()+": "+stringerror());
+  if(connect(d_sock, (sockaddr *)&d_remote, d_remote.getSocklen())<0) {
+    throw PDNSException("Unable to UDP connect to remote nameserver "+d_remote.toStringWithPort()+": "+stringerror());
+  }
 
   d_xor=dns_random(0xffff);
-  L<<Logger::Error<<"DNS Proxy launched, local port "<<ntohs(local.sin4.sin_port)<<", remote "<<remaddr.toStringWithPort()<<endl;
+  g_log<<Logger::Error<<"DNS Proxy launched, local port "<<ntohs(local.sin4.sin_port)<<", remote "<<d_remote.toStringWithPort()<<endl;
 } 
 
 void DNSProxy::go()
@@ -96,14 +101,22 @@ bool DNSProxy::completePacket(DNSPacket *r, const DNSName& target,const DNSName&
       ret2 = stubDoResolve(target, QType::AAAA, ips);
 
     if(ret1 != RCode::NoError || ret2 != RCode::NoError) {
-      L<<Logger::Error<<"Error resolving for ALIAS "<<target<<", returning SERVFAIL"<<endl;
-    }
-
-    for (auto &ip : ips)
-    {
-      ip.dr.d_name = aname;
-      ip.scopeMask = scopeMask;
-      r->addRecord(ip);
+      g_log<<Logger::Error<<"Error resolving for "<<aname<<" ALIAS "<<target<<" over UDP, original query came in over TCP";
+      if (ret1 != RCode::NoError) {
+       g_log<<Logger::Error<<", A-record query returned "<<RCode::to_s(ret1);
+      }
+      if (ret2 != RCode::NoError) {
+       g_log<<Logger::Error<<", AAAA-record query returned "<<RCode::to_s(ret2);
+      }
+      g_log<<Logger::Error<<", returning SERVFAIL"<<endl;
+      r->clearRecords();
+      r->setRcode(RCode::ServFail);
+    } else {
+      for (auto &ip : ips)
+      {
+        ip.dr.d_name = aname;
+        r->addRecord(ip);
+      }
     }
 
     uint16_t len=htons(r->getString().length());
@@ -139,7 +152,7 @@ bool DNSProxy::completePacket(DNSPacket *r, const DNSName& target,const DNSName&
   pw.getHeader()->id=id ^ d_xor;
 
   if(send(d_sock,&packet[0], packet.size() , 0)<0) { // zoom
-    L<<Logger::Error<<"Unable to send a packet to our recursing backend: "<<stringerror()<<endl;
+    g_log<<Logger::Error<<"Unable to send a packet to our recursing backend: "<<stringerror()<<endl;
   }
 
   return true;
@@ -158,7 +171,7 @@ int DNSProxy::getID_locked()
     }
     else if(i->second.created<time(0)-60) {
       if(i->second.created) {
-        L<<Logger::Warning<<"Recursive query for remote "<<
+        g_log<<Logger::Warning<<"Recursive query for remote "<<
           i->second.remote.toStringWithPort()<<" with internal id "<<n<<
           " was not answered by backend within timeout, reusing id"<<endl;
 	delete i->second.complete;
@@ -171,6 +184,7 @@ int DNSProxy::getID_locked()
 
 void DNSProxy::mainloop(void)
 {
+  setThreadName("pdns/dnsproxy");
   try {
     char buffer[1500];
     ssize_t len;
@@ -178,17 +192,23 @@ void DNSProxy::mainloop(void)
     struct msghdr msgh;
     struct iovec iov;
     char cbuf[256];
+    ComboAddress fromaddr;
 
     for(;;) {
-      len=recv(d_sock, buffer, sizeof(buffer),0); // answer from our backend
+      socklen_t fromaddrSize = sizeof(fromaddr);
+      len=recvfrom(d_sock, buffer, sizeof(buffer),0, (struct sockaddr*) &fromaddr, &fromaddrSize); // answer from our backend
       if(len<(ssize_t)sizeof(dnsheader)) {
         if(len<0)
-          L<<Logger::Error<<"Error receiving packet from recursor backend: "<<stringerror()<<endl;
+          g_log<<Logger::Error<<"Error receiving packet from recursor backend: "<<stringerror()<<endl;
         else if(len==0)
-          L<<Logger::Error<<"Error receiving packet from recursor backend, EOF"<<endl;
+          g_log<<Logger::Error<<"Error receiving packet from recursor backend, EOF"<<endl;
         else
-          L<<Logger::Error<<"Short packet from recursor backend, "<<len<<" bytes"<<endl;
+          g_log<<Logger::Error<<"Short packet from recursor backend, "<<len<<" bytes"<<endl;
         
+        continue;
+      }
+      if (fromaddr != d_remote) {
+        g_log<<Logger::Error<<"Got answer from unexpected host "<<fromaddr.toStringWithPort()<<" instead of our recursor backend "<<d_remote.toStringWithPort()<<endl;
         continue;
       }
       (*d_resanswers)++;
@@ -203,12 +223,12 @@ void DNSProxy::mainloop(void)
 #endif
         map_t::iterator i=d_conntrack.find(d.id^d_xor);
         if(i==d_conntrack.end()) {
-          L<<Logger::Error<<"Discarding untracked packet from recursor backend with id "<<(d.id^d_xor)<<
+          g_log<<Logger::Error<<"Discarding untracked packet from recursor backend with id "<<(d.id^d_xor)<<
             ". Conntrack table size="<<d_conntrack.size()<<endl;
           continue;
         }
         else if(i->second.created==0) {
-          L<<Logger::Error<<"Received packet from recursor backend with id "<<(d.id^d_xor)<<" which is a duplicate"<<endl;
+          g_log<<Logger::Error<<"Received packet from recursor backend with id "<<(d.id^d_xor)<<" which is a duplicate"<<endl;
           continue;
         }
 	
@@ -220,45 +240,43 @@ void DNSProxy::mainloop(void)
         q.parse(buffer,(size_t)len);
 
         if(p.qtype.getCode() != i->second.qtype || p.qdomain != i->second.qname) {
-          L<<Logger::Error<<"Discarding packet from recursor backend with id "<<(d.id^d_xor)<<
+          g_log<<Logger::Error<<"Discarding packet from recursor backend with id "<<(d.id^d_xor)<<
             ", qname or qtype mismatch ("<<p.qtype.getCode()<<" v " <<i->second.qtype<<", "<<p.qdomain<<" v "<<i->second.qname<<")"<<endl;
           continue;
         }
 
         /* Set up iov and msgh structures. */
         memset(&msgh, 0, sizeof(struct msghdr));
-	string reply; // needs to be alive at time of sendmsg!
-	if(i->second.complete) {
+        string reply; // needs to be alive at time of sendmsg!
+        MOADNSParser mdp(false, p.getString());
+        //	  cerr<<"Got completion, "<<mdp.d_answers.size()<<" answers, rcode: "<<mdp.d_header.rcode<<endl;
+        if (mdp.d_header.rcode == RCode::NoError) {
+          for(MOADNSParser::answers_t::const_iterator j=mdp.d_answers.begin(); j!=mdp.d_answers.end(); ++j) {        
+            //	    cerr<<"comp: "<<(int)j->first.d_place-1<<" "<<j->first.d_label<<" " << DNSRecordContent::NumberToType(j->first.d_type)<<" "<<j->first.d_content->getZoneRepresentation()<<endl;
+            if(j->first.d_place == DNSResourceRecord::ANSWER || (j->first.d_place == DNSResourceRecord::AUTHORITY && j->first.d_type == QType::SOA)) {
 
-	  MOADNSParser mdp(false, p.getString());
-	  //	  cerr<<"Got completion, "<<mdp.d_answers.size()<<" answers, rcode: "<<mdp.d_header.rcode<<endl;
-	  for(MOADNSParser::answers_t::const_iterator j=mdp.d_answers.begin(); j!=mdp.d_answers.end(); ++j) {        
-	    //	    cerr<<"comp: "<<(int)j->first.d_place-1<<" "<<j->first.d_label<<" " << DNSRecordContent::NumberToType(j->first.d_type)<<" "<<j->first.d_content->getZoneRepresentation()<<endl;
-	    if(j->first.d_place == DNSResourceRecord::ANSWER || (j->first.d_place == DNSResourceRecord::AUTHORITY && j->first.d_type == QType::SOA)) {
-	    
-	      if(j->first.d_type == i->second.qtype || (i->second.qtype == QType::ANY && (j->first.d_type == QType::A || j->first.d_type == QType::AAAA))) {
+              if(j->first.d_type == i->second.qtype || (i->second.qtype == QType::ANY && (j->first.d_type == QType::A || j->first.d_type == QType::AAAA))) {
                 DNSZoneRecord dzr;
-		dzr.dr.d_name=i->second.aname;
-		dzr.scopeMask=i->second.anameScopeMask;
-		dzr.dr.d_type = j->first.d_type;
-		dzr.dr.d_ttl=j->first.d_ttl;
-		dzr.dr.d_place= j->first.d_place;
-		dzr.dr.d_content=j->first.d_content;
-		i->second.complete->addRecord(dzr);
-	      }
-	    }
-	  }
-	  i->second.complete->setRcode(mdp.d_header.rcode);
-	  reply=i->second.complete->getString();
-	  iov.iov_base = (void*)reply.c_str();
-	  iov.iov_len = reply.length();
-	  delete i->second.complete;
-	  i->second.complete=0;
-	}
-	else {
-	  iov.iov_base = buffer;
-	  iov.iov_len = len;
-	}
+                dzr.dr.d_name=i->second.aname;
+                dzr.dr.d_type = j->first.d_type;
+                dzr.dr.d_ttl=j->first.d_ttl;
+                dzr.dr.d_place= j->first.d_place;
+                dzr.dr.d_content=j->first.d_content;
+                i->second.complete->addRecord(dzr);
+              }
+            }
+          }
+          i->second.complete->setRcode(mdp.d_header.rcode);
+        } else {
+          g_log<<Logger::Error<<"Error resolving for "<<i->second.aname<<" ALIAS "<<i->second.qname<<" over UDP, "<<QType(i->second.qtype).getName()<<"-record query returned "<<RCode::to_s(mdp.d_header.rcode)<<", returning SERVFAIL"<<endl;
+          i->second.complete->clearRecords();
+          i->second.complete->setRcode(RCode::ServFail);
+        }
+        reply=i->second.complete->getString();
+        iov.iov_base = (void*)reply.c_str();
+        iov.iov_len = reply.length();
+        delete i->second.complete;
+        i->second.complete=0;
         msgh.msg_iov = &iov;
         msgh.msg_iovlen = 1;
         msgh.msg_name = (struct sockaddr*)&i->second.remote;
@@ -269,23 +287,23 @@ void DNSProxy::mainloop(void)
           addCMsgSrcAddr(&msgh, cbuf, i->second.anyLocal.get_ptr(), 0);
         }
         if(sendmsg(i->second.outsock, &msgh, 0) < 0)
-          L<<Logger::Warning<<"dnsproxy.cc: Error sending reply with sendmsg (socket="<<i->second.outsock<<"): "<<strerror(errno)<<endl;
-        
+          g_log<<Logger::Warning<<"dnsproxy.cc: Error sending reply with sendmsg (socket="<<i->second.outsock<<"): "<<strerror(errno)<<endl;
+
         i->second.created=0;
       }
     }
   }
   catch(PDNSException &ae) {
-    L<<Logger::Error<<"Fatal error in DNS proxy: "<<ae.reason<<endl;
+    g_log<<Logger::Error<<"Fatal error in DNS proxy: "<<ae.reason<<endl;
   }
   catch(std::exception &e) {
-    L<<Logger::Error<<"Communicator thread died because of STL error: "<<e.what()<<endl;
+    g_log<<Logger::Error<<"Communicator thread died because of STL error: "<<e.what()<<endl;
   }
   catch( ... )
   {
-    L << Logger::Error << "Caught unknown exception." << endl;
+    g_log << Logger::Error << "Caught unknown exception." << endl;
   }
-  L<<Logger::Error<<"Exiting because DNS proxy failed"<<endl;
+  g_log<<Logger::Error<<"Exiting because DNS proxy failed"<<endl;
   _exit(1);
 }
 
