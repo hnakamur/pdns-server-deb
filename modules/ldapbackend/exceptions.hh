@@ -42,10 +42,4 @@ class LDAPNoConnection : public LDAPException
     explicit LDAPNoConnection() : LDAPException( "No connection to LDAP server" ) {}
 };
 
-class LDAPNoSuchObject : public LDAPException
-{
-  public:
-    explicit LDAPNoSuchObject() : LDAPException( "No such object" ) {}
-};
-
 #endif // LDAPEXCEPTIONS_HH

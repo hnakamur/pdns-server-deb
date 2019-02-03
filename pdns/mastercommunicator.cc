@@ -58,13 +58,13 @@ void CommunicatorClass::queueNotifyDomain(const DomainInfo& di, UeberBackend* B)
     for(set<string>::const_iterator j=nsset.begin();j!=nsset.end();++j) {
       vector<string> nsips=fns.lookup(DNSName(*j), B);
       if(nsips.empty())
-        g_log<<Logger::Warning<<"Unable to queue notification of domain '"<<di.zone<<"': nameservers do not resolve!"<<endl;
+        L<<Logger::Warning<<"Unable to queue notification of domain '"<<di.zone<<"': nameservers do not resolve!"<<endl;
       else
         for(vector<string>::const_iterator k=nsips.begin();k!=nsips.end();++k) {
           const ComboAddress caIp(*k, 53);
           if(!d_preventSelfNotification || !AddressIsUs(caIp)) {
             if(!d_onlyNotify.match(&caIp))
-              g_log<<Logger::Info<<"Skipped notification of domain '"<<di.zone<<"' to "<<*j<<" because it does not match only-notify."<<endl;
+              L<<Logger::Info<<"Skipped notification of domain '"<<di.zone<<"' to "<<*j<<" because it does not match only-notify."<<endl;
             else
               ips.insert(caIp.toStringWithPort());
           }
@@ -72,7 +72,7 @@ void CommunicatorClass::queueNotifyDomain(const DomainInfo& di, UeberBackend* B)
     }
 
     for(set<string>::const_iterator j=ips.begin();j!=ips.end();++j) {
-      g_log<<Logger::Warning<<"Queued notification of domain '"<<di.zone<<"' to "<<*j<<endl;
+      L<<Logger::Warning<<"Queued notification of domain '"<<di.zone<<"' to "<<*j<<endl;
       d_nq.add(di.zone,*j);
       hasQueuedItem=true;
     }
@@ -84,7 +84,7 @@ void CommunicatorClass::queueNotifyDomain(const DomainInfo& di, UeberBackend* B)
   for(set<string>::const_iterator j=alsoNotify.begin();j!=alsoNotify.end();++j) {
     try {
       const ComboAddress caIp(*j, 53);
-      g_log<<Logger::Warning<<"Queued also-notification of domain '"<<di.zone<<"' to "<<caIp.toStringWithPort()<<endl;
+      L<<Logger::Warning<<"Queued also-notification of domain '"<<di.zone<<"' to "<<caIp.toStringWithPort()<<endl;
       if (!ips.count(caIp.toStringWithPort())) {
         ips.insert(caIp.toStringWithPort());
         d_nq.add(di.zone, caIp.toStringWithPort());
@@ -92,12 +92,12 @@ void CommunicatorClass::queueNotifyDomain(const DomainInfo& di, UeberBackend* B)
       hasQueuedItem=true;
     }
     catch(PDNSException &e) {
-      g_log<<Logger::Warning<<"Unparseable IP in ALSO-NOTIFY metadata of domain '"<<di.zone<<"'. Warning: "<<e.reason<<endl;
+      L<<Logger::Warning<<"Unparseable IP in ALSO-NOTIFY metadata of domain '"<<di.zone<<"'. Warning: "<<e.reason<<endl;
     }
   }
 
   if (!hasQueuedItem)
-    g_log<<Logger::Warning<<"Request to queue notification for domain '"<<di.zone<<"' was processed, but no valid nameservers or ALSO-NOTIFYs found. Not notifying!"<<endl;
+    L<<Logger::Warning<<"Request to queue notification for domain '"<<di.zone<<"' was processed, but no valid nameservers or ALSO-NOTIFYs found. Not notifying!"<<endl;
 }
 
 
@@ -106,7 +106,7 @@ bool CommunicatorClass::notifyDomain(const DNSName &domain)
   DomainInfo di;
   UeberBackend B;
   if(!B.getDomainInfo(domain, di)) {
-    g_log<<Logger::Error<<"No such domain '"<<domain<<"' in our database"<<endl;
+    L<<Logger::Error<<"No such domain '"<<domain<<"' in our database"<<endl;
     return false;
   }
   queueNotifyDomain(di, &B);
@@ -135,12 +135,12 @@ void CommunicatorClass::masterUpdateCheck(PacketHandler *P)
   
   if(cmdomains.empty()) {
     if(d_masterschanged)
-      g_log<<Logger::Warning<<"No master domains need notifications"<<endl;
+      L<<Logger::Warning<<"No master domains need notifications"<<endl;
     d_masterschanged=false;
   }
   else {
     d_masterschanged=true;
-    g_log<<Logger::Error<<cmdomains.size()<<" domain"<<(cmdomains.size()>1 ? "s" : "")<<" for which we are master need"<<
+    L<<Logger::Error<<cmdomains.size()<<" domain"<<(cmdomains.size()>1 ? "s" : "")<<" for which we are master need"<<
       (cmdomains.size()>1 ? "" : "s")<<
       " notifications"<<endl;
   }
@@ -162,10 +162,9 @@ time_t CommunicatorClass::doNotifications()
   char buffer[1500];
   int sock;
   ssize_t size;
-  set<int> fds = {d_nsock4, d_nsock6};
 
   // receive incoming notifications on the nonblocking socket and take them off the list
-  while(waitForMultiData(fds, 0, 0, &sock) > 0) {
+  while(waitFor2Data(d_nsock4, d_nsock6, 0, 0, &sock) > 0) {
     fromlen=sizeof(from);
     size=recvfrom(sock,buffer,sizeof(buffer),0,(struct sockaddr *)&from,&fromlen);
     if(size < 0)
@@ -175,17 +174,17 @@ time_t CommunicatorClass::doNotifications()
     p.setRemote(&from);
 
     if(p.parse(buffer,(size_t)size)<0) {
-      g_log<<Logger::Warning<<"Unable to parse SOA notification answer from "<<p.getRemote()<<endl;
+      L<<Logger::Warning<<"Unable to parse SOA notification answer from "<<p.getRemote()<<endl;
       continue;
     }
 
     if(p.d.rcode)
-      g_log<<Logger::Warning<<"Received unsuccessful notification report for '"<<p.qdomain<<"' from "<<from.toStringWithPort()<<", error: "<<RCode::to_s(p.d.rcode)<<endl;      
+      L<<Logger::Warning<<"Received unsuccessful notification report for '"<<p.qdomain<<"' from "<<from.toStringWithPort()<<", error: "<<RCode::to_s(p.d.rcode)<<endl;      
 
     if(d_nq.removeIf(from.toStringWithPort(), p.d.id, p.qdomain))
-      g_log<<Logger::Warning<<"Removed from notification list: '"<<p.qdomain<<"' to "<<from.toStringWithPort()<<" "<< (p.d.rcode ? RCode::to_s(p.d.rcode) : "(was acknowledged)")<<endl;      
+      L<<Logger::Warning<<"Removed from notification list: '"<<p.qdomain<<"' to "<<from.toStringWithPort()<<" "<< (p.d.rcode ? RCode::to_s(p.d.rcode) : "(was acknowledged)")<<endl;      
     else {
-      g_log<<Logger::Warning<<"Received spurious notify answer for '"<<p.qdomain<<"' from "<< from.toStringWithPort()<<endl;
+      L<<Logger::Warning<<"Received spurious notify answer for '"<<p.qdomain<<"' from "<< from.toStringWithPort()<<endl;
       //d_nq.dump();
     }
   }
@@ -201,23 +200,20 @@ time_t CommunicatorClass::doNotifications()
       try {
         ComboAddress remote(ip, 53); // default to 53
         if((d_nsock6 < 0 && remote.sin4.sin_family == AF_INET6) ||
-           (d_nsock4 < 0 && remote.sin4.sin_family == AF_INET)) {
-             g_log<<Logger::Warning<<"Unable to notify "<<remote.toStringWithPort()<<" for domain '"<<domain<<"', address family is disabled. Is query-local-address"<<(remote.sin4.sin_family == AF_INET ? "" : "6")<<" unset?"<<endl;
-             d_nq.removeIf(remote.toStringWithPort(), id, domain); // Remove, we'll never be able to notify
+           (d_nsock4 < 0 && remote.sin4.sin_family == AF_INET))
              continue; // don't try to notify what we can't!
-        }
         if(d_preventSelfNotification && AddressIsUs(remote))
           continue;
 
-        sendNotification(remote.sin4.sin_family == AF_INET ? d_nsock4 : d_nsock6, domain, remote, id);
+        sendNotification(remote.sin4.sin_family == AF_INET ? d_nsock4 : d_nsock6, domain, remote, id); 
         drillHole(domain, ip);
       }
       catch(ResolverException &re) {
-        g_log<<Logger::Error<<"Error trying to resolve '"<<ip<<"' for notifying '"<<domain<<"' to server: "<<re.reason<<endl;
+        L<<Logger::Error<<"Error trying to resolve '"<<ip<<"' for notifying '"<<domain<<"' to server: "<<re.reason<<endl;
       }
     }
     else
-      g_log<<Logger::Error<<"Notification for "<<domain<<" to "<<ip<<" failed after retries"<<endl;
+      L<<Logger::Error<<"Notification for "<<domain<<" to "<<ip<<" failed after retries"<<endl;
   }
 
   return d_nq.earliest();
@@ -232,7 +228,7 @@ void CommunicatorClass::sendNotification(int sock, const DNSName& domain, const 
   string tsigsecret64;
   string tsigsecret;
 
-  if (::arg().mustDo("send-signed-notify") && B.getDomainMetadata(domain, "TSIG-ALLOW-AXFR", meta) && meta.size() > 0) {
+  if (B.getDomainMetadata(domain, "TSIG-ALLOW-AXFR", meta) && meta.size() > 0) {
     tsigkeyname = DNSName(meta[0]);
   }
 
@@ -243,7 +239,7 @@ void CommunicatorClass::sendNotification(int sock, const DNSName& domain, const 
 
   if (tsigkeyname.empty() == false) {
     if (!B.getTSIGKey(tsigkeyname, &tsigalgorithm, &tsigsecret64)) {
-      g_log<<Logger::Error<<"TSIG key '"<<tsigkeyname<<"' for domain '"<<domain<<"' not found"<<endl;
+      L<<Logger::Error<<"TSIG key '"<<tsigkeyname<<"' for domain '"<<domain<<"' not found"<<endl;
       return;
     }
     TSIGRecordContent trc;
@@ -256,7 +252,7 @@ void CommunicatorClass::sendNotification(int sock, const DNSName& domain, const 
     trc.d_origID=ntohs(id);
     trc.d_eRcode=0;
     if (B64Decode(tsigsecret64, tsigsecret) == -1) {
-      g_log<<Logger::Error<<"Unable to Base-64 decode TSIG key '"<<tsigkeyname<<"' for domain '"<<domain<<"'"<<endl;
+      L<<Logger::Error<<"Unable to Base-64 decode TSIG key '"<<tsigkeyname<<"' for domain '"<<domain<<"'"<<endl;
       return;
     }
     addTSIG(pw, trc, tsigkeyname, tsigsecret, "", false);
@@ -288,16 +284,11 @@ bool CommunicatorClass::justNotified(const DNSName &domain, const string &ip)
 
 void CommunicatorClass::makeNotifySockets()
 {
-  if(!::arg()["query-local-address"].empty()) {
-    d_nsock4 = makeQuerySocket(ComboAddress(::arg()["query-local-address"]), true, ::arg().mustDo("non-local-bind"));
-  } else {
-    d_nsock4 = -1;
-  }
-  if(!::arg()["query-local-address6"].empty()) {
+  d_nsock4 = makeQuerySocket(ComboAddress(::arg()["query-local-address"]), true, ::arg().mustDo("non-local-bind"));
+  if(!::arg()["query-local-address6"].empty())
     d_nsock6 = makeQuerySocket(ComboAddress(::arg()["query-local-address6"]), true, ::arg().mustDo("non-local-bind"));
-  } else {
+  else
     d_nsock6 = -1;
-  }
 }
 
 void CommunicatorClass::notify(const DNSName &domain, const string &ip)

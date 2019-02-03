@@ -1,15 +1,17 @@
-SUBDIRS = ext modules pdns codedocs docs
+SUBDIRS = ext modules codedocs docs
+
+SUBDIRS += pdns
 
 EXTRA_DIST = \
 	INSTALL \
 	NOTICE \
 	README \
-	COPYING \
+	.version \
+	build-aux/gen-version \
 	codedocs/doxygen.conf \
 	contrib/powerdns.solaris.init.d \
 	pdns/named.conf.parsertest \
-	regression-tests/zones/unit.test \
-	builder-support/gen-version
+	regression-tests/zones/unit.test
 
 ACLOCAL_AMFLAGS = -I m4
 

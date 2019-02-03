@@ -1,6 +1,6 @@
 AC_PREREQ([2.61])
 
-AC_INIT([pdns], [4.2.0-alpha1])
+AC_INIT([pdns], m4_esyscmd([build-aux/gen-version]))
 
 AC_CONFIG_SRCDIR([pdns/receiver.cc])
 AC_CONFIG_MACRO_DIR([m4])
@@ -29,7 +29,7 @@ AC_PROG_MAKE_SET
 
 AC_PROG_CXX
 AS_IF([test "x$CXX" = "xno" || test "x$CXX:x$GXX" = "xg++:x"],
-  [AC_MSG_ERROR([no C++ compiler found])]
+  AC_MSG_ERROR([no C++ compiler found])
 )
 
 AC_LANG([C++])
@@ -42,9 +42,11 @@ AC_DEFINE([_GNU_SOURCE], [1],
 m4_pattern_forbid([^_?PKG_[A-Z_]+$], [*** pkg.m4 missing, please install pkg-config])
 
 PDNS_CHECK_OS
-PTHREAD_SET_NAME
 
-PDNS_WITH_LUA
+PDNS_WITH_LUAJIT
+AS_IF([test "x$with_luajit" = "xno"], [
+  PDNS_WITH_LUA
+])
 PDNS_CHECK_LUA_HPP
 
 AX_CXX_COMPILE_STDCXX_11
@@ -64,8 +66,6 @@ AS_IF([test "x$enable_hardening" != "xno"], [
   AC_CC_D_FORTIFY_SOURCE
   AC_LD_RELRO
 ])
-
-PDNS_ENABLE_KISS
 
 PDNS_CHECK_NETWORK_LIBS
 
@@ -93,17 +93,17 @@ AC_CHECK_HEADERS(
 	[have_mmap=no]
 )
 
-PDNS_WITH_LIBSODIUM
-PDNS_WITH_LIBDECAF
+PDNS_ENABLE_BOTAN
+PDNS_CHECK_LIBSODIUM
+PDNS_CHECK_LIBDECAF
 PDNS_CHECK_LIBCRYPTO([
 ],[
    AC_MSG_ERROR([OpenSSL/libcrypto not found])
   ]
 )
 PDNS_CHECK_LIBCRYPTO_ECDSA
-PDNS_CHECK_LIBCRYPTO_EDDSA
 
-PDNS_CHECK_RAGEL([pdns/dnslabeltext.cc], [www.powerdns.com])
+PDNS_CHECK_RAGEL
 PDNS_CHECK_CLOCK_GETTIME
 
 BOOST_REQUIRE([1.35])
@@ -116,9 +116,7 @@ AS_IF([test "$boost_cv_lib_program_options" = "no"], [
   AC_MSG_ERROR([Boost Program Options library not found])
 ])
 PDNS_ENABLE_UNIT_TESTS
-PDNS_ENABLE_BACKEND_UNIT_TESTS
 PDNS_ENABLE_REPRODUCIBLE
-PDNS_ENABLE_FUZZ_TARGETS
 
 PDNS_WITH_SQLITE3
 
@@ -126,7 +124,7 @@ PDNS_CHECK_VIRTUALENV
 PDNS_FROM_GIT
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS_ONCE([strcasestr localtime_r recvmmsg getrandom arc4random])
+AC_CHECK_FUNCS_ONCE([strcasestr localtime_r recvmmsg])
 
 AM_CONDITIONAL([HAVE_RECVMMSG], [test "x$ac_cv_func_recvmmsg" = "xyes"])
 
@@ -204,12 +202,12 @@ for a in $modules $dynmodules; do
     geoip)
       PDNS_CHECK_GEOIP
       ;;
-    lua*)
+    lua)
       AS_IF([test "x$with_lua" = "xno"],
-        [AC_MSG_ERROR([${a} backend needs lua, run ./configure --with-lua])]
+        AC_MSG_ERROR([Lua backend needs lua, run ./configure --with-lua])
       )
-      AS_IF([test "x$LUAPC" = "x"],
-        [AC_MSG_ERROR([${a} backend needs lua but we cannot find it])]
+      AS_IF([test "x$LUAPC" = "x" -a "x$LUAJITPC" = "x"],
+        AC_MSG_ERROR([Lua backend needs lua but we cannot find it])
       )
       ;;
   esac
@@ -226,11 +224,9 @@ AC_ARG_ENABLE([tools],
 
 AC_MSG_RESULT([$enable_tools])
 AM_CONDITIONAL([TOOLS], [test "x$enable_tools" != "xno"])
-PDNS_ENABLE_IXFRDIST
 
 PDNS_WITH_PROTOBUF
 
-PDNS_WITH_LUA_RECORDS
 
 AM_CONDITIONAL([ORACLE], [test "x$needoracle" = "xyes"])
 
@@ -318,7 +314,6 @@ AC_CONFIG_FILES([
   modules/gsqlite3backend/Makefile
   modules/ldapbackend/Makefile
   modules/luabackend/Makefile
-  modules/lua2backend/Makefile
   modules/mydnsbackend/Makefile
   modules/opendbxbackend/Makefile
   modules/oraclebackend/Makefile
@@ -354,13 +349,17 @@ AS_IF([test "x$libcrypto_ecdsa" = "xyes"],
   [AC_MSG_NOTICE([OpenSSL ecdsa: yes])],
   [AC_MSG_NOTICE([OpenSSL ecdsa: no])]
 )
-AS_IF([test "x$LIBSODIUM_LIBS" != "x" || test "x$LIBDECAF_LIBS" != "x" || test "x$libcrypto_ed25519" = "xyes"],
+AS_IF([test "x$LIBSODIUM_LIBS" != "x" || test "x$LIBDECAF_LIBS" != "x"],
   [AC_MSG_NOTICE([ed25519: yes])],
   [AC_MSG_NOTICE([ed25519: no])]
 )
-AS_IF([test "x$LIBDECAF_LIBS" != "x" || test "x$libcrypto_ed448" = "xyes"],
+AS_IF([test "x$LIBDECAF_LIBS" != "x"],
   [AC_MSG_NOTICE([ed448: yes])],
   [AC_MSG_NOTICE([ed448: no])]
+)
+AS_IF([test "x$BOTAN_LIBS" != "x"],
+  [AC_MSG_NOTICE([gost: yes])],
+  [AC_MSG_NOTICE([gost: no])]
 )
 AS_IF([test "x$needsqlite3" != "x"],
   [AC_MSG_NOTICE([SQLite3: yes])],

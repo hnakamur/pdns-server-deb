@@ -61,7 +61,6 @@ public:
   static pthread_mutex_t instances_lock;
 
   static bool loadmodule(const string &name);
-  static bool loadModules(const vector<string>& modules, const string& path);
 
   static void go(void);
 
@@ -102,14 +101,13 @@ public:
   /** Determines if we are authoritative for a zone, and at what level */
   bool getAuth(const DNSName &target, const QType &qtype, SOAData* sd, bool cachedOk=true);
   bool getSOA(const DNSName &domain, SOAData &sd);
-  /** Load SOA info from backends, ignoring the cache.*/
-  bool getSOAUncached(const DNSName &domain, SOAData &sd);
+  bool getSOAUncached(const DNSName &domain, SOAData &sd);  // same, but ignores cache
   bool get(DNSZoneRecord &r);
   void getAllDomains(vector<DomainInfo> *domains, bool include_disabled=false);
 
   void getUnfreshSlaveInfos(vector<DomainInfo>* domains);
   void getUpdatedMasters(vector<DomainInfo>* domains);
-  bool getDomainInfo(const DNSName &domain, DomainInfo &di, bool getSerial=true);
+  bool getDomainInfo(const DNSName &domain, DomainInfo &di);
   bool createDomain(const DNSName &domain);
   
   bool doesDNSSEC();

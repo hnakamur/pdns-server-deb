@@ -83,6 +83,7 @@ try
   }
 
   reportAllTypes();
+  dns_random_init("0123456789abcdef");
 
   vector<uint8_t> packet;
   uint16_t len;

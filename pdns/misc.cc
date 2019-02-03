@@ -60,10 +60,6 @@
 #ifdef __FreeBSD__
 #  include <pthread_np.h>
 #endif
-#ifdef __NetBSD__
-#  include <pthread.h>
-#  include <sched.h>
-#endif
 
 bool g_singleThreaded;
 
@@ -338,7 +334,10 @@ int waitForRWData(int fd, bool waitForRead, int seconds, int useconds, bool* err
     pfd.events=POLLOUT;
 
   ret = poll(&pfd, 1, seconds * 1000 + useconds/1000);
-  if (ret > 0) {
+  if ( ret == -1 ) {
+    errno = ETIMEDOUT; // ???
+  }
+  else if (ret > 0) {
     if (error && (pfd.revents & POLLERR)) {
       *error = true;
     }
@@ -348,44 +347,6 @@ int waitForRWData(int fd, bool waitForRead, int seconds, int useconds, bool* err
   }
 
   return ret;
-}
-
-// returns -1 in case of error, 0 if no data is available, 1 if there is. In the first two cases, errno is set
-int waitForMultiData(const set<int>& fds, const int seconds, const int useconds, int* fdOut) {
-  set<int> realFDs;
-  for (const auto& fd : fds) {
-    if (fd >= 0 && realFDs.count(fd) == 0) {
-      realFDs.insert(fd);
-    }
-  }
-
-  std::vector<struct pollfd> pfds(realFDs.size());
-  memset(pfds.data(), 0, realFDs.size()*sizeof(struct pollfd));
-  int ctr = 0;
-  for (const auto& fd : realFDs) {
-    pfds[ctr].fd = fd;
-    pfds[ctr].events = POLLIN;
-    ctr++;
-  }
-
-  int ret;
-  if(seconds >= 0)
-    ret = poll(pfds.data(), realFDs.size(), seconds * 1000 + useconds/1000);
-  else
-    ret = poll(pfds.data(), realFDs.size(), -1);
-  if(ret <= 0)
-    return ret;
-
-  set<int> pollinFDs;
-  for (const auto& pfd : pfds) {
-    if (pfd.revents & POLLIN) {
-      pollinFDs.insert(pfd.fd);
-    }
-  }
-  set<int>::const_iterator it(pollinFDs.begin());
-  advance(it, random() % pollinFDs.size());
-  *fdOut = *it;
-  return 1;
 }
 
 // returns -1 in case of error, 0 if no data is available, 1 if there is. In the first two cases, errno is set
@@ -755,19 +716,15 @@ int makeIPv6sockaddr(const std::string& addr, struct sockaddr_in6* ret)
   unsigned int port;
   if(addr[0]=='[') { // [::]:53 style address
     string::size_type pos = addr.find(']');
-    if(pos == string::npos)
+    if(pos == string::npos || pos + 2 > addr.size() || addr[pos+1]!=':')
       return -1;
     ourAddr.assign(addr.c_str() + 1, pos-1);
-    if (pos + 1 != addr.size()) { // complete after ], no port specified
-      if (pos + 2 > addr.size() || addr[pos+1]!=':')
-        return -1;
-      try {
-        port = pdns_stou(addr.substr(pos+2));
-        portSet = true;
-      }
-      catch(const std::out_of_range&) {
-        return -1;
-      }
+    try {
+      port = pdns_stou(addr.substr(pos+2));
+      portSet = true;
+    }
+    catch(const std::out_of_range&) {
+      return -1;
     }
   }
   ret->sin6_scope_id=0;
@@ -905,7 +862,7 @@ void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* sour
     pkt->ipi6_ifindex = itfIndex;
   }
   else {
-#if defined(IP_PKTINFO)
+#ifdef IP_PKTINFO
     struct in_pktinfo *pkt;
 
     msgh->msg_control = cmsgbuf;
@@ -920,7 +877,8 @@ void addCMsgSrcAddr(struct msghdr* msgh, void* cmsgbuf, const ComboAddress* sour
     memset(pkt, 0, sizeof(*pkt));
     pkt->ipi_spec_dst = source->sin4.sin_addr;
     pkt->ipi_ifindex = itfIndex;
-#elif defined(IP_SENDSRCADDR)
+#endif
+#ifdef IP_SENDSRCADDR
     struct in_addr *in;
 
     msgh->msg_control = cmsgbuf;
@@ -1055,9 +1013,8 @@ bool setSocketTimestamps(int fd)
 #ifdef SO_TIMESTAMP
   int on=1;
   return setsockopt(fd, SOL_SOCKET, SO_TIMESTAMP, (char*)&on, sizeof(on)) == 0;
-#else
-  return true; // we pretend this happened.
 #endif
+  return true; // we pretend this happened.
 }
 
 bool setTCPNoDelay(int sock)
@@ -1084,14 +1041,6 @@ bool setBlocking(int sock)
   int flags=fcntl(sock,F_GETFL,0);
   if(flags<0 || fcntl(sock, F_SETFL,flags&(~O_NONBLOCK)) <0)
     return false;
-  return true;
-}
-
-bool setReuseAddr(int sock)
-{
-  int tmp = 1;
-  if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (char*)&tmp, static_cast<unsigned>(sizeof tmp))<0)
-    throw PDNSException(string("Setsockopt failed: ")+strerror(errno));
   return true;
 }
 
@@ -1385,20 +1334,9 @@ bool isSettingThreadCPUAffinitySupported()
 int mapThreadToCPUList(pthread_t tid, const std::set<int>& cpus)
 {
 #ifdef HAVE_PTHREAD_SETAFFINITY_NP
-#  ifdef __NetBSD__
-  cpuset_t *cpuset;
-  cpuset = cpuset_create();
-  for (const auto cpuID : cpus) {
-    cpuset_set(cpuID, cpuset);
-  }
-
-  return pthread_setaffinity_np(tid,
-                                cpuset_size(cpuset),
-                                cpuset);
-#  else
-#    ifdef __FreeBSD__
-#      define cpu_set_t cpuset_t
-#    endif
+#  ifdef __FreeBSD__
+#    define cpu_set_t cpuset_t
+#  endif
   cpu_set_t cpuset;
   CPU_ZERO(&cpuset);
   for (const auto cpuID : cpus) {
@@ -1408,44 +1346,6 @@ int mapThreadToCPUList(pthread_t tid, const std::set<int>& cpus)
   return pthread_setaffinity_np(tid,
                                 sizeof(cpuset),
                                 &cpuset);
-#  endif
-#else
-  return ENOSYS;
 #endif /* HAVE_PTHREAD_SETAFFINITY_NP */
-}
-
-std::vector<ComboAddress> getResolvers(const std::string& resolvConfPath)
-{
-  std::vector<ComboAddress> results;
-
-  ifstream ifs(resolvConfPath);
-  if (!ifs) {
-    return results;
-  }
-
-  string line;
-  while(std::getline(ifs, line)) {
-    boost::trim_right_if(line, is_any_of(" \r\n\x1a"));
-    boost::trim_left(line); // leading spaces, let's be nice
-
-    string::size_type tpos = line.find_first_of(";#");
-    if (tpos != string::npos) {
-      line.resize(tpos);
-    }
-
-    if (boost::starts_with(line, "nameserver ") || boost::starts_with(line, "nameserver\t")) {
-      vector<string> parts;
-      stringtok(parts, line, " \t,"); // be REALLY nice
-      for(vector<string>::const_iterator iter = parts.begin() + 1; iter != parts.end(); ++iter) {
-        try {
-          results.emplace_back(*iter, 53);
-        }
-        catch(...)
-        {
-        }
-      }
-    }
-  }
-
-  return results;
+  return ENOSYS;
 }

@@ -82,12 +82,6 @@
 #include <sys/endian.h>
 #endif
 
-#if defined(__NetBSD__) && defined(IP_PKTINFO) && !defined(IP_SENDSRCADDR)
-// The IP_PKTINFO option in NetBSD was incompatible with Linux until a
-// change that also introduced IP_SENDSRCADDR for FreeBSD compatibility.
-#undef IP_PKTINFO
-#endif
-
 union ComboAddress {
   struct sockaddr_in sin4;
   struct sockaddr_in6 sin6;
@@ -188,8 +182,6 @@ union ComboAddress {
     sin4.sin_family=AF_INET;
     sin4.sin_addr.s_addr=0;
     sin4.sin_port=0;
-    sin6.sin6_scope_id = 0;
-    sin6.sin6_flowinfo = 0;
   }
 
   ComboAddress(const struct sockaddr *sa, socklen_t salen) {
@@ -269,11 +261,10 @@ union ComboAddress {
   string toString() const
   {
     char host[1024];
-    int retval = 0;
-    if(sin4.sin_family && !(retval = getnameinfo((struct sockaddr*) this, getSocklen(), host, sizeof(host),0, 0, NI_NUMERICHOST)))
+    if(sin4.sin_family && !getnameinfo((struct sockaddr*) this, getSocklen(), host, sizeof(host),0, 0, NI_NUMERICHOST))
       return host;
     else
-      return "invalid "+string(gai_strerror(retval));
+      return "invalid";
   }
 
   string toStringWithPort() const
@@ -284,21 +275,6 @@ union ComboAddress {
       return "["+toString() + "]:" + std::to_string(ntohs(sin4.sin_port));
   }
 
-  string toStringWithPortExcept(int port) const
-  {
-    if(ntohs(sin4.sin_port) == port)
-      return toString();
-    if(sin4.sin_family==AF_INET)
-      return toString() + ":" + std::to_string(ntohs(sin4.sin_port));
-    else
-      return "["+toString() + "]:" + std::to_string(ntohs(sin4.sin_port));
-  }
-
-  string toLogString() const
-  {
-    return toStringWithPortExcept(53);
-  }
-
   void truncate(unsigned int bits) noexcept;
 
   uint16_t getPort() const
@@ -306,19 +282,11 @@ union ComboAddress {
     return ntohs(sin4.sin_port);
   }
 
-  ComboAddress setPort(uint16_t port) const
-  {
-    ComboAddress ret(*this);
-    ret.sin4.sin_port=htons(port);
-    return ret;
-  }
-
   void reset()
   {
     memset(&sin4, 0, sizeof(sin4));
     memset(&sin6, 0, sizeof(sin6));
   }
-
 };
 
 /** This exception is thrown by the Netmask class and by extension by the NetmaskGroup class */
@@ -340,30 +308,6 @@ inline ComboAddress makeComboAddress(const string& str)
   return address;
 }
 
-inline ComboAddress makeComboAddressFromRaw(uint8_t version, const char* raw, size_t len)
-{
-  ComboAddress address;
-
-  if (version == 4) {
-    address.sin4.sin_family = AF_INET;
-    if (len != sizeof(address.sin4.sin_addr)) throw NetmaskException("invalid raw address length");
-    memcpy(&address.sin4.sin_addr, raw, sizeof(address.sin4.sin_addr));
-  }
-  else if (version == 6) {
-    address.sin6.sin6_family = AF_INET6;
-    if (len != sizeof(address.sin6.sin6_addr)) throw NetmaskException("invalid raw address length");
-    memcpy(&address.sin6.sin6_addr, raw, sizeof(address.sin6.sin6_addr));
-  }
-  else throw NetmaskException("invalid address family");
-
-  return address;
-}
-
-inline ComboAddress makeComboAddressFromRaw(uint8_t version, const string &str)
-{
-  return makeComboAddressFromRaw(version, str.c_str(), str.size());
-}
-
 /** This class represents a netmask and can be queried to see if a certain
     IP address is matched by this mask */
 class Netmask
@@ -377,8 +321,9 @@ public:
 	d_bits=0;
   }
   
-  Netmask(const ComboAddress& network, uint8_t bits=0xff): d_network(network)
+  Netmask(const ComboAddress& network, uint8_t bits=0xff)
   {
+    d_network = network;
     d_network.sin4.sin_port=0;
     if(bits > 128)
       bits = (network.sin4.sin_family == AF_INET) ? 32 : 128;
@@ -628,15 +573,14 @@ public:
     // see above.
     for(auto const& node: rhs._nodes)
       insert(node->first).second = node->second;
-    d_cleanup_tree = rhs.d_cleanup_tree;
     return *this;
   }
 
-  const typename std::set<node_type*>::const_iterator begin() const { return _nodes.begin(); }
-  const typename std::set<node_type*>::const_iterator end() const { return _nodes.end(); }
+  const typename std::vector<node_type*>::const_iterator begin() const { return _nodes.begin(); }
+  const typename std::vector<node_type*>::const_iterator end() const { return _nodes.end(); }
 
-  typename std::set<node_type*>::iterator begin() { return _nodes.begin(); }
-  typename std::set<node_type*>::iterator end() { return _nodes.end(); }
+  typename std::vector<node_type*>::iterator begin() { return _nodes.begin(); }
+  typename std::vector<node_type*>::iterator end() { return _nodes.end(); }
 
   node_type& insert(const string &mask) {
     return insert(key_type(mask));
@@ -664,7 +608,7 @@ public:
       // only create node if not yet assigned
       if (!node->node4) {
         node->node4 = unique_ptr<node_type>(new node_type());
-        _nodes.insert(node->node4.get());
+        _nodes.push_back(node->node4.get());
       }
       value = node->node4.get();
     } else {
@@ -689,7 +633,7 @@ public:
       // only create node if not yet assigned
       if (!node->node6) {
         node->node6 = unique_ptr<node_type>(new node_type());
-        _nodes.insert(node->node6.get());
+        _nodes.push_back(node->node6.get());
       }
       value = node->node6.get();
     }
@@ -814,7 +758,13 @@ public:
         bits++;
       }
       if (node) {
-        _nodes.erase(node->node4.get());
+        for(auto it = _nodes.begin(); it != _nodes.end(); ) {
+          if (node->node4.get() == *it)
+            it = _nodes.erase(it);
+          else
+            it++;
+        }
+
         node->node4.reset();
 
         if (d_cleanup_tree)
@@ -837,7 +787,13 @@ public:
         bits++;
       }
       if (node) {
-        _nodes.erase(node->node6.get());
+        for(auto it = _nodes.begin(); it != _nodes.end(); ) {
+          if (node->node6.get() == *it)
+            it = _nodes.erase(it);
+          else
+            it++;
+        }
+
         node->node6.reset();
 
         if (d_cleanup_tree)
@@ -883,7 +839,7 @@ public:
 
 private:
   unique_ptr<TreeNode> root; //<! Root of our tree
-  std::set<node_type*> _nodes; //<! Container for actual values
+  std::vector<node_type*> _nodes; //<! Container for actual values
   bool d_cleanup_tree; //<! Whether or not to cleanup the tree on erase
 };
 
@@ -1023,14 +979,6 @@ struct SComboAddress
   }
 };
 
-class NetworkError : public runtime_error
-{
-public:
-  NetworkError(const string& why="Network Error") : runtime_error(why.c_str())
-  {}
-  NetworkError(const char *why="Network Error") : runtime_error(why)
-  {}
-};
 
 int SSocket(int family, int type, int flags);
 int SConnect(int sockfd, const ComboAddress& remote);
@@ -1049,7 +997,6 @@ int SSetsockopt(int sockfd, int level, int opname, int value);
 #elif defined(IP_RECVDSTADDR)
   #define GEN_IP_PKTINFO IP_RECVDSTADDR 
 #endif
-
 bool IsAnyAddress(const ComboAddress& addr);
 bool HarvestDestinationAddress(const struct msghdr* msgh, ComboAddress* destination);
 bool HarvestTimestamp(struct msghdr* msgh, struct timeval* tv);

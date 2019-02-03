@@ -42,7 +42,6 @@ class DNSPacket;
 #include "comment.hh"
 #include "dnsname.hh"
 #include "dnsrecords.hh"
-#include "iputils.hh"
 
 class DNSBackend;  
 struct DomainInfo
@@ -52,7 +51,7 @@ struct DomainInfo
   DNSName zone;
   time_t last_check;
   string account;
-  vector<ComboAddress> masters; 
+  vector<string> masters;
   DNSBackend *backend;
 
   uint32_t id;
@@ -87,15 +86,6 @@ struct DomainInfo
       return DomainInfo::Native;
   }
 
-  bool isMaster(const ComboAddress& ip) const
-  {
-    for( const auto& master: masters) {
-      if(ComboAddress::addressOnlyEqual()(ip, master))
-        return true;
-    }
-    return false;
-  }
-
 };
 
 struct TSIGKey {
@@ -106,7 +96,7 @@ struct TSIGKey {
 
 class DNSPacket;
 
-//! This virtual base class defines the interface for backends for PowerDNS.
+//! This virtual base class defines the interface for backends for the ahudns.
 /** To create a backend, inherit from this class and implement functions for all virtual methods.
     Methods should not throw an exception if they are sure they did not find the requested data. However,
     if an error occurred which prevented them temporarily from performing a lockup, they should throw a DBException,
@@ -136,6 +126,9 @@ public:
 
   //! fills the soadata struct with the SOA details. Returns false if there is no SOA.
   virtual bool getSOA(const DNSName &name, SOAData &soadata);
+
+  //! Calculates a SOA serial for the zone and stores it in the third argument.
+  virtual bool calculateSOASerial(const DNSName& domain, const SOAData& sd, time_t& serial);
 
   virtual bool replaceRRSet(uint32_t domain_id, const DNSName& qname, const QType& qt, const vector<DNSResourceRecord>& rrset)
   {
@@ -243,6 +236,11 @@ public:
   }
 
   //! returns true if master ip is master for domain name.
+  virtual bool isMaster(const DNSName &name, const string &ip)
+  {
+    return false;
+  }
+  
   //! starts the transaction for updating domain qname (FIXME: what is id?)
   virtual bool startTransaction(const DNSName &qname, int id=-1)
   {
@@ -284,7 +282,7 @@ public:
   }
 
   //! if this returns true, DomainInfo di contains information about the domain
-  virtual bool getDomainInfo(const DNSName &domain, DomainInfo &di, bool getSerial=true)
+  virtual bool getDomainInfo(const DNSName &domain, DomainInfo &di)
   {
     return false;
   }

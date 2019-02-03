@@ -24,7 +24,6 @@
 #endif
 #include "statbag.hh"
 #include "logger.hh"
-#include "threadname.hh"
 #include "iputils.hh"
 #include "sstuff.hh"
 #include "arguments.hh"
@@ -35,10 +34,8 @@
 void* carbonDumpThread(void*)
 try
 {
-  setThreadName("pdns/carbonDump");
   extern StatBag S;
 
-  string namespace_name=arg()["carbon-namespace"];
   string hostname=arg()["carbon-ourname"];
   if(hostname.empty()) {
     char tmp[80];
@@ -49,7 +46,6 @@ try
     hostname=tmp;
     boost::replace_all(hostname, ".", "_");
   }
-  string instance_name=arg()["carbon-instance"];
 
   vector<string> carbonServers;
   stringtok(carbonServers, arg()["carbon-server"], ", ");
@@ -65,7 +61,7 @@ try
     ostringstream str;
     time_t now=time(0);
     for(const string& entry : entries) {
-      str<<namespace_name<<'.'<<hostname<<'.'<<instance_name<<'.'<<entry<<' '<<S.read(entry)<<' '<<now<<"\r\n";
+      str<<"pdns."<<hostname<<".auth."<<entry<<' '<<S.read(entry)<<' '<<now<<"\r\n";
     }
     msg = str.str();
 
@@ -79,7 +75,7 @@ try
 
         writen2WithTimeout(s.getHandle(), msg.c_str(), msg.length(), 2);
       } catch (runtime_error &e){
-        g_log<<Logger::Warning<<"Unable to write data to carbon server at "<<remote.toStringWithPort()<<": "<<e.what()<<endl;
+        L<<Logger::Warning<<"Unable to write data to carbon server at "<<remote.toStringWithPort()<<": "<<e.what()<<endl;
         continue;
       }
     }
@@ -89,16 +85,16 @@ try
 }
 catch(std::exception& e)
 {
-  g_log<<Logger::Error<<"Carbon thread died: "<<e.what()<<endl;
+  L<<Logger::Error<<"Carbon thread died: "<<e.what()<<endl;
   return 0;
 }
 catch(PDNSException& e)
 {
-  g_log<<Logger::Error<<"Carbon thread died, PDNSException: "<<e.reason<<endl;
+  L<<Logger::Error<<"Carbon thread died, PDNSException: "<<e.reason<<endl;
   return 0;
 }
 catch(...)
 {
-  g_log<<Logger::Error<<"Carbon thread died"<<endl;
+  L<<Logger::Error<<"Carbon thread died"<<endl;
   return 0;
 }

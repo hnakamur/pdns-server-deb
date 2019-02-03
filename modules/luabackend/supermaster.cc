@@ -43,7 +43,7 @@ bool LUABackend::superMasterBackend(const string &ip, const DNSName &domain, con
         return false;
 
     if (logging)
-	g_log << Logger::Info << backend_name << "(superMasterBackend) BEGIN" << endl;
+	L << Logger::Info << backend_name << "(superMasterBackend) BEGIN" << endl;
 	
     lua_rawgeti(lua, LUA_REGISTRYINDEX, f_lua_supermasterbackend);
 
@@ -97,7 +97,7 @@ bool LUABackend::superMasterBackend(const string &ip, const DNSName &domain, con
     }
     
     if (logging)
-	g_log << Logger::Info << backend_name << "(superMasterBackend) END" << endl;
+	L << Logger::Info << backend_name << "(superMasterBackend) END" << endl;
 	
     return ok;
 }
@@ -108,7 +108,7 @@ bool LUABackend::createSlaveDomain(const string &ip, const DNSName& domain, cons
         return false;
 
     if (logging)
-	g_log << Logger::Info << backend_name << "(createSlaveDomain) BEGIN" << endl;
+	L << Logger::Info << backend_name << "(createSlaveDomain) BEGIN" << endl;
 
     lua_rawgeti(lua, LUA_REGISTRYINDEX, f_lua_createslavedomain);
 
@@ -133,7 +133,7 @@ bool LUABackend::createSlaveDomain(const string &ip, const DNSName& domain, cons
     lua_pop(lua, 1);
 
     if (logging)
-	g_log << Logger::Info << backend_name << "(createSlaveDomain) END" << endl;
+	L << Logger::Info << backend_name << "(createSlaveDomain) END" << endl;
 	
     return ok;
 }

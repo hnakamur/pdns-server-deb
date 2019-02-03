@@ -71,6 +71,8 @@ What to do with timeouts. We keep around at most 65536 outstanding answers.
 #include "dnsrecords.hh"
 #include "ednssubnet.hh"
 #include "ednsoptions.hh"
+// this is needed because boost multi_index also uses 'L', as do we (which is sad enough)
+#undef L
 
 #include <set>
 #include <deque>
@@ -444,7 +446,7 @@ try
 	measureResultAndClean(iter);
       }
     }
-    catch(const MOADNSException &mde)
+    catch(MOADNSException &e)
     {
       s_wednserrors++;
     }
@@ -551,6 +553,9 @@ Orig    9           21      29     36         47        57       66    72
   pruneQids();
 }
 
+
+bool g_rdSelector;
+
 static void generateOptRR(const std::string& optRData, string& res)
 {
   const uint8_t name = 0;
@@ -558,7 +563,7 @@ static void generateOptRR(const std::string& optRData, string& res)
   EDNS0Record edns0;
   edns0.extRCode = 0;
   edns0.version = 0;
-  edns0.extFlags = 0;
+  edns0.Z = 0;
   
   dh.d_type = htons(QType::OPT);
   dh.d_class = htons(1280);
@@ -569,7 +574,7 @@ static void generateOptRR(const std::string& optRData, string& res)
   res.append(optRData.c_str(), optRData.length());
 }
 
-static void addECSOption(char* packet, const size_t packetSize, uint16_t* len, const ComboAddress& remote, int stamp)
+static void addECSOption(char* packet, const size_t& packetSize, uint16_t* len, const ComboAddress& remote, int stamp)
 {
   string EDNSRR;
   struct dnsheader* dh = (struct dnsheader*) packet;
@@ -590,7 +595,7 @@ static void addECSOption(char* packet, const size_t packetSize, uint16_t* len, c
 
   uint16_t arcount = ntohs(dh->arcount);
   /* does it fit in the existing buffer? */
-  if (packetSize > *len && (packetSize - *len) > EDNSRR.size()) {
+  if (packetSize > *len && packetSize - *len > EDNSRR.size()) {
     arcount++;
     dh->arcount = htons(arcount);
     memcpy(packet + *len, EDNSRR.c_str(), EDNSRR.size());
@@ -598,21 +603,12 @@ static void addECSOption(char* packet, const size_t packetSize, uint16_t* len, c
   }
 }
 
-static bool g_rdSelector;
-static uint16_t g_pcapDnsPort;
 
-static bool sendPacketFromPR(PcapPacketReader& pr, const ComboAddress& remote, int stamp)
+bool sendPacketFromPR(PcapPacketReader& pr, const ComboAddress& remote, int stamp)
 {
+  dnsheader* dh=(dnsheader*)pr.d_payload;
   bool sent=false;
-  if (pr.d_len <= sizeof(dnsheader)) {
-    return sent;
-  }
-  if (pr.d_len > std::numeric_limits<uint16_t>::max()) {
-    /* too large for an DNS UDP query, something is not right */
-    return false;
-  }
-  dnsheader* dh=const_cast<dnsheader*>(reinterpret_cast<const dnsheader*>(pr.d_payload));
-  if((ntohs(pr.d_udp->uh_dport)!=g_pcapDnsPort && ntohs(pr.d_udp->uh_sport)!=g_pcapDnsPort) || dh->rd != g_rdSelector)
+  if((ntohs(pr.d_udp->uh_dport)!=53 && ntohs(pr.d_udp->uh_sport)!=53) || dh->rd != g_rdSelector || (unsigned int)pr.d_len <= sizeof(dnsheader))
     return sent;
 
   QuestionData qd;
@@ -626,16 +622,8 @@ static bool sendPacketFromPR(PcapPacketReader& pr, const ComboAddress& remote, i
       //      dh->rd=1; // useful to replay traffic to auths to a recursor
       uint16_t dlen = pr.d_len;
 
-      if (stamp >= 0) {
-        static_assert(sizeof(pr.d_buffer) >= 1500, "The size of the underlying buffer should be at least 1500 bytes");
-        if (dlen > 1500) {
-          /* the existing packet is larger than the maximum size we are willing to send, and it won't get better by adding ECS */
-          return false;
-        }
-        addECSOption((char*)pr.d_payload, 1500, &dlen, pr.getSource(), stamp);
-        pr.d_len=dlen;
-      }
-
+      if (stamp >= 0) addECSOption((char*)pr.d_payload, 1500, &dlen, pr.getSource(), stamp);
+      pr.d_len=dlen;
       s_socket->sendTo((const char*)pr.d_payload, dlen, remote);
       sent=true;
       dh->id=tmp;
@@ -684,10 +672,10 @@ static bool sendPacketFromPR(PcapPacketReader& pr, const ComboAddress& remote, i
       }
     }
   }
-  catch(const MOADNSException &mde)
+  catch(MOADNSException &e)
   {
     if(!g_quiet)
-      cerr<<"Error parsing packet: "<<mde.what()<<endl;
+      cerr<<"Error parsing packet: "<<e.what()<<endl;
     s_idmanager.releaseID(qd.d_assignedID);  // not added to qids for cleanup
     s_origdnserrors++;
   }
@@ -716,7 +704,6 @@ try
     ("help,h", "produce help message")
     ("version", "show version number")
     ("packet-limit", po::value<uint32_t>()->default_value(0), "stop after this many packets")
-    ("pcap-dns-port", po::value<uint16_t>()->default_value(53), "look at packets from or to this port in the PCAP (defaults to 53)")
     ("quiet", po::value<bool>()->default_value(true), "don't be too noisy")
     ("recursive", po::value<bool>()->default_value(true), "look at recursion desired packets, or not (defaults true)")
     ("speedup", po::value<float>()->default_value(1), "replay at this speedup")
@@ -763,7 +750,6 @@ try
   uint32_t packetLimit = g_vm["packet-limit"].as<uint32_t>();
 
   g_rdSelector = g_vm["recursive"].as<bool>();
-  g_pcapDnsPort = g_vm["pcap-dns-port"].as<uint16_t>();
 
   g_quiet = g_vm["quiet"].as<bool>();
 

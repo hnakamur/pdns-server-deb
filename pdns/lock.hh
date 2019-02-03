@@ -118,9 +118,7 @@ public:
   TryWriteLock(TryWriteLock&& rhs)
   {
     d_lock = rhs.d_lock;
-    rhs.d_lock = nullptr;
-    d_havelock = rhs.d_havelock;
-    rhs.d_havelock = false;
+    rhs.d_lock=0;
   }
 
   
@@ -166,9 +164,7 @@ public:
   TryReadLock(TryReadLock&& rhs)
   {
     d_lock = rhs.d_lock;
-    rhs.d_lock = nullptr;
-    d_havelock = rhs.d_havelock;
-    rhs.d_havelock = false;
+    rhs.d_lock=0;
   }
 
   ~TryReadLock()

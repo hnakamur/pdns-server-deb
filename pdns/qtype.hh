@@ -76,8 +76,6 @@ public:
     NS=2,
     CNAME=5,
     SOA=6,
-    MB=7,
-    MG=8,
     MR=9,
     WKS=11,
     PTR=12,
@@ -127,8 +125,7 @@ public:
     CAA=257,
     DLV=32769,
     ADDR=65400,
-    ALIAS=65401,
-    LUA=65402
+    ALIAS=65401
   };
 
   typedef pair<string,uint16_t> namenum;
@@ -172,8 +169,6 @@ private:
       qtype_insert("NS", 2);
       qtype_insert("CNAME", 5);
       qtype_insert("SOA", 6);
-      qtype_insert("MB", 7);
-      qtype_insert("MG", 8);
       qtype_insert("MR", 9);
       qtype_insert("WKS", 11);
       qtype_insert("PTR", 12);
@@ -224,7 +219,6 @@ private:
       qtype_insert("DLV", 32769);
       qtype_insert("ADDR", 65400);
       qtype_insert("ALIAS", 65401);
-      qtype_insert("LUA", 65402);
     }
   } initializer;
 

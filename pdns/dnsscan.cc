@@ -28,6 +28,8 @@
 #include "sstuff.hh"
 #include "anadns.hh"
 
+// this is needed because boost multi_index also uses 'L', as do we (which is sad enough)
+#undef L
 
 #include <set>
 #include <deque>
@@ -90,8 +92,8 @@ try
           counts[mdp.d_qtype]++;
 
       }
-      catch(const MOADNSException &mde) {
-        cout<<"Error from remote "<<pr.getSource().toString()<<": "<<mde.what()<<"\n";
+      catch(MOADNSException &e) {
+        cout<<"Error from remote "<<pr.getSource().toString()<<": "<<e.what()<<"\n";
         //        sock.sendTo(string(pr.d_payload, pr.d_payload + pr.d_len), remote);
       }
     }

@@ -10,7 +10,6 @@
 #include "misc.hh"
 #include "pdnsexception.hh"
 #include "namespaces.hh"
-#include "iputils.hh"
 #define YYDEBUG 1
 extern int yydebug;
 #include "bindparserclasses.hh"
@@ -254,7 +253,7 @@ masters: /* empty */
 
 master: AWORD
 	{
-		s_di.masters.push_back(ComboAddress($1, 53));
+		s_di.masters.push_back($1);
 		free($1);
 	}
 	;

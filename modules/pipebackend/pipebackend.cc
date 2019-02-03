@@ -77,7 +77,7 @@ void CoWrapper::launch()
    d_cp->send("HELO\t"+std::to_string(d_abiVersion));
    string banner;
    d_cp->receive(banner);
-   g_log<<Logger::Error<<"Backend launched with banner: "<<banner<<endl;
+   L<<Logger::Error<<"Backend launched with banner: "<<banner<<endl;
 }
 
 void CoWrapper::send(const string &line)
@@ -101,7 +101,7 @@ void CoWrapper::receive(string &line)
       return;
    }
    catch(PDNSException &ae) {
-      g_log<<Logger::Warning<<kBackendId<<" Unable to receive data from coprocess. "<<ae.reason<<endl;
+      L<<Logger::Warning<<kBackendId<<" Unable to receive data from coprocess. "<<ae.reason<<endl;
       delete d_cp;
       d_cp=0;
       throw;
@@ -118,7 +118,7 @@ PipeBackend::PipeBackend(const string &suffix)
      launch();
    }
    catch(const ArgException &A) {
-      g_log<<Logger::Error<<kBackendId<<" Unable to launch, fatal argument error: "<<A.reason<<endl;
+      L<<Logger::Error<<kBackendId<<" Unable to launch, fatal argument error: "<<A.reason<<endl;
       throw;
    }
    catch(...) {
@@ -162,7 +162,7 @@ void PipeBackend::lookup(const QType& qtype,const DNSName& qname, DNSPacket *pkt
     d_disavow=false;
     if(d_regex && !d_regex->match(qname.toStringRootDot())) {
       if(::arg().mustDo("query-logging"))
-        g_log<<Logger::Error<<"Query for '"<<qname<<"' failed regex '"<<d_regexstr<<"'"<<endl;
+        L<<Logger::Error<<"Query for '"<<qname<<"' failed regex '"<<d_regexstr<<"'"<<endl;
       d_disavow=true; // don't pass to backend
     } else {
       ostringstream query;
@@ -185,12 +185,12 @@ void PipeBackend::lookup(const QType& qtype,const DNSName& qname, DNSPacket *pkt
         query <<"\t"<<realRemote.toString(); 
 
       if(::arg().mustDo("query-logging"))
-        g_log<<Logger::Error<<"Query: '"<<query.str()<<"'"<<endl;
+        L<<Logger::Error<<"Query: '"<<query.str()<<"'"<<endl;
       d_coproc->send(query.str());
     }
   }
   catch(PDNSException &pe) {
-    g_log<<Logger::Error<<kBackendId<<" Error from coprocess: "<<pe.reason<<endl;
+    L<<Logger::Error<<kBackendId<<" Error from coprocess: "<<pe.reason<<endl;
     d_disavow = true;
   }
   d_qtype=qtype;
@@ -214,7 +214,7 @@ bool PipeBackend::list(const DNSName& target, int inZoneId, bool include_disable
     d_coproc->send(query.str());
   }
   catch(PDNSException &ae) {
-    g_log<<Logger::Error<<kBackendId<<" Error from coprocess: "<<ae.reason<<endl;
+    L<<Logger::Error<<kBackendId<<" Error from coprocess: "<<ae.reason<<endl;
   }
   d_qname=DNSName(itoa(inZoneId)); // why do we store a number here??
   return true;
@@ -231,7 +231,7 @@ string PipeBackend::directBackendCmd(const string &query) {
     d_coproc->send(oss.str());
   }
   catch(PDNSException &ae) {
-    g_log<<Logger::Error<<kBackendId<<" Error from coprocess: "<<ae.reason<<endl;
+    L<<Logger::Error<<kBackendId<<" Error from coprocess: "<<ae.reason<<endl;
     cleanup();
   }
 
@@ -253,7 +253,7 @@ DNSBackend *PipeBackend::maker()
       return new PipeBackend();
    }
    catch(...) {
-      g_log<<Logger::Error<<kBackendId<<" Unable to instantiate a pipebackend!"<<endl;
+      L<<Logger::Error<<kBackendId<<" Unable to instantiate a pipebackend!"<<endl;
       return 0;
    }
 }
@@ -283,7 +283,7 @@ bool PipeBackend::get(DNSResourceRecord &r)
       vector<string>parts;
       stringtok(parts,line,"\t");
       if(parts.empty()) {
-        g_log<<Logger::Error<<kBackendId<<" Coprocess returned empty line in query for "<<d_qname<<endl;
+        L<<Logger::Error<<kBackendId<<" Coprocess returned empty line in query for "<<d_qname<<endl;
         throw PDNSException("Format error communicating with coprocess");
       }
       else if(parts[0]=="FAIL") {
@@ -293,12 +293,12 @@ bool PipeBackend::get(DNSResourceRecord &r)
         return false;
       }
       else if(parts[0]=="LOG") {
-        g_log<<Logger::Error<<"Coprocess: "<<line.substr(4)<<endl;
+        L<<Logger::Error<<"Coprocess: "<<line.substr(4)<<endl;
         continue;
       }
       else if(parts[0]=="DATA") { // yay
         if(parts.size() < 7 + extraFields) {
-          g_log<<Logger::Error<<kBackendId<<" Coprocess returned incomplete or empty line in data section for query for "<<d_qname<<endl;
+          L<<Logger::Error<<kBackendId<<" Coprocess returned incomplete or empty line in data section for query for "<<d_qname<<endl;
           throw PDNSException("Format error communicating with coprocess in data section");
           // now what?
         }
@@ -325,7 +325,7 @@ bool PipeBackend::get(DNSResourceRecord &r)
         }
         else {
           if(parts.size()< 8 + extraFields) {
-            g_log<<Logger::Error<<kBackendId<<" Coprocess returned incomplete MX/SRV line in data section for query for "<<d_qname<<endl;
+            L<<Logger::Error<<kBackendId<<" Coprocess returned incomplete MX/SRV line in data section for query for "<<d_qname<<endl;
             throw PDNSException("Format error communicating with coprocess in data section of MX/SRV record");
           }
 
@@ -338,11 +338,11 @@ bool PipeBackend::get(DNSResourceRecord &r)
     }
   }
   catch (DBException &dbe) {
-    g_log<<Logger::Error<<kBackendId<<" "<<dbe.reason<<endl;
+    L<<Logger::Error<<kBackendId<<" "<<dbe.reason<<endl;
     throw;
   }
   catch (PDNSException &pe) {
-    g_log<<Logger::Error<<kBackendId<<" "<<pe.reason<<endl;
+    L<<Logger::Error<<kBackendId<<" "<<pe.reason<<endl;
     cleanup();
     throw;
   }
@@ -378,7 +378,7 @@ class PipeLoader
       PipeLoader()
       {
          BackendMakers().report(new PipeFactory);
-         g_log << Logger::Info << kBackendId <<" This is the pipe backend version " VERSION
+         L << Logger::Info << kBackendId <<" This is the pipe backend version " VERSION
 #ifndef REPRODUCIBLE
       << " (" __DATE__ " " __TIME__ ")"
 #endif

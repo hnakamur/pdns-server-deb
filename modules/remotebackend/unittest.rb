@@ -244,6 +244,11 @@ class Handler
    def do_aborttransaction(args)
      [true]
    end
+  
+   def do_calculatesoaserial(args)
+     return [2013060300] if args["sd"]["qname"] == "unit.test."
+     [false]
+   end
 
    def do_directbackendcmd(args)
      [args["query"]]

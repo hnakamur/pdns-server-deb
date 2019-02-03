@@ -15,7 +15,7 @@
 #include <utility>
 extern StatBag S;
 
-BOOST_AUTO_TEST_SUITE(test_packetcache_cc)
+BOOST_AUTO_TEST_SUITE(packetcache_cc)
 
 BOOST_AUTO_TEST_CASE(test_AuthQueryCacheSimple) {
   AuthQueryCache QC;
@@ -149,7 +149,7 @@ try
 
     pak.clear();
     DNSPacketWriter pw2(pak, qname, QType::A);
-    pw2.startRecord(qname, QType::A, 3600, QClass::IN, DNSResourceRecord::ANSWER);
+    pw2.startRecord(qname, QType::A, 16, 1, DNSResourceRecord::ANSWER);
     pw2.xfrIP(htonl(0x7f000001));
     pw2.commit();
 
@@ -160,8 +160,7 @@ try
     DNSPacket cached(false);
     g_PC->get(&q, &cached);
 
-    const unsigned int maxTTL = 3600;
-    g_PC->insert(&q, &r, maxTTL);
+    g_PC->insert(&q, &r, 60);
   }
 
   return 0;
@@ -201,7 +200,7 @@ BOOST_AUTO_TEST_CASE(test_PacketCacheThreaded) {
   try {
     AuthPacketCache PC;
     PC.setMaxEntries(1000000);
-    PC.setTTL(3600);
+    PC.setTTL(20);
 
     g_PC=&PC;
     pthread_t tid[4];

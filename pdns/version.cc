@@ -25,6 +25,10 @@
 #include "logger.hh"
 #include "version.hh"
 
+#ifdef HAVE_BOTAN
+#include <botan/version.h>
+#endif /* HAVE_BOTAN */
+
 static ProductType productType;
 
 string compilerVersion()
@@ -67,66 +71,43 @@ string productTypeApiType() {
 
 void showProductVersion()
 {
-  g_log<<Logger::Warning<<productName()<<" "<< VERSION << " (C) 2001-2018 "
+  theL()<<Logger::Warning<<productName()<<" "<< VERSION << " (C) 2001-2018 "
     "PowerDNS.COM BV" << endl;
-  g_log<<Logger::Warning<<"Using "<<(sizeof(unsigned long)*8)<<"-bits mode. "
+  theL()<<Logger::Warning<<"Using "<<(sizeof(unsigned long)*8)<<"-bits mode. "
     "Built using " << compilerVersion()
 #ifndef REPRODUCIBLE
     <<" on " __DATE__ " " __TIME__ " by " BUILD_HOST
 #endif
     <<"."<< endl;
-  g_log<<Logger::Warning<<"PowerDNS comes with ABSOLUTELY NO WARRANTY. "
+  theL()<<Logger::Warning<<"PowerDNS comes with ABSOLUTELY NO WARRANTY. "
     "This is free software, and you are welcome to redistribute it "
     "according to the terms of the GPL version 2." << endl;
 }
 
 void showBuildConfiguration()
 {
-  g_log<<Logger::Warning<<"Features: "<<
+  theL()<<Logger::Warning<<"Features: "<<
+#ifdef HAVE_BOTAN
+    "botan" << BOTAN_VERSION_MAJOR << "." << BOTAN_VERSION_MINOR  << " " <<
+#endif
+#ifdef HAVE_LIBSODIUM
+    "sodium " <<
+#endif
 #ifdef HAVE_LIBDECAF
     "decaf " <<
 #endif
-#ifdef HAVE_BOOST_CONTEXT
-    "fcontext " <<
-#endif
-#ifdef HAVE_LIBCRYPTO_ECDSA
-    "libcrypto-ecdsa "
-#endif
-#ifdef HAVE_LIBCRYPTO_ED25519
-    "libcrypto-ed25519 "
-#endif
-#ifdef HAVE_LIBCRYPTO_ED448
-    "libcrypto-ed448 "
-#endif
-#ifdef HAVE_LIBCRYPTO_EDDSA
-    "libcrypto-eddsa "
-#endif
+    "openssl " <<
 #ifdef HAVE_LIBDL
     "libdl " <<
 #endif
 #ifdef HAVE_LUA
     "lua " <<
 #endif
-#ifdef HAVE_LUA_RECORDS
-    "lua-records " <<
-#endif
-#ifdef NOD_ENABLED
-    "nod " <<
-#endif
-#ifdef HAVE_P11KIT1
-    "PKCS#11 " <<
-#endif
-#ifdef HAVE_PROTOBUF
-    "protobuf " <<
-#endif
 #ifdef REMOTEBACKEND_ZEROMQ
     "remotebackend-zeromq " <<
 #endif
-#ifdef HAVE_NET_SNMP
-    "snmp " <<
-#endif
-#ifdef HAVE_LIBSODIUM
-    "sodium " <<
+#ifdef HAVE_P11KIT1
+    "PKCS#11" <<
 #endif
 #ifdef VERBOSELOG
     "verboselog" <<
@@ -134,12 +115,12 @@ void showBuildConfiguration()
     endl;
 #ifdef PDNS_MODULES
   // Auth only
-  g_log<<Logger::Warning<<"Built-in modules: "<<PDNS_MODULES<<endl;
+  theL()<<Logger::Warning<<"Built-in modules: "<<PDNS_MODULES<<endl;
 #endif
 #ifdef PDNS_CONFIG_ARGS
 #define double_escape(s) #s
 #define escape_quotes(s) double_escape(s)
-  g_log<<Logger::Warning<<"Configured with: "<<escape_quotes(PDNS_CONFIG_ARGS)<<endl;
+  theL()<<Logger::Warning<<"Configured with: "<<escape_quotes(PDNS_CONFIG_ARGS)<<endl;
 #undef escape_quotes
 #undef double_escape
 #endif

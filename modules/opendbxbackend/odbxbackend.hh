@@ -85,7 +85,8 @@ public:
         bool commitTransaction() override;
         bool abortTransaction() override;
 
-        bool getDomainInfo( const DNSName& domain, DomainInfo& di, bool getSerial=true ) override;
+        bool isMaster( const DNSName& domain, const string& ip ) override;
+        bool getDomainInfo( const DNSName& domain, DomainInfo& di ) override;
         bool feedRecord( const DNSResourceRecord& rr, const DNSName& ordername ) override;
         bool createSlaveDomain( const string& ip, const DNSName& domain, const string &nameserver, const string& account ) override;
         bool superMasterBackend( const string& ip, const DNSName& domain, const vector<DNSResourceRecord>& nsset, string *nameserver, string* account, DNSBackend** ddb ) override;
@@ -164,7 +165,7 @@ public:
         OdbxLoader()
         {
         	BackendMakers().report( &factory );
-        	g_log<< Logger::Info << "[opendbxbackend] This is the opendbx backend version " VERSION
+        	L<< Logger::Info << "[opendbxbackend] This is the opendbx backend version " VERSION
 #ifndef REPRODUCIBLE
         		<< " (" __DATE__ " " __TIME__ ")"
 #endif

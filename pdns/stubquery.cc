@@ -46,6 +46,7 @@ try
   ::arg().set("resolver","Use this resolver for ALIAS and the internal stub resolver")="no"; 
 
   reportAllTypes();
+  dns_random_init("0123456789abcdef");
   stubParseResolveConf();
 
   vector<DNSZoneRecord> ret;

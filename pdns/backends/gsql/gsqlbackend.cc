@@ -43,12 +43,12 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   setArgPrefix(mode+suffix);
   d_db=0;
   d_logprefix="["+mode+"Backend"+suffix+"] ";
-
+	
   try
   {
     d_dnssecQueries = mustDo("dnssec");
   }
-  catch (const ArgException&)
+  catch (ArgException e)
   {
     d_dnssecQueries = false;
   }
@@ -61,6 +61,7 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   d_listQuery=getArg("list-query");
   d_listSubZoneQuery=getArg("list-subzone-query");
 
+  d_MasterOfDomainsZoneQuery=getArg("master-zone-query");
   d_InfoOfDomainsZoneQuery=getArg("info-zone-query");
   d_InfoOfAllSlaveDomainsQuery=getArg("info-all-slaves-query");
   d_SuperMasterInfoQuery=getArg("supermaster-query");
@@ -72,6 +73,7 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   d_UpdateSerialOfZoneQuery=getArg("update-serial-query");
   d_UpdateLastCheckofZoneQuery=getArg("update-lastcheck-query");
   d_UpdateAccountOfZoneQuery=getArg("update-account-query");
+  d_ZoneLastChangeQuery=getArg("zone-lastchange-query");
   d_InfoOfAllMasterDomainsQuery=getArg("info-all-master-query");
   d_DeleteDomainQuery=getArg("delete-domain-query");
   d_DeleteZoneQuery=getArg("delete-zone-query");
@@ -128,6 +130,7 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   d_ANYIdQuery_stmt = NULL;
   d_listQuery_stmt = NULL;
   d_listSubZoneQuery_stmt = NULL;
+  d_MasterOfDomainsZoneQuery_stmt = NULL;
   d_InfoOfDomainsZoneQuery_stmt = NULL;
   d_InfoOfAllSlaveDomainsQuery_stmt = NULL;
   d_SuperMasterInfoQuery_stmt = NULL;
@@ -145,6 +148,7 @@ GSQLBackend::GSQLBackend(const string &mode, const string &suffix)
   d_DeleteZoneQuery_stmt = NULL;
   d_DeleteRRSetQuery_stmt = NULL;
   d_DeleteNamesQuery_stmt = NULL;
+  d_ZoneLastChangeQuery_stmt = NULL;
   d_firstOrderQuery_stmt = NULL;
   d_beforeOrderQuery_stmt = NULL;
   d_afterOrderQuery_stmt = NULL;
@@ -212,6 +216,39 @@ void GSQLBackend::setFresh(uint32_t domain_id)
   }
 }
 
+bool GSQLBackend::isMaster(const DNSName &domain, const string &ip)
+{
+  try {
+    reconnectIfNeeded();
+
+    d_MasterOfDomainsZoneQuery_stmt->
+      bind("domain", domain)->
+      execute()->
+      getResult(d_result)->
+      reset();
+  }
+  catch (SSqlException &e) {
+    throw PDNSException("GSQLBackend unable to retrieve list of master domains: "+e.txtReason());
+  }
+
+  if(!d_result.empty()) {
+    ASSERT_ROW_COLUMNS("master-zone-query", d_result[0], 1);
+
+    // we can have multiple masters separated by commas
+    vector<string> masters;
+    stringtok(masters, d_result[0][0], " ,\t");
+
+    for(const auto& master: masters) {
+      const ComboAddress caMaster(master);
+      if(ip == caMaster.toString())
+        return true;
+    }
+  }
+
+  // no matching master
+  return false;
+}
+
 bool GSQLBackend::setMaster(const DNSName &domain, const string &ip)
 {
   try {
@@ -224,7 +261,7 @@ bool GSQLBackend::setMaster(const DNSName &domain, const string &ip)
       reset();
   }
   catch (SSqlException &e) {
-    throw PDNSException("GSQLBackend unable to set master of domain '"+domain.toLogString()+"': "+e.txtReason());
+    throw PDNSException("GSQLBackend unable to set master of domain \""+domain.toString()+"\": "+e.txtReason());
   }
   return true;
 }
@@ -241,7 +278,7 @@ bool GSQLBackend::setKind(const DNSName &domain, const DomainInfo::DomainKind ki
       reset();
   }
   catch (SSqlException &e) {
-    throw PDNSException("GSQLBackend unable to set kind of domain '"+domain.toLogString()+"': "+e.txtReason());
+    throw PDNSException("GSQLBackend unable to set kind of domain \""+domain.toString()+"\": "+e.txtReason());
   }
   return true;
 }
@@ -258,12 +295,12 @@ bool GSQLBackend::setAccount(const DNSName &domain, const string &account)
             reset();
   }
   catch (SSqlException &e) {
-    throw PDNSException("GSQLBackend unable to set account of domain '"+domain.toLogString()+"': "+e.txtReason());
+    throw PDNSException("GSQLBackend unable to set account of domain \""+domain.toString()+"\": "+e.txtReason());
   }
   return true;
 }
 
-bool GSQLBackend::getDomainInfo(const DNSName &domain, DomainInfo &di, bool getSerial)
+bool GSQLBackend::getDomainInfo(const DNSName &domain, DomainInfo &di)
 {
   /* fill DomainInfo from database info:
      id,name,master IP(s),last_check,notified_serial,type,account */
@@ -292,10 +329,7 @@ bool GSQLBackend::getDomainInfo(const DNSName &domain, DomainInfo &di, bool getS
   } catch (...) {
     return false;
   }
-  vector<string> masters;
-  stringtok(masters, d_result[0][2], " ,\t");
-  for(const auto& m : masters)
-    di.masters.emplace_back(m, 53);
+  stringtok(di.masters, d_result[0][2], " ,\t");
   di.last_check=pdns_stou(d_result[0][3]);
   di.notified_serial = pdns_stou(d_result[0][4]);
   string type=d_result[0][5];
@@ -303,17 +337,15 @@ bool GSQLBackend::getDomainInfo(const DNSName &domain, DomainInfo &di, bool getS
   di.backend=this;
 
   di.serial = 0;
-  if(getSerial) {
-    try {
-      SOAData sd;
-      if(!getSOA(domain, sd))
-        g_log<<Logger::Notice<<"No serial for '"<<domain<<"' found - zone is missing?"<<endl;
-      else
-        di.serial = sd.serial;
-    }
-    catch(PDNSException &ae){
-      g_log<<Logger::Error<<"Error retrieving serial for '"<<domain<<"': "<<ae.reason<<endl;
-    }
+  try {
+    SOAData sd;
+    if(!getSOA(domain, sd))
+      L<<Logger::Notice<<"No serial for '"<<domain<<"' found - zone is missing?"<<endl;
+    else
+      di.serial = sd.serial;
+  }
+  catch(PDNSException &ae){
+    L<<Logger::Error<<"Error retrieving serial for '"<<domain<<"': "<<ae.reason<<endl;
   }
 
   di.kind = DomainInfo::stringToKind(type);
@@ -348,12 +380,7 @@ void GSQLBackend::getUnfreshSlaveInfos(vector<DomainInfo> *unfreshDomains)
     } catch (...) {
       continue;
     }
-
-    vector<string> masters;
-    stringtok(masters, d_result[n][2], ", \t");
-    for(const auto& m : masters)
-      sd.masters.emplace_back(m, 53);
-
+    stringtok(sd.masters, d_result[n][2], ", \t");
     sd.last_check=pdns_stou(d_result[n][3]);
     sd.backend=this;
     sd.kind=DomainInfo::Slave;
@@ -520,7 +547,7 @@ bool GSQLBackend::updateEmptyNonTerminals(uint32_t domain_id, set<DNSName>& inse
           reset();
       }
       catch (SSqlException &e) {
-        throw PDNSException("GSQLBackend unable to delete empty non-terminal rr '"+qname.toLogString()+"' from domain_id "+itoa(domain_id)+": "+e.txtReason());
+        throw PDNSException("GSQLBackend unable to delete empty non-terminal rr "+qname.toString()+" from domain_id "+itoa(domain_id)+": "+e.txtReason());
         return false;
       }
     }
@@ -539,7 +566,7 @@ bool GSQLBackend::updateEmptyNonTerminals(uint32_t domain_id, set<DNSName>& inse
         reset();
     }
     catch (SSqlException &e) {
-      throw PDNSException("GSQLBackend unable to insert empty non-terminal rr '"+qname.toLogString()+"' in domain_id "+itoa(domain_id)+": "+e.txtReason());
+      throw PDNSException("GSQLBackend unable to insert empty non-terminal rr "+qname.toString()+" in domain_id "+itoa(domain_id)+": "+e.txtReason());
       return false;
     }
   }
@@ -1043,7 +1070,7 @@ void GSQLBackend::lookup(const QType &qtype,const DNSName &qname, DNSPacket *pkt
 
 bool GSQLBackend::list(const DNSName &target, int domain_id, bool include_disabled)
 {
-  DLOG(g_log<<"GSQLBackend constructing handle for list of domain id '"<<domain_id<<"'"<<endl);
+  DLOG(L<<"GSQLBackend constructing handle for list of domain id '"<<domain_id<<"'"<<endl);
 
   try {
     reconnectIfNeeded();
@@ -1065,7 +1092,7 @@ bool GSQLBackend::list(const DNSName &target, int domain_id, bool include_disabl
 
 bool GSQLBackend::listSubZone(const DNSName &zone, int domain_id) {
 
-  string wildzone = "%." + zone.makeLowerCase().toStringNoDot();
+  string wildzone = "%." + toLower(zone.toStringNoDot());
 
   try {
     reconnectIfNeeded();
@@ -1087,7 +1114,7 @@ bool GSQLBackend::listSubZone(const DNSName &zone, int domain_id) {
 
 bool GSQLBackend::get(DNSResourceRecord &r)
 {
-  // g_log << "GSQLBackend get() was called for "<<qtype.getName() << " record: ";
+  // L << "GSQLBackend get() was called for "<<qtype.getName() << " record: ";
   SSqlStatement::row_t row;
 
 skiprow:
@@ -1157,7 +1184,7 @@ bool GSQLBackend::createDomain(const DNSName &domain, const string &type, const 
       reset();
   }
   catch(SSqlException &e) {
-    throw PDNSException("Database error trying to insert new domain '"+domain.toLogString()+"': "+ e.txtReason());
+    throw PDNSException("Database error trying to insert new domain '"+domain.toString()+"': "+ e.txtReason());
   }
   return true;
 }
@@ -1191,7 +1218,7 @@ bool GSQLBackend::createSlaveDomain(const string &ip, const DNSName &domain, con
     createDomain(domain, "SLAVE", masters, account);
   }
   catch(SSqlException &e) {
-    throw PDNSException("Database error trying to insert new slave domain '"+domain.toLogString()+"': "+ e.txtReason());
+    throw PDNSException("Database error trying to insert new slave domain '"+domain.toString()+"': "+ e.txtReason());
   }
   return true;
 }
@@ -1228,14 +1255,14 @@ bool GSQLBackend::deleteDomain(const DNSName &domain)
       reset();
   }
   catch(SSqlException &e) {
-    throw PDNSException("Database error trying to delete domain '"+domain.toLogString()+"': "+ e.txtReason());
+    throw PDNSException("Database error trying to delete domain '"+domain.toString()+"': "+ e.txtReason());
   }
   return true;
 }
 
 void GSQLBackend::getAllDomains(vector<DomainInfo> *domains, bool include_disabled)
 {
-  DLOG(g_log<<"GSQLBackend retrieving all domains."<<endl);
+  DLOG(L<<"GSQLBackend retrieving all domains."<<endl);
 
   try {
     reconnectIfNeeded();
@@ -1257,10 +1284,7 @@ void GSQLBackend::getAllDomains(vector<DomainInfo> *domains, bool include_disabl
       }
   
       if (!row[4].empty()) {
-        vector<string> masters;
-        stringtok(masters, row[4], " ,\t");
-        for(const auto& m : masters)
-          di.masters.emplace_back(m, 53);
+        stringtok(di.masters, row[4], " ,\t");
       }
 
       SOAData sd;
@@ -1480,6 +1504,36 @@ bool GSQLBackend::abortTransaction()
     throw PDNSException("Database failed to abort transaction: "+string(e.txtReason()));
   }
   return true;
+}
+
+bool GSQLBackend::calculateSOASerial(const DNSName& domain, const SOAData& sd, time_t& serial)
+{
+  if (d_ZoneLastChangeQuery.empty()) {
+    // query not set => fall back to default impl
+    return DNSBackend::calculateSOASerial(domain, sd, serial);
+  }
+  
+  try {
+    reconnectIfNeeded();
+
+    d_ZoneLastChangeQuery_stmt->
+      bind("domain_id", sd.domain_id)->
+      execute()->
+      getResult(d_result)->
+      reset();
+  }
+  catch (const SSqlException& e) {
+    //DLOG(L<<"GSQLBackend unable to calculate SOA serial: " << e.txtReason()<<endl);
+    return false;
+  }
+ 
+  if (!d_result.empty()) {
+    ASSERT_ROW_COLUMNS("zone-lastchange-query", d_result[0], 1);
+    serial = pdns_stou(d_result[0][0]);
+    return true;
+  }
+
+  return false;
 }
 
 bool GSQLBackend::listComments(const uint32_t domain_id)

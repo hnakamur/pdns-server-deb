@@ -38,7 +38,6 @@ typedef map<pair<string, string>, string> signaturecache_t;
 static signaturecache_t g_signatures;
 static int g_cacheweekno;
 
-const static std::set<uint16_t> g_KSKSignedQTypes {QType::DNSKEY, QType::CDS, QType::CDNSKEY};
 AtomicCounter* g_signatureCount;
 
 static void fillOutRRSIG(DNSSECPrivateKey& dpk, const DNSName& signQName, RRSIGRecordContent& rrc, vector<shared_ptr<DNSRecordContent> >& toSign)
@@ -75,7 +74,7 @@ static void fillOutRRSIG(DNSSECPrivateKey& dpk, const DNSName& signQName, RRSIGR
 
     WriteLock l(&g_signatures_lock);
     if(g_cacheweekno < weekno || g_signatures.size() >= (uint) maxcachesize) {  // blunt but effective (C) Habbie, mind04
-      g_log<<Logger::Warning<<"Cleared signature cache."<<endl;
+      L<<Logger::Warning<<"Cleared signature cache."<<endl;
       g_signatures.clear();
       g_cacheweekno = weekno;
     }
@@ -85,7 +84,7 @@ static void fillOutRRSIG(DNSSECPrivateKey& dpk, const DNSName& signQName, RRSIGR
 
 /* this is where the RRSIGs begin, keys are retrieved,
    but the actual signing happens in fillOutRRSIG */
-static int getRRSIGsForRRSET(DNSSECKeeper& dk, const DNSName& signer, const DNSName& signQName, uint16_t signQType, uint32_t signTTL,
+static int getRRSIGsForRRSET(DNSSECKeeper& dk, const DNSName& signer, const DNSName signQName, uint16_t signQType, uint32_t signTTL,
                              vector<shared_ptr<DNSRecordContent> >& toSign, vector<RRSIGRecordContent>& rrcs)
 {
   if(toSign.empty())
@@ -107,11 +106,8 @@ static int getRRSIGsForRRSET(DNSSECKeeper& dk, const DNSName& signer, const DNSN
     if(!keymeta.second.active)
       continue;
 
-    bool signWithKSK = g_KSKSignedQTypes.count(signQType) != 0;
-    // Do not sign DNSKEY RRsets with the ZSK
     if((signQType == QType::DNSKEY && keymeta.second.keyType == DNSSECKeeper::ZSK) ||
-       // Do not sign any other RRset than DNSKEY, CDS and CDNSKEY with a KSK
-       (!signWithKSK && keymeta.second.keyType == DNSSECKeeper::KSK)) {
+       (signQType != QType::DNSKEY && keymeta.second.keyType == DNSSECKeeper::KSK)) {
       continue;
     }
 
@@ -122,7 +118,7 @@ static int getRRSIGsForRRSET(DNSSECKeeper& dk, const DNSName& signer, const DNSN
 }
 
 // this is the entrypoint from DNSPacket
-static void addSignature(DNSSECKeeper& dk, UeberBackend& db, const DNSName& signer, const DNSName& signQName, const DNSName& wildcardname, uint16_t signQType,
+static void addSignature(DNSSECKeeper& dk, UeberBackend& db, const DNSName& signer, const DNSName signQName, const DNSName& wildcardname, uint16_t signQType,
                          uint32_t signTTL, DNSResourceRecord::Place signPlace,
                          vector<shared_ptr<DNSRecordContent> >& toSign, vector<DNSZoneRecord>& outsigned, uint32_t origTTL)
 {

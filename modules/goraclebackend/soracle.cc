@@ -178,7 +178,7 @@ public:
     prepareStatement();
 
     if (d_dolog)
-      g_log<<Logger::Warning<<"Query: "<<d_query<<endl;
+      L<<Logger::Warning<<"Query: "<<d_query<<endl;
     ub2 fntype;
     ub4 iters;
 
@@ -496,7 +496,7 @@ SOracle::~SOracle()
   if (d_serviceContextHandle != NULL) {
     err=OCILogoff(d_serviceContextHandle, d_errorHandle);
     if (err) {
-      g_log<<Logger::Warning<<"Problems logging out: "+getOracleError()<<endl;
+      L<<Logger::Warning<<"Problems logging out: "+getOracleError()<<endl;
     }
   }
 

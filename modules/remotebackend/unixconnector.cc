@@ -32,7 +32,7 @@
 
 UnixsocketConnector::UnixsocketConnector(std::map<std::string,std::string> optionsMap) {
   if (optionsMap.count("path") == 0) {
-    g_log<<Logger::Error<<"Cannot find 'path' option in connection string"<<endl;
+    L<<Logger::Error<<"Cannot find 'path' option in connection string"<<endl;
     throw PDNSException();
   } 
   this->timeout = 2000;
@@ -48,7 +48,7 @@ UnixsocketConnector::UnixsocketConnector(std::map<std::string,std::string> optio
 UnixsocketConnector::~UnixsocketConnector() {
   if (this->connected) {
     try {
-      g_log<<Logger::Info<<"closing socket connection"<<endl;
+      L<<Logger::Info<<"closing socket connection"<<endl;
     }
     catch (...) {
     }
@@ -147,23 +147,23 @@ void UnixsocketConnector::reconnect() {
   if (connected) return; // no point reconnecting if connected...
   connected = true;
 
-  g_log<<Logger::Info<<"Reconnecting to backend" << std::endl;
+  L<<Logger::Info<<"Reconnecting to backend" << std::endl;
   fd = socket(AF_UNIX, SOCK_STREAM, 0);
   if (fd < 0) {
      connected = false;
-     g_log<<Logger::Error<<"Cannot create socket: " << strerror(errno) << std::endl;;
+     L<<Logger::Error<<"Cannot create socket: " << strerror(errno) << std::endl;;
      return;
   }
 
   if (makeUNsockaddr(path, &sock)) {
-     g_log<<Logger::Error<<"Unable to create UNIX domain socket: Path '"<<path<<"' is not a valid UNIX socket path."<<std::endl;
+     L<<Logger::Error<<"Unable to create UNIX domain socket: Path '"<<path<<"' is not a valid UNIX socket path."<<std::endl;
      return;
   }
 
   rv = connect(fd, reinterpret_cast<struct sockaddr*>(&sock), sizeof sock);
 
   if (rv != 0 && errno != EISCONN && errno != 0) {
-     g_log<<Logger::Error<<"Cannot connect to socket: " << strerror(errno) << std::endl;
+     L<<Logger::Error<<"Cannot connect to socket: " << strerror(errno) << std::endl;
      close(fd);
      connected = false;
      return;
@@ -179,7 +179,7 @@ void UnixsocketConnector::reconnect() {
   this->send(msg);
   msg = nullptr;
   if (this->recv(msg) == false) {
-     g_log<<Logger::Warning << "Failed to initialize backend" << std::endl;
+     L<<Logger::Warning << "Failed to initialize backend" << std::endl;
      close(fd);
      this->connected = false;
   }

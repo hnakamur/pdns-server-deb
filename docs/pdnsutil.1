@@ -1,8 +1,8 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "PDNSUTIL" "1" "Dec 08, 2018" "4.2" "PowerDNS Authoritative Server"
+.TH "PDNSUTIL" "1" "Jan 31, 2019" "4.1" "PowerDNS Recursor"
 .SH NAME
-pdnsutil \- PowerDNS record and DNSSEC command and control
+pdnsutil \- 
 .
 .nr rst2man-indent-level 0
 .
@@ -30,6 +30,8 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
+.sp
+pdnsutil \- PowerDNS dnssec command and control
 .SH SYNOPSIS
 .sp
 pdnsutil [OPTION]... \fICOMMAND\fP
@@ -75,13 +77,11 @@ rsasha256
 .IP \(bu 2
 rsasha512
 .IP \(bu 2
+gost
+.IP \(bu 2
 ecdsa256
 .IP \(bu 2
 ecdsa384
-.IP \(bu 2
-ed25519
-.IP \(bu 2
-ed448
 .UNINDENT
 .INDENT 0.0
 .TP
@@ -117,9 +117,7 @@ generate\-zone\-key {\fBKSK\fP,\fBZSK\fP} [\fIALGORITHM\fP] [\fIKEYBITS\fP]
 Generate a ZSK or KSK to stdout with specified algorithm and bits
 and print it on STDOUT. If \fIALGORITHM\fP is not set, RSASHA512 is
 used. If \fIKEYBITS\fP is not set, an appropriate keysize is selected
-for \fIALGORITHM\fP\&. Each ECC\-based algorithm supports only one valid
-\fIKEYBITS\fP value: For ECDSA256 and ED25519, it is 256; for ECDSA384,
-it is 384; and for ED448, it is 456.
+for \fIALGORITHM\fP\&.
 .TP
 import\-zone\-key \fIZONE\fP \fIFILE\fP {\fBKSK\fP,\fBZSK\fP}
 Import from \fIFILE\fP a full (private) key for zone called \fIZONE\fP\&. The
@@ -320,11 +318,6 @@ Disables presigned operation for \fIZONE\fP\&.
 Send a text command to a backend for execution. GSQL backends will
 take SQL commands, other backends may take different things. Be
 careful!
-.TP
-.B bench\-db [\fIFILE\fP]
-Perform a benchmark of the backend\-database.
-\fIFILE\fP can be a file with a list, one per line, of domain names to use for this.
-If \fIFILE\fP is not specified, powerdns.com is used.
 .UNINDENT
 .SH SEE ALSO
 .sp

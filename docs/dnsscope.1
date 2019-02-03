@@ -1,8 +1,8 @@
 .\" Man page generated from reStructuredText.
 .
-.TH "DNSSCOPE" "1" "Dec 08, 2018" "4.2" "PowerDNS Authoritative Server"
+.TH "DNSSCOPE" "1" "Jan 31, 2019" "4.1" "PowerDNS Recursor"
 .SH NAME
-dnsscope \- A PowerDNS nameserver debugging tool
+dnsscope \- 
 .
 .nr rst2man-indent-level 0
 .
@@ -30,6 +30,8 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .\" new: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .in \\n[rst2man-indent\\n[rst2man-indent-level]]u
 ..
+.sp
+\fBdnsscope\fP \- A PowerDNS nameserver debugging tool
 .SH SYNOPSIS
 .sp
 \fBdnsscope\fP [\fIOPTION\fP]... \fIINFILE\fP
@@ -58,20 +60,8 @@ Process IPv4 packets. On by default, disable with \fB\-\-ipv4 false\fP\&.
 .BI \-\-ipv6\fB= <state>
 Process IPv6 packets. On by default, disable with \fB\-\-ipv6 false\fP\&.
 .TP
-.BI \-\-full\-histogram \ <msec>
-Write out histogram with specified bin\-size to \(aqfull\-histogram\(aq
-.TP
-.B \-\-log\-histogram
-Write out a log\-histogram of response times to \(aqlog\-histogram\(aq
-.TP
-.B \-\-no\-servfail\-stats
-Remove servfail responses from latency statistics
-.TP
 .B \-\-servfail\-tree
 Figure out subtrees that generate servfails.
-.TP
-.BI \-\-stats\-dir \ <directory>
-Drop statistics files in this directory. Defaults to ./
 .TP
 .B \-l\fP,\fB  \-\-load\-stats
 Emit per\-second load statistics (questions, answers, outstanding).

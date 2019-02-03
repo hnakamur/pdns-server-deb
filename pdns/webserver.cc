@@ -26,25 +26,25 @@
 #include "webserver.hh"
 #include "misc.hh"
 #include <thread>
-#include "threadname.hh"
 #include <vector>
 #include "logger.hh"
 #include <stdio.h>
 #include "dns.hh"
 #include "base64.hh"
 #include "json.hh"
+#include "arguments.hh"
 #include <yahttp/router.hpp>
 
 json11::Json HttpRequest::json()
 {
   string err;
   if(this->body.empty()) {
-    g_log<<Logger::Debug<<"HTTP: JSON document expected in request body, but body was empty" << endl;
+    L<<Logger::Debug<<"HTTP: JSON document expected in request body, but body was empty" << endl;
     throw HttpBadRequestException();
   }
   json11::Json doc = json11::Json::parse(this->body, err);
   if (doc.is_null()) {
-    g_log<<Logger::Debug<<"HTTP: parsing of JSON document failed:" << err << endl;
+    L<<Logger::Debug<<"HTTP: parsing of JSON document failed:" << err << endl;
     throw HttpBadRequestException();
   }
   return doc;
@@ -124,19 +124,21 @@ static bool optionsHandler(HttpRequest* req, HttpResponse* resp) {
   return false;
 }
 
-static void apiWrapper(WebServer::HandlerFunction handler, HttpRequest* req, HttpResponse* resp, const string &apikey) {
+static void apiWrapper(WebServer::HandlerFunction handler, HttpRequest* req, HttpResponse* resp) {
+  const string& api_key = arg()["api-key"];
+
   if (optionsHandler(req, resp)) return;
 
   resp->headers["access-control-allow-origin"] = "*";
 
-  if (apikey.empty()) {
-    g_log<<Logger::Error<<"HTTP API Request \"" << req->url.path << "\": Authentication failed, API Key missing in config" << endl;
+  if (api_key.empty()) {
+    L<<Logger::Error<<"HTTP API Request \"" << req->url.path << "\": Authentication failed, API Key missing in config" << endl;
     throw HttpUnauthorizedException("X-API-Key");
   }
-  bool auth_ok = req->compareHeader("x-api-key", apikey) || req->getvars["api-key"] == apikey;
+  bool auth_ok = req->compareHeader("x-api-key", api_key) || req->getvars["api-key"]==api_key;
   
   if (!auth_ok) {
-    g_log<<Logger::Error<<"HTTP Request \"" << req->url.path << "\": Authentication by API Key failed" << endl;
+    L<<Logger::Error<<"HTTP Request \"" << req->url.path << "\": Authentication by API Key failed" << endl;
     throw HttpUnauthorizedException("X-API-Key");
   }
 
@@ -169,16 +171,17 @@ static void apiWrapper(WebServer::HandlerFunction handler, HttpRequest* req, Htt
 }
 
 void WebServer::registerApiHandler(const string& url, HandlerFunction handler) {
-  HandlerFunction f = boost::bind(&apiWrapper, handler, _1, _2, d_apikey);
+  HandlerFunction f = boost::bind(&apiWrapper, handler, _1, _2);
   registerBareHandler(url, f);
-  d_registerApiHandlerCalled = true;
 }
 
-static void webWrapper(WebServer::HandlerFunction handler, HttpRequest* req, HttpResponse* resp, const string &password) {
-  if (!password.empty()) {
-    bool auth_ok = req->compareAuthorization(password);
+static void webWrapper(WebServer::HandlerFunction handler, HttpRequest* req, HttpResponse* resp) {
+  const string& web_password = arg()["webserver-password"];
+
+  if (!web_password.empty()) {
+    bool auth_ok = req->compareAuthorization(web_password);
     if (!auth_ok) {
-      g_log<<Logger::Debug<<"HTTP Request \"" << req->url.path << "\": Web Authentication failed" << endl;
+      L<<Logger::Debug<<"HTTP Request \"" << req->url.path << "\": Web Authentication failed" << endl;
       throw HttpUnauthorizedException("Basic");
     }
   }
@@ -187,12 +190,11 @@ static void webWrapper(WebServer::HandlerFunction handler, HttpRequest* req, Htt
 }
 
 void WebServer::registerWebHandler(const string& url, HandlerFunction handler) {
-  HandlerFunction f = boost::bind(&webWrapper, handler, _1, _2, d_webserverPassword);
+  HandlerFunction f = boost::bind(&webWrapper, handler, _1, _2);
   registerBareHandler(url, f);
 }
 
 static void *WebServerConnectionThreadStart(const WebServer* webServer, std::shared_ptr<Socket> client) {
-  setThreadName("pdns-r/webhndlr");
   webServer->serveConnection(client);
   return nullptr;
 }
@@ -204,11 +206,11 @@ void WebServer::handleRequest(HttpRequest& req, HttpResponse& resp) const
 
   try {
     if (!req.complete) {
-      g_log<<Logger::Debug<<"HTTP: Incomplete request" << endl;
+      L<<Logger::Debug<<"HTTP: Incomplete request" << endl;
       throw HttpBadRequestException();
     }
 
-    g_log<<Logger::Debug<<"HTTP: Handling request \"" << req.url.path << "\"" << endl;
+    L<<Logger::Debug<<"HTTP: Handling request \"" << req.url.path << "\"" << endl;
 
     YaHTTP::strstr_map_t::iterator header;
 
@@ -223,42 +225,40 @@ void WebServer::handleRequest(HttpRequest& req, HttpResponse& resp) const
 
     YaHTTP::THandlerFunction handler;
     if (!YaHTTP::Router::Route(&req, handler)) {
-      g_log<<Logger::Debug<<"HTTP: No route found for \"" << req.url.path << "\"" << endl;
+      L<<Logger::Debug<<"HTTP: No route found for \"" << req.url.path << "\"" << endl;
       throw HttpNotFoundException();
     }
 
     try {
       handler(&req, &resp);
-      g_log<<Logger::Debug<<"HTTP: Result for \"" << req.url.path << "\": " << resp.status << ", body length: " << resp.body.size() << endl;
+      L<<Logger::Debug<<"HTTP: Result for \"" << req.url.path << "\": " << resp.status << ", body length: " << resp.body.size() << endl;
     }
     catch(HttpException&) {
       throw;
     }
     catch(PDNSException &e) {
-      g_log<<Logger::Error<<"HTTP ISE for \""<< req.url.path << "\": Exception: " << e.reason << endl;
+      L<<Logger::Error<<"HTTP ISE for \""<< req.url.path << "\": Exception: " << e.reason << endl;
       throw HttpInternalServerErrorException();
     }
     catch(std::exception &e) {
-      g_log<<Logger::Error<<"HTTP ISE for \""<< req.url.path << "\": STL Exception: " << e.what() << endl;
+      L<<Logger::Error<<"HTTP ISE for \""<< req.url.path << "\": STL Exception: " << e.what() << endl;
       throw HttpInternalServerErrorException();
     }
     catch(...) {
-      g_log<<Logger::Error<<"HTTP ISE for \""<< req.url.path << "\": Unknown Exception" << endl;
+      L<<Logger::Error<<"HTTP ISE for \""<< req.url.path << "\": Unknown Exception" << endl;
       throw HttpInternalServerErrorException();
     }
   }
   catch(HttpException &e) {
     resp = e.response();
-    g_log<<Logger::Debug<<"HTTP: Error result for \"" << req.url.path << "\": " << resp.status << endl;
+    L<<Logger::Debug<<"HTTP: Error result for \"" << req.url.path << "\": " << resp.status << endl;
     string what = YaHTTP::Utility::status2text(resp.status);
     if(req.accept_html) {
       resp.headers["Content-Type"] = "text/html; charset=utf-8";
       resp.body = "<!html><title>" + what + "</title><h1>" + what + "</h1>";
     } else if (req.accept_json) {
       resp.headers["Content-Type"] = "application/json";
-      if (resp.body.empty()) {
-        resp.setErrorResult(what, resp.status);
-      }
+      resp.setErrorResult(what, resp.status);
     } else {
       resp.headers["Content-Type"] = "text/plain; charset=utf-8";
       resp.body = what;
@@ -311,14 +311,14 @@ try {
   client->writenWithTimeout(reply.c_str(), reply.size(), timeout);
 }
 catch(PDNSException &e) {
-  g_log<<Logger::Error<<"HTTP Exception: "<<e.reason<<endl;
+  L<<Logger::Error<<"HTTP Exception: "<<e.reason<<endl;
 }
 catch(std::exception &e) {
   if(strstr(e.what(), "timeout")==0)
-    g_log<<Logger::Error<<"HTTP STL Exception: "<<e.what()<<endl;
+    L<<Logger::Error<<"HTTP STL Exception: "<<e.what()<<endl;
 }
 catch(...) {
-  g_log<<Logger::Error<<"HTTP: Unknown exception"<<endl;
+  L<<Logger::Error<<"HTTP: Unknown exception"<<endl;
 }
 
 WebServer::WebServer(const string &listenaddress, int port) : d_server(nullptr)
@@ -331,10 +331,10 @@ void WebServer::bind()
 {
   try {
     d_server = createServer();
-    g_log<<Logger::Warning<<"Listening for HTTP requests on "<<d_server->d_local.toStringWithPort()<<endl;
+    L<<Logger::Warning<<"Listening for HTTP requests on "<<d_server->d_local.toStringWithPort()<<endl;
   }
   catch(NetworkError &e) {
-    g_log<<Logger::Error<<"Listening on HTTP socket failed: "<<e.what()<<endl;
+    L<<Logger::Error<<"Listening on HTTP socket failed: "<<e.what()<<endl;
     d_server = nullptr;
   }
 }
@@ -344,40 +344,43 @@ void WebServer::go()
   if(!d_server)
     return;
   try {
+    NetmaskGroup acl;
+    acl.toMasks(::arg()["webserver-allow-from"]);
+
     while(true) {
       try {
         auto client = d_server->accept();
         if (!client) {
           continue;
         }
-        if (client->acl(d_acl)) {
+        if (client->acl(acl)) {
           std::thread webHandler(WebServerConnectionThreadStart, this, client);
           webHandler.detach();
         } else {
           ComboAddress remote;
           if (client->getRemote(remote))
-            g_log<<Logger::Error<<"Webserver closing socket: remote ("<< remote.toString() <<") does not match the set ACL("<<d_acl.toString()<<")"<<endl;
+            L<<Logger::Error<<"Webserver closing socket: remote ("<< remote.toString() <<") does not match 'webserver-allow-from'"<<endl;
         }
       }
       catch(PDNSException &e) {
-        g_log<<Logger::Error<<"PDNSException while accepting a connection in main webserver thread: "<<e.reason<<endl;
+        L<<Logger::Error<<"PDNSException while accepting a connection in main webserver thread: "<<e.reason<<endl;
       }
       catch(std::exception &e) {
-        g_log<<Logger::Error<<"STL Exception while accepting a connection in main webserver thread: "<<e.what()<<endl;
+        L<<Logger::Error<<"STL Exception while accepting a connection in main webserver thread: "<<e.what()<<endl;
       }
       catch(...) {
-        g_log<<Logger::Error<<"Unknown exception while accepting a connection in main webserver thread"<<endl;
+        L<<Logger::Error<<"Unknown exception while accepting a connection in main webserver thread"<<endl;
       }
     }
   }
   catch(PDNSException &e) {
-    g_log<<Logger::Error<<"PDNSException in main webserver thread: "<<e.reason<<endl;
+    L<<Logger::Error<<"PDNSException in main webserver thread: "<<e.reason<<endl;
   }
   catch(std::exception &e) {
-    g_log<<Logger::Error<<"STL Exception in main webserver thread: "<<e.what()<<endl;
+    L<<Logger::Error<<"STL Exception in main webserver thread: "<<e.what()<<endl;
   }
   catch(...) {
-    g_log<<Logger::Error<<"Unknown exception in main webserver thread"<<endl;
+    L<<Logger::Error<<"Unknown exception in main webserver thread"<<endl;
   }
   _exit(1);
 }

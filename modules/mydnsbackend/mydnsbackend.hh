@@ -41,7 +41,6 @@ public:
   bool get(DNSResourceRecord &r) override;
   bool getSOA(const DNSName& name, SOAData& soadata) override;
   void getAllDomains(vector<DomainInfo> *domains, bool include_disabled=false) override;
-
 private:
   SMySQL *d_db; 
 

@@ -21,6 +21,7 @@ CREATE TABLE records (
   content               VARCHAR(65535) DEFAULT NULL,
   ttl                   INTEGER DEFAULT NULL,
   prio                  INTEGER DEFAULT NULL,
+  change_date           INTEGER DEFAULT NULL,
   disabled              BOOLEAN DEFAULT 0,
   ordername             VARCHAR(255),
   auth                  BOOL DEFAULT 1,

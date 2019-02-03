@@ -83,6 +83,7 @@ public:
       d_DeleteZoneQuery_stmt = d_db->prepare(d_DeleteZoneQuery, 1);
       d_DeleteRRSetQuery_stmt = d_db->prepare(d_DeleteRRSetQuery, 3);
       d_DeleteNamesQuery_stmt = d_db->prepare(d_DeleteNamesQuery, 2);
+      d_ZoneLastChangeQuery_stmt = d_db->prepare(d_ZoneLastChangeQuery, 1);
       d_firstOrderQuery_stmt = d_db->prepare(d_firstOrderQuery, 1);
       d_beforeOrderQuery_stmt = d_db->prepare(d_beforeOrderQuery, 2);
       d_afterOrderQuery_stmt = d_db->prepare(d_afterOrderQuery, 2);
@@ -144,6 +145,7 @@ public:
     d_DeleteZoneQuery_stmt.reset();
     d_DeleteRRSetQuery_stmt.reset();
     d_DeleteNamesQuery_stmt.reset();
+    d_ZoneLastChangeQuery_stmt.reset();
     d_firstOrderQuery_stmt.reset();
     d_beforeOrderQuery_stmt.reset();
     d_afterOrderQuery_stmt.reset();
@@ -183,6 +185,7 @@ public:
   bool list(const DNSName &target, int domain_id, bool include_disabled=false) override;
   bool get(DNSResourceRecord &r) override;
   void getAllDomains(vector<DomainInfo> *domains, bool include_disabled=false) override;
+  bool isMaster(const DNSName &domain, const string &ip) override;
   void alsoNotifies(const DNSName &domain, set<string> *ips) override;
   bool startTransaction(const DNSName &domain, int domain_id=-1) override;
   bool commitTransaction() override;
@@ -199,7 +202,7 @@ public:
   void setFresh(uint32_t domain_id) override;
   void getUnfreshSlaveInfos(vector<DomainInfo> *domains) override;
   void getUpdatedMasters(vector<DomainInfo> *updatedDomains) override;
-  bool getDomainInfo(const DNSName &domain, DomainInfo &di, bool getSerial=true) override;
+  bool getDomainInfo(const DNSName &domain, DomainInfo &di) override;
   void setNotified(uint32_t domain_id, uint32_t serial) override;
   bool setMaster(const DNSName &domain, const string &ip) override;
   bool setKind(const DNSName &domain, const DomainInfo::DomainKind kind) override;
@@ -210,6 +213,8 @@ public:
 
   bool updateEmptyNonTerminals(uint32_t domain_id, set<DNSName>& insert ,set<DNSName>& erase, bool remove) override;
   bool doesDNSSEC() override;
+
+  bool calculateSOASerial(const DNSName& domain, const SOAData& sd, time_t& serial) override;
 
   bool replaceRRSet(uint32_t domain_id, const DNSName& qname, const QType& qt, const vector<DNSResourceRecord>& rrset) override;
   bool listSubZone(const DNSName &zone, int domain_id) override;
@@ -295,6 +300,7 @@ private:
   string d_DeleteZoneQuery;
   string d_DeleteRRSetQuery;
   string d_DeleteNamesQuery;
+  string d_ZoneLastChangeQuery;
 
   string d_firstOrderQuery;
   string d_beforeOrderQuery;
@@ -364,6 +370,7 @@ private:
   unique_ptr<SSqlStatement> d_DeleteZoneQuery_stmt;
   unique_ptr<SSqlStatement> d_DeleteRRSetQuery_stmt;
   unique_ptr<SSqlStatement> d_DeleteNamesQuery_stmt;
+  unique_ptr<SSqlStatement> d_ZoneLastChangeQuery_stmt;
   unique_ptr<SSqlStatement> d_firstOrderQuery_stmt;
   unique_ptr<SSqlStatement> d_beforeOrderQuery_stmt;
   unique_ptr<SSqlStatement> d_afterOrderQuery_stmt;

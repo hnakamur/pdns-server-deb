@@ -1,1 +1,1 @@
-geoipbackend.lo geoipinterface-dat.lo geoipinterface.lo geoipinterface-mmdb.lo
+geoipbackend.lo

@@ -60,35 +60,15 @@ pthread_cond_t UeberBackend::d_cond = PTHREAD_COND_INITIALIZER;
 //! Loads a module and reports it to all UeberBackend threads
 bool UeberBackend::loadmodule(const string &name)
 {
-  g_log<<Logger::Warning <<"Loading '"<<name<<"'" << endl;
+  L<<Logger::Warning <<"Loading '"<<name<<"'" << endl;
 
   void *dlib=dlopen(name.c_str(), RTLD_NOW);
 
   if(dlib == NULL) {
-    g_log<<Logger::Error <<"Unable to load module '"<<name<<"': "<<dlerror() << endl;
+    L<<Logger::Error <<"Unable to load module '"<<name<<"': "<<dlerror() << endl;
     return false;
   }
 
-  return true;
-}
-
-bool UeberBackend::loadModules(const vector<string>& modules, const string& path)
-{
-  for (const auto& module: modules) {
-    bool res;
-    if (module.find(".")==string::npos) {
-      res = UeberBackend::loadmodule(path+"/lib"+module+"backend.so");
-    } else if (module[0]=='/' || (module[0]=='.' && module[1]=='/') || (module[0]=='.' && module[1]=='.')) {
-      // absolute or current path
-      res = UeberBackend::loadmodule(module);
-    } else {
-      res = UeberBackend::loadmodule(path+"/"+module);
-    }
-
-    if (res == false) {
-      return false;
-    }
-  }
   return true;
 }
 
@@ -100,10 +80,10 @@ void UeberBackend::go(void)
   pthread_mutex_unlock(&d_mut);
 }
 
-bool UeberBackend::getDomainInfo(const DNSName &domain, DomainInfo &di, bool getSerial)
+bool UeberBackend::getDomainInfo(const DNSName &domain, DomainInfo &di)
 {
   for(vector<DNSBackend *>::const_iterator i=backends.begin();i!=backends.end();++i)
-    if((*i)->getDomainInfo(domain, di, getSerial))
+    if((*i)->getDomainInfo(domain, di))
       return true;
   return false;
 }
@@ -299,14 +279,14 @@ bool UeberBackend::getAuth(const DNSName &target, const QType& qtype, SOAData* s
       cstat = cacheHas(d_question,d_answers);
 
       if(cstat == 1 && !d_answers.empty() && d_cache_ttl) {
-        DLOG(g_log<<Logger::Error<<"has pos cache entry: "<<shorter<<endl);
+        DLOG(L<<Logger::Error<<"has pos cache entry: "<<shorter<<endl);
         fillSOAData(d_answers[0], *sd);
 
         sd->db = 0;
         sd->qname = shorter;
         goto found;
       } else if(cstat == 0 && d_negcache_ttl) {
-        DLOG(g_log<<Logger::Error<<"has neg cache entry: "<<shorter<<endl);
+        DLOG(L<<Logger::Error<<"has neg cache entry: "<<shorter<<endl);
         continue;
       }
     }
@@ -317,26 +297,26 @@ bool UeberBackend::getAuth(const DNSName &target, const QType& qtype, SOAData* s
       vector<pair<size_t, SOAData> >::iterator j = bestmatch.begin();
       for(; i != backends.end() && j != bestmatch.end(); ++i, ++j) {
 
-        DLOG(g_log<<Logger::Error<<"backend: "<<i-backends.begin()<<", qname: "<<shorter<<endl);
+        DLOG(L<<Logger::Error<<"backend: "<<i-backends.begin()<<", qname: "<<shorter<<endl);
 
         if(j->first < shorter.wirelength()) {
-          DLOG(g_log<<Logger::Error<<"skipped, we already found a shorter best match in this backend: "<<j->second.qname<<endl);
+          DLOG(L<<Logger::Error<<"skipped, we already found a shorter best match in this backend: "<<j->second.qname<<endl);
           continue;
         } else if(j->first == shorter.wirelength()) {
-          DLOG(g_log<<Logger::Error<<"use shorter best match: "<<j->second.qname<<endl);
+          DLOG(L<<Logger::Error<<"use shorter best match: "<<j->second.qname<<endl);
           *sd = j->second;
           break;
         } else {
-          DLOG(g_log<<Logger::Error<<"lookup: "<<shorter<<endl);
+          DLOG(L<<Logger::Error<<"lookup: "<<shorter<<endl);
           if((*i)->getAuth(shorter, sd)) {
-            DLOG(g_log<<Logger::Error<<"got: "<<sd->qname<<endl);
+            DLOG(L<<Logger::Error<<"got: "<<sd->qname<<endl);
             j->first = sd->qname.wirelength();
             j->second = *sd;
             if(sd->qname == shorter) {
               break;
             }
           } else {
-            DLOG(g_log<<Logger::Error<<"no match for: "<<shorter<<endl);
+            DLOG(L<<Logger::Error<<"no match for: "<<shorter<<endl);
           }
         }
       }
@@ -344,13 +324,13 @@ bool UeberBackend::getAuth(const DNSName &target, const QType& qtype, SOAData* s
       // Add to cache
       if(i == backends.end()) {
         if(d_negcache_ttl) {
-          DLOG(g_log<<Logger::Error<<"add neg cache entry:"<<shorter<<endl);
+          DLOG(L<<Logger::Error<<"add neg cache entry:"<<shorter<<endl);
           d_question.qname=shorter;
           addNegCache(d_question);
         }
         continue;
       } else if(d_cache_ttl) {
-        DLOG(g_log<<Logger::Error<<"add pos cache entry: "<<sd->qname<<endl);
+        DLOG(L<<Logger::Error<<"add pos cache entry: "<<sd->qname<<endl);
         d_question.qtype = QType::SOA;
         d_question.qname = sd->qname;
         d_question.zoneId = -1;
@@ -368,10 +348,10 @@ bool UeberBackend::getAuth(const DNSName &target, const QType& qtype, SOAData* s
 
 found:
     if(found == (qtype == QType::DS) || target != shorter) {
-      DLOG(g_log<<Logger::Error<<"found: "<<sd->qname<<endl);
+      DLOG(L<<Logger::Error<<"found: "<<sd->qname<<endl);
       return true;
     } else {
-      DLOG(g_log<<Logger::Error<<"chasing next: "<<sd->qname<<endl);
+      DLOG(L<<Logger::Error<<"chasing next: "<<sd->qname<<endl);
       found = true;
     }
 
@@ -409,10 +389,11 @@ bool UeberBackend::getSOAUncached(const DNSName &domain, SOAData &sd)
 
   for(vector<DNSBackend *>::const_iterator i=backends.begin();i!=backends.end();++i)
     if((*i)->getSOA(domain, sd)) {
-      if(d_cache_ttl) {
+      if( d_cache_ttl ) {
         DNSZoneRecord rr;
         rr.dr.d_name = sd.qname;
         rr.dr.d_type = QType::SOA;
+        
         rr.dr.d_content = makeSOAContent(sd);
         rr.dr.d_ttl = sd.ttl;
         rr.domain_id = sd.domain_id;
@@ -482,7 +463,7 @@ int UeberBackend::cacheHas(const Question &q, vector<DNSZoneRecord> &rrs)
   }
 
   rrs.clear();
-  //  g_log<<Logger::Warning<<"looking up: '"<<q.qname+"'|N|"+q.qtype.getName()+"|"+itoa(q.zoneId)<<endl;
+  //  L<<Logger::Warning<<"looking up: '"<<q.qname+"'|N|"+q.qtype.getName()+"|"+itoa(q.zoneId)<<endl;
 
   bool ret=QC.getEntry(q.qname, q.qtype, rrs, q.zoneId);   // think about lowercasing here
   if(!ret) {
@@ -529,7 +510,7 @@ void UeberBackend::alsoNotifies(const DNSName &domain, set<string> *ips)
 
 UeberBackend::~UeberBackend()
 {
-  DLOG(g_log<<Logger::Error<<"UeberBackend destructor called, removing ourselves from instances, and deleting our backends"<<endl);
+  DLOG(L<<Logger::Error<<"UeberBackend destructor called, removing ourselves from instances, and deleting our backends"<<endl);
   cleanup();
 }
 
@@ -537,17 +518,17 @@ UeberBackend::~UeberBackend()
 void UeberBackend::lookup(const QType &qtype,const DNSName &qname, DNSPacket *pkt_p, int zoneId)
 {
   if(d_stale) {
-    g_log<<Logger::Error<<"Stale ueberbackend received question, signalling that we want to be recycled"<<endl;
+    L<<Logger::Error<<"Stale ueberbackend received question, signalling that we want to be recycled"<<endl;
     throw PDNSException("We are stale, please recycle");
   }
 
-  DLOG(g_log<<"UeberBackend received question for "<<qtype.getName()<<" of "<<qname<<endl);
+  DLOG(L<<"UeberBackend received question for "<<qtype.getName()<<" of "<<qname<<endl);
   if(!d_go) {
     pthread_mutex_lock(&d_mut);
     while (d_go==false) {
-      g_log<<Logger::Error<<"UeberBackend is blocked, waiting for 'go'"<<endl;
+      L<<Logger::Error<<"UeberBackend is blocked, waiting for 'go'"<<endl;
       pthread_cond_wait(&d_cond, &d_mut);
-      g_log<<Logger::Error<<"Broadcast received, unblocked"<<endl;
+      L<<Logger::Error<<"Broadcast received, unblocked"<<endl;
     }
     pthread_mutex_unlock(&d_mut);
   }
@@ -561,7 +542,7 @@ void UeberBackend::lookup(const QType &qtype,const DNSName &qname, DNSPacket *pk
   d_ancount=0;
 
   if(!backends.size()) {
-    g_log<<Logger::Error<<"No database backends available - unable to answer questions."<<endl;
+    L<<Logger::Error<<"No database backends available - unable to answer questions."<<endl;
     d_stale=true; // please recycle us!
     throw PDNSException("We are stale, please recycle");
   }
@@ -652,7 +633,7 @@ AtomicCounter UeberBackend::handle::instances(0);
 
 UeberBackend::handle::handle()
 {
-  //  g_log<<Logger::Warning<<"Handle instances: "<<instances<<endl;
+  //  L<<Logger::Warning<<"Handle instances: "<<instances<<endl;
   ++instances;
   parent=NULL;
   d_hinterBackend=NULL;
@@ -667,11 +648,11 @@ UeberBackend::handle::~handle()
 
 bool UeberBackend::handle::get(DNSZoneRecord &r)
 {
-  DLOG(g_log << "Ueber get() was called for a "<<qtype.getName()<<" record" << endl);
+  DLOG(L << "Ueber get() was called for a "<<qtype.getName()<<" record" << endl);
   bool isMore=false;
   while(d_hinterBackend && !(isMore=d_hinterBackend->get(r))) { // this backend out of answers
     if(i<parent->backends.size()) {
-      DLOG(g_log<<"Backend #"<<i<<" of "<<parent->backends.size()
+      DLOG(L<<"Backend #"<<i<<" of "<<parent->backends.size()
            <<" out of answers, taking next"<<endl);
       
       d_hinterBackend=parent->backends[i++];
@@ -680,15 +661,15 @@ bool UeberBackend::handle::get(DNSZoneRecord &r)
     else 
       break;
 
-    DLOG(g_log<<"Now asking backend #"<<i<<endl);
+    DLOG(L<<"Now asking backend #"<<i<<endl);
   }
 
   if(!isMore && i==parent->backends.size()) {
-    DLOG(g_log<<"UeberBackend reached end of backends"<<endl);
+    DLOG(L<<"UeberBackend reached end of backends"<<endl);
     return false;
   }
 
-  DLOG(g_log<<"Found an answering backend - will not try another one"<<endl);
+  DLOG(L<<"Found an answering backend - will not try another one"<<endl);
   i=parent->backends.size(); // don't go on to the next backend
   return true;
 }

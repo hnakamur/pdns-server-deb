@@ -9,9 +9,6 @@
 /* Define to 1 if you have the `accept4' function. */
 #undef HAVE_ACCEPT4
 
-/* Define to 1 if you have the `arc4random' function. */
-#undef HAVE_ARC4RANDOM
-
 /* Defined if the requested minimum BOOST version is satisfied */
 #undef HAVE_BOOST
 
@@ -27,29 +24,20 @@
 /* Defined if the Boost unit_test_framework library is available */
 #undef HAVE_BOOST_UNIT_TEST_FRAMEWORK
 
+/* Define to 1 if you have botan */
+#undef HAVE_BOTAN
+
 /* Define to 1 if you have the <cdb.h> header file. */
 #undef HAVE_CDB_H
 
 /* Define to 1 if you have clock_gettime */
 #undef HAVE_CLOCK_GETTIME
 
-/* Define to 1 if you have the `crypto_box_curve25519xchacha20poly1305_easy'
-   function. */
-#undef HAVE_CRYPTO_BOX_CURVE25519XCHACHA20POLY1305_EASY
-
 /* Define to 1 if you have the `crypto_box_easy_afternm' function. */
 #undef HAVE_CRYPTO_BOX_EASY_AFTERNM
 
 /* define if the compiler supports basic C++11 syntax */
 #undef HAVE_CXX11
-
-/* Define to 1 if you have the declaration of `NID_ED25519', and to 0 if you
-   don't. */
-#undef HAVE_DECL_NID_ED25519
-
-/* Define to 1 if you have the declaration of `NID_ED448', and to 0 if you
-   don't. */
-#undef HAVE_DECL_NID_ED448
 
 /* Define to 1 if you have the declaration of `NID_secp384r1', and to 0 if you
    don't. */
@@ -65,17 +53,8 @@
 /* Define if ASAN fiber annotation interface is available. */
 #undef HAVE_FIBER_SANITIZER
 
-/* Define this if you have GeoIP */
-#undef HAVE_GEOIP
-
-/* Define to 1 if you have the `getrandom' function. */
-#undef HAVE_GETRANDOM
-
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
-
-/* Define to 1 to enable unsafe rng KISS */
-#undef HAVE_KISS_RNG
 
 /* Define to 1 if you have the `krb5_get_init_creds_opt_set_default_flags'
    function. */
@@ -99,18 +78,6 @@
 /* define to 1 if OpenSSL ecdsa support is available. */
 #undef HAVE_LIBCRYPTO_ECDSA
 
-/* define to 1 if OpenSSL ed25519 support is available. */
-#undef HAVE_LIBCRYPTO_ED25519
-
-/* define to 1 if OpenSSL ed448 support is available. */
-#undef HAVE_LIBCRYPTO_ED448
-
-/* define to 1 if OpenSSL EDDSA support is available. */
-#undef HAVE_LIBCRYPTO_EDDSA
-
-/* Define to 1 if you have a functional curl library. */
-#undef HAVE_LIBCURL
-
 /* Define to 1 if you have libdecaf */
 #undef HAVE_LIBDECAF
 
@@ -132,17 +99,11 @@
 /* Define to 1 if you have lua */
 #undef HAVE_LUA
 
-/* Define if enabling LUA records. */
-#undef HAVE_LUA_RECORDS
-
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
 
 /* Define to 1 if you have mmap */
 #undef HAVE_MMAP
-
-/* Define this if you have Maxmind DB */
-#undef HAVE_MMDB
 
 /* Define to 1 if you have the <odbx.h> header file. */
 #undef HAVE_ODBX_H
@@ -155,33 +116,6 @@
 
 /* Define if using protobuf. */
 #undef HAVE_PROTOBUF
-
-/* Define to 1 if you have the <pthread_np.h> header file. */
-#undef HAVE_PTHREAD_NP_H
-
-/* 1-arg pthread_setname_np */
-#undef HAVE_PTHREAD_SETNAME_NP_1
-
-/* 2-arg pthread_setname_np */
-#undef HAVE_PTHREAD_SETNAME_NP_2
-
-/* 3-arg pthread_setname_np */
-#undef HAVE_PTHREAD_SETNAME_NP_3
-
-/* 2-arg pthread_set_name_np */
-#undef HAVE_PTHREAD_SET_NAME_NP_2
-
-/* 2-arg void pthread_set_name_np */
-#undef HAVE_PTHREAD_SET_NAME_NP_2_VOID
-
-/* Define to 1 if you have the `randombytes_stir' function. */
-#undef HAVE_RANDOMBYTES_STIR
-
-/* Define to 1 if you have the `RAND_bytes' function. */
-#undef HAVE_RAND_BYTES
-
-/* Define to 1 if you have the `RAND_pseudo_bytes' function. */
-#undef HAVE_RAND_PSEUDO_BYTES
 
 /* Define to 1 if you have the `recvmmsg' function. */
 #undef HAVE_RECVMMSG
@@ -238,70 +172,8 @@
 /* Define to 1 if the ZeroMQ 3.x or greater API is available */
 #undef HAVE_ZMQ_MSG_SEND
 
-/* Defined if libcurl supports AsynchDNS */
-#undef LIBCURL_FEATURE_ASYNCHDNS
-
-/* Defined if libcurl supports IDN */
-#undef LIBCURL_FEATURE_IDN
-
-/* Defined if libcurl supports IPv6 */
-#undef LIBCURL_FEATURE_IPV6
-
-/* Defined if libcurl supports KRB4 */
-#undef LIBCURL_FEATURE_KRB4
-
-/* Defined if libcurl supports libz */
-#undef LIBCURL_FEATURE_LIBZ
-
-/* Defined if libcurl supports NTLM */
-#undef LIBCURL_FEATURE_NTLM
-
-/* Defined if libcurl supports SSL */
-#undef LIBCURL_FEATURE_SSL
-
-/* Defined if libcurl supports SSPI */
-#undef LIBCURL_FEATURE_SSPI
-
-/* Defined if libcurl supports DICT */
-#undef LIBCURL_PROTOCOL_DICT
-
-/* Defined if libcurl supports FILE */
-#undef LIBCURL_PROTOCOL_FILE
-
-/* Defined if libcurl supports FTP */
-#undef LIBCURL_PROTOCOL_FTP
-
-/* Defined if libcurl supports FTPS */
-#undef LIBCURL_PROTOCOL_FTPS
-
-/* Defined if libcurl supports HTTP */
-#undef LIBCURL_PROTOCOL_HTTP
-
-/* Defined if libcurl supports HTTPS */
-#undef LIBCURL_PROTOCOL_HTTPS
-
-/* Defined if libcurl supports IMAP */
-#undef LIBCURL_PROTOCOL_IMAP
-
-/* Defined if libcurl supports LDAP */
-#undef LIBCURL_PROTOCOL_LDAP
-
-/* Defined if libcurl supports POP3 */
-#undef LIBCURL_PROTOCOL_POP3
-
-/* Defined if libcurl supports RTSP */
-#undef LIBCURL_PROTOCOL_RTSP
-
-/* Defined if libcurl supports SMTP */
-#undef LIBCURL_PROTOCOL_SMTP
-
-/* Defined if libcurl supports TELNET */
-#undef LIBCURL_PROTOCOL_TELNET
-
-/* Defined if libcurl supports TFTP */
-#undef LIBCURL_PROTOCOL_TFTP
-
-/* Define to the sub-directory where libtool stores uninstalled libraries. */
+/* Define to the sub-directory in which libtool stores uninstalled libraries.
+   */
 #undef LT_OBJDIR
 
 /* Define to 1 if you want to benefit from malloc trace */
@@ -367,6 +239,3 @@
 
 /* Define _GNU_SOURCE so that we get all necessary prototypes */
 #undef _GNU_SOURCE
-
-/* Define curl_free() as free() if our version of curl lacks curl_free. */
-#undef curl_free

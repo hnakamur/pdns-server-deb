@@ -76,6 +76,7 @@ public:
                                       DNSName& after) override;
   bool get(DNSResourceRecord &rr) override;
   vector<string> getDomainMasters(const DNSName& domain, int zoneId) override;
+  bool isMaster(const DNSName& domain, const string &master) override;
   bool getDomainInfo(const DNSName& domain, DomainInfo &di) override;
   void alsoNotifies(const DNSName& domain, set<string> *addrs) override;
   void getUnfreshSlaveInfos(vector<DomainInfo>* domains) override;
@@ -126,6 +127,7 @@ private:
   string zoneInfoQuerySQL;
   string alsoNotifyQuerySQL;
   string zoneMastersQuerySQL;
+  string isZoneMasterQuerySQL;
   string deleteZoneQuerySQL;
   string zoneSetLastCheckQuerySQL;
 

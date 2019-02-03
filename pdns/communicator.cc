@@ -36,12 +36,10 @@
 #include "dns.hh"
 #include "arguments.hh"
 #include "packetcache.hh"
-#include "threadname.hh"
 
 // there can be MANY OF THESE
 void CommunicatorClass::retrievalLoopThread(void)
 {
-  setThreadName("pdns/comm-retre");
   for(;;) {
     d_suck_sem.wait();
     SuckRequest sr;
@@ -67,7 +65,7 @@ void CommunicatorClass::loadArgsIntoSet(const char *listname, set<string> &lists
       listset.insert(caIp.toStringWithPort());
     }
     catch(PDNSException &e) {
-      g_log<<Logger::Error<<"Unparseable IP in "<<listname<<". Error: "<<e.reason<<endl;
+      L<<Logger::Error<<"Unparseable IP in "<<listname<<". Error: "<<e.reason<<endl;
       _exit(1);
     }
   }
@@ -79,7 +77,7 @@ void CommunicatorClass::go()
     PacketHandler::s_allowNotifyFrom.toMasks(::arg()["allow-notify-from"] );
   }
   catch(PDNSException &e) {
-    g_log<<Logger::Error<<"Unparseable IP in allow-notify-from. Error: "<<e.reason<<endl;
+    L<<Logger::Error<<"Unparseable IP in allow-notify-from. Error: "<<e.reason<<endl;
     _exit(1);
   }
 
@@ -94,7 +92,7 @@ void CommunicatorClass::go()
     d_onlyNotify.toMasks(::arg()["only-notify"]);
   }
   catch(PDNSException &e) {
-    g_log<<Logger::Error<<"Unparseable IP in only-notify. Error: "<<e.reason<<endl;
+    L<<Logger::Error<<"Unparseable IP in only-notify. Error: "<<e.reason<<endl;
     _exit(1);
   }
 
@@ -106,9 +104,8 @@ void CommunicatorClass::go()
 void CommunicatorClass::mainloop(void)
 {
   try {
-    setThreadName("pdns/comm-main");
     signal(SIGPIPE,SIG_IGN);
-    g_log<<Logger::Error<<"Master/slave communicator launching"<<endl;
+    L<<Logger::Error<<"Master/slave communicator launching"<<endl;
     PacketHandler P;
     d_tickinterval=::arg().asNum("slave-cycle-interval");
     makeNotifySockets();
@@ -148,17 +145,17 @@ void CommunicatorClass::mainloop(void)
     }
   }
   catch(PDNSException &ae) {
-    g_log<<Logger::Error<<"Exiting because communicator thread died with error: "<<ae.reason<<endl;
+    L<<Logger::Error<<"Exiting because communicator thread died with error: "<<ae.reason<<endl;
     Utility::sleep(1);
     _exit(1);
   }
   catch(std::exception &e) {
-    g_log<<Logger::Error<<"Exiting because communicator thread died with STL error: "<<e.what()<<endl;
+    L<<Logger::Error<<"Exiting because communicator thread died with STL error: "<<e.what()<<endl;
     _exit(1);
   }
   catch( ... )
   {
-    g_log << Logger::Error << "Exiting because communicator caught unknown exception." << endl;
+    L << Logger::Error << "Exiting because communicator caught unknown exception." << endl;
     _exit(1);
   }
 }

@@ -48,7 +48,7 @@ public:
   DNSName name;
   string viewName;
   string filename;
-  vector<ComboAddress> masters;
+  vector<string> masters;
   set<string> alsoNotify;
   string type;
   bool hadFileDirective;

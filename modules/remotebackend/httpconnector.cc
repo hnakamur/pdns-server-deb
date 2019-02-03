@@ -134,6 +134,9 @@ void HTTPConnector::restful_requestbuilder(const std::string &method, const Json
         req.POST()["content"] = param["content"].string_value();
         req.preparePost();
         verb = "PUT";
+    } else if (method == "isMaster") {
+        addUrlComponent(parameters, "ip", ss);
+        verb = "GET";
     } else if (method == "superMasterBackend") {
         std::stringstream ss2;
         addUrlComponent(parameters, "ip", ss);
@@ -205,6 +208,12 @@ void HTTPConnector::restful_requestbuilder(const std::string &method, const Json
     } else if (method == "commitTransaction" || method == "abortTransaction") {
         addUrlComponent(parameters, "trxid", ss);
         req.preparePost();
+        verb = "POST";
+    } else if (method == "calculateSOASerial") {
+        addUrlComponent(parameters, "domain", ss);
+        req.body = buildMemberListArgs("sd", parameters["sd"]);
+        req.headers["content-type"] = "application/x-www-form-urlencoded; charset=utf-8";
+        req.headers["content-length"] = std::to_string(req.body.size());
         verb = "POST";
     } else if (method == "setDomainMetadata") {
         // copy all metadata values into post
@@ -313,9 +322,9 @@ int HTTPConnector::send_message(const Json& input) {
           d_socket->writenWithTimeout(out.str().c_str(), out.str().size(), timeout);
           rv = 1;
         } catch (NetworkError& ne) {
-          g_log<<Logger::Error<<"While writing to HTTP endpoint "<<d_addr.toStringWithPort()<<": "<<ne.what()<<std::endl;
+          L<<Logger::Error<<"While writing to HTTP endpoint "<<d_addr.toStringWithPort()<<": "<<ne.what()<<std::endl;
         } catch (...) {
-          g_log<<Logger::Error<<"While writing to HTTP endpoint "<<d_addr.toStringWithPort()<<": exception caught"<<std::endl;
+          L<<Logger::Error<<"While writing to HTTP endpoint "<<d_addr.toStringWithPort()<<": exception caught"<<std::endl;
         }
       }
     }
@@ -349,9 +358,9 @@ int HTTPConnector::send_message(const Json& input) {
             d_socket->writenWithTimeout(out.str().c_str(), out.str().size(), timeout);
             rv = 1;
           } catch (NetworkError& ne) {
-            g_log<<Logger::Error<<"While writing to HTTP endpoint "<<d_addr.toStringWithPort()<<": "<<ne.what()<<std::endl;
+            L<<Logger::Error<<"While writing to HTTP endpoint "<<d_addr.toStringWithPort()<<": "<<ne.what()<<std::endl;
           } catch (...) {
-            g_log<<Logger::Error<<"While writing to HTTP endpoint "<<d_addr.toStringWithPort()<<": exception caught"<<std::endl;
+            L<<Logger::Error<<"While writing to HTTP endpoint "<<d_addr.toStringWithPort()<<": exception caught"<<std::endl;
           }
 
           if (rv > -1) break;
@@ -362,7 +371,7 @@ int HTTPConnector::send_message(const Json& input) {
         }
         freeaddrinfo(gAddr);
       } else {
-        g_log<<Logger::Error<<"Unable to resolve " << req.url.host << ": " << gai_strerror(ec) << std::endl;
+        L<<Logger::Error<<"Unable to resolve " << req.url.host << ": " << gai_strerror(ec) << std::endl;
       }
     }
 
@@ -395,12 +404,12 @@ int HTTPConnector::recv_message(Json& output) {
       if (arl.ready() == false)
         throw NetworkError("timeout");
     } catch (NetworkError &ne) {
-      g_log<<Logger::Error<<"While reading from HTTP endpoint "<<d_addr.toStringWithPort()<<": "<<ne.what()<<std::endl; 
+      L<<Logger::Error<<"While reading from HTTP endpoint "<<d_addr.toStringWithPort()<<": "<<ne.what()<<std::endl; 
       delete d_socket;
       d_socket = NULL;
       fail = true;
     } catch (...) {
-      g_log<<Logger::Error<<"While reading from HTTP endpoint "<<d_addr.toStringWithPort()<<": exception caught"<<std::endl;
+      L<<Logger::Error<<"While reading from HTTP endpoint "<<d_addr.toStringWithPort()<<": exception caught"<<std::endl;
       delete d_socket;
       fail = true;
     }
@@ -420,7 +429,7 @@ int HTTPConnector::recv_message(Json& output) {
     std::string err;
     output = Json::parse(resp.body, err);
     if (output != nullptr) return resp.body.size();
-    g_log<<Logger::Error<<"Cannot parse JSON reply: "<<err<<endl;
+    L<<Logger::Error<<"Cannot parse JSON reply: "<<err<<endl;
 
     return rv;
 }

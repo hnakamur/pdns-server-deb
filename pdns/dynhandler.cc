@@ -56,7 +56,7 @@ string DLQuitHandler(const vector<string>&parts, Utility::pid_t ppid)
   if(parts[0]=="QUIT") {
     s_pleasequit=true;
     ret="Scheduling exit";
-    g_log<<Logger::Error<<"Scheduling exit on remote request"<<endl;
+    L<<Logger::Error<<"Scheduling exit on remote request"<<endl;
   }
   return ret;
 }
@@ -252,7 +252,7 @@ string DLNotifyRetrieveHandler(const vector<string>&parts, Utility::pid_t ppid)
 
   random_shuffle(di.masters.begin(), di.masters.end());
   Communicator.addSuckRequest(domain, di.masters.front()); 
-  return "Added retrieval request for '"+domain.toString()+"' from master "+di.masters.front().toLogString();
+  return "Added retrieval request for '"+domain.toString()+"' from master "+di.masters.front();
 }
 
 string DLNotifyHostHandler(const vector<string>&parts, Utility::pid_t ppid)
@@ -278,7 +278,7 @@ string DLNotifyHostHandler(const vector<string>&parts, Utility::pid_t ppid)
     return "Unable to convert '"+parts[2]+"' to an IP address";
   }
   
-  g_log<<Logger::Warning<<"Notification request to host "<<parts[2]<<" for domain '"<<domain<<"' received from operator"<<endl;
+  L<<Logger::Warning<<"Notification request to host "<<parts[2]<<" for domain '"<<domain<<"' received from operator"<<endl;
   Communicator.notify(domain, parts[2]);
   return "Added to queue";
 }
@@ -291,7 +291,7 @@ string DLNotifyHandler(const vector<string>&parts, Utility::pid_t ppid)
     return "syntax: notify domain";
   if(!::arg().mustDo("master") && !(::arg().mustDo("slave") && ::arg().mustDo("slave-renotify")))
       return "PowerDNS not configured as master or slave with re-notifications";
-  g_log<<Logger::Warning<<"Notification request for domain '"<<parts[1]<<"' received from operator"<<endl;
+  L<<Logger::Warning<<"Notification request for domain '"<<parts[1]<<"' received from operator"<<endl;
 
   if (parts[1] == "*") {
     vector<DomainInfo> domains;
@@ -327,7 +327,7 @@ string DLRediscoverHandler(const vector<string>&parts, Utility::pid_t ppid)
 {
   UeberBackend B;
   try {
-    g_log<<Logger::Error<<"Rediscovery was requested"<<endl;
+    L<<Logger::Error<<"Rediscovery was requested"<<endl;
     string status="Ok";
     B.rediscover(&status);
     return status;
@@ -342,7 +342,7 @@ string DLReloadHandler(const vector<string>&parts, Utility::pid_t ppid)
 {
   UeberBackend B;
   B.reload();
-  g_log<<Logger::Error<<"Reload was requested"<<endl;
+  L<<Logger::Error<<"Reload was requested"<<endl;
   return "Ok";
 }
 
@@ -350,7 +350,7 @@ string DLReloadHandler(const vector<string>&parts, Utility::pid_t ppid)
 string DLListZones(const vector<string>&parts, Utility::pid_t ppid)
 {
   UeberBackend B;
-  g_log<<Logger::Notice<<"Received request to list zones."<<endl;
+  L<<Logger::Notice<<"Received request to list zones."<<endl;
   vector<DomainInfo> domains;
   B.getAllDomains(&domains);
   ostringstream ret;

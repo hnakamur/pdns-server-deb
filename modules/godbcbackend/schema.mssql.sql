@@ -19,6 +19,7 @@ CREATE TABLE records (
   content               VARCHAR(MAX) DEFAULT NULL,
   ttl                   INT DEFAULT NULL,
   prio                  INT DEFAULT NULL,
+  change_date           INT DEFAULT NULL,
   disabled              BIT DEFAULT 0,
   ordername             VARBINARY(255) DEFAULT NULL,
   auth                  BIT DEFAULT 1,
