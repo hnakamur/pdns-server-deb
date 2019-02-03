@@ -1,3 +1,9 @@
+pdns (4.1.6-1) unstable; urgency=medium
+
+  * New upstream version 4.1.6
+
+ -- Chris Hofstaedtler <zeha@debian.org>  Sun, 03 Feb 2019 14:20:23 +0000
+
 pdns (4.1.5-1) unstable; urgency=medium
 
   * Cleanup insserv.d and resolvconf hooks that we used to install
