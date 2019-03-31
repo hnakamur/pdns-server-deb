@@ -1,3 +1,10 @@
+pdns (4.0.3-1+deb9u4) stretch; urgency=medium
+
+  * Insufficient validation in the HTTP remote backend (CVE-2019-3871)
+    Thanks to Salvatore Bonaccorso <carnil@debian.org> (Closes: #924966)
+
+ -- Christian Hofstaedtler <zeha@debian.org>  Sun, 31 Mar 2019 13:28:32 +0000
+
 pdns (4.0.3-1+deb9u3) stretch; urgency=medium
 
   * Fix (security) bugs, partially using upstream patches:
