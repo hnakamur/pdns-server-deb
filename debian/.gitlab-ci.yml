@@ -1,4 +1,6 @@
-buildpackage:
-  image: registry.gitlab.com/eighthave/ci-image-git-buildpackage:latest
-  script:
-    - gitlab-ci-git-buildpackage-all
+include:
+ - https://salsa.debian.org/salsa-ci-team/pipeline/raw/master/salsa-ci.yml
+ - https://salsa.debian.org/salsa-ci-team/pipeline/raw/master/pipeline-jobs.yml
+
+variables:
+ RELEASE: 'unstable'
