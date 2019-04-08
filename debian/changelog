@@ -1,3 +1,9 @@
+pdns (4.1.6-2ppa1~ubuntu18.04.1) bionic; urgency=medium
+
+  * Backport to Ubuntu 18.04 LTS
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Mon, 08 Apr 2019 12:31:29 +0900
+
 pdns (4.1.6-2) unstable; urgency=high
 
   [ Salvatore Bonaccorso ]
