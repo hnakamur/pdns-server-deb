@@ -1,59 +1,80 @@
 #!/usr/bin/make -f
-include /usr/share/dpkg/architecture.mk
-include /usr/share/dpkg/pkg-info.mk
-include /usr/share/dpkg/vendor.mk
-
-# Vendor and version
-version := $(DEB_VERSION).$(DEB_VENDOR)
-CXXFLAGS += -DPACKAGEVERSION='"$(version)"'
-
-# (Re-)Enable warnings
-CXXFLAGS += -Wall
-
-# Turn on all hardening flags, as we're a networked daemon.
-export DEB_BUILD_MAINT_OPTIONS = hardening=+all
-
-# Avoid test failure in docker.
-export PDNS_TEST_NO_IPV6=1
 
 # Backends
 backends := bind ldap pipe gmysql godbc gpgsql gsqlite3 geoip lua mydns remote random opendbx tinydns
 
-# Disable systemd integration on non-linux archs
-ifeq ($(DEB_HOST_ARCH_OS),linux)
-CONFIGURE_ARGS += --enable-systemd --with-systemd=/lib/systemd/system
-else
-CONFIGURE_ARGS += --disable-systemd
+DEB_HOST_MULTIARCH  ?= $(shell dpkg-architecture -qDEB_HOST_MULTIARCH)
+
+ENABLE_SYSTEMD := --enable-systemd --with-systemd=/lib/systemd/system
+LIBSYSTEMD_DEV := , libsystemd-dev
+DEBHELPER_WITH_SYSTEMD := --with systemd
+
+ENABLE_LIBSODIUM := --enable-libsodium
+LIBSODIUM_DEV := , libsodium-dev
+
+# $(ID) and $(VERSION_ID) come from the environment, source this from /etc/os-release
+ifeq ($(ID), ubuntu)
+  ifeq ($(VERSION_ID), 14.04)
+    # Disable building with and depending on systemd on Ubuntu Trusty
+    ENABLE_SYSTEMD=
+    LIBSYSTEMD_DEV=
+    DEBHELPER_WITH_SYSTEMD=
+
+    # Also disable libsodium
+    ENABLE_LIBSODIUM=
+    LIBSODIUM_DEV=
+  endif
 endif
 
+debian/control: debian/control.in
+	sed -e "s!@LIBSYSTEMDDEV@!$(LIBSYSTEMD_DEV)!" \
+	    -e "s!@LIBSODIUMDEV@!$(LIBSODIUM_DEV)!" $< > $@
 
+# Use new build system
 %:
-	dh $@
+	dh $@ \
+	  --with autoreconf \
+	  --parallel \
+	  $(DEBHELPER_WITH_SYSTEMD)
 
 override_dh_auto_configure:
 	test -f pdns/dnslabeltext.cc && mv pdns/dnslabeltext.cc debian/dnslabeltext.cc.moved || true
-	dh_auto_configure -- \
+	./configure \
+		--host=$(DEB_HOST_GNU_TYPE) \
+		--build=$(DEB_BUILD_GNU_TYPE) \
+		--prefix=/usr \
 		--sysconfdir=/etc/powerdns \
+		--mandir=\$${prefix}/share/man \
+		--infodir=\$${prefix}/share/info \
+		--libdir='$${prefix}/lib/$(DEB_HOST_MULTIARCH)' \
+		--libexecdir='$${prefix}/lib' \
 		--with-dynmodules="$(backends)" \
 		--with-modules="" \
-		--enable-libsodium \
 		--enable-tools \
-		--without-protobuf \
 		--enable-unit-tests \
-		--enable-reproducible \
-		$(CONFIGURE_ARGS)
+		--with-luajit \
+		--enable-experimental-pkcs11 \
+		$(ENABLE_SYSTEMD) \
+		$(ENABLE_LIBSODIUM)
 
+# pdns-server has a debug package
 override_dh_strip:
-	dh_strip --ddeb-migration='pdns-server-dbg (<< 4.0.0-0)'
+	dh_strip --dbg-package=pdns-server-dbg
 
-override_dh_systemd_enable:
-	dh_systemd_enable --name=pdns
+# Additional permissions
+override_dh_fixperms:
+	dh_fixperms
+	chmod 755 debian/pdns-server/etc/resolvconf/update.d/pdns
 
-# init script needs to be named pdns, not pdns-server. if no pdns-backend
-# is installed, start will fail, so pass --no-start. backends will trigger
-# a restart.
+override_dh_auto_install:
+	dh_auto_install
+	rm -f debian/pdns-server/etc/powerdns/pdns.conf-dist
+
+# init script needs to be named pdns, not pdns-server
 override_dh_installinit:
-	dh_installinit --error-handler=initscript_error --no-start --restart-after-upgrade --name=pdns
+	dh_systemd_enable --name=pdns
+	dh_installinit --name=pdns
+	dh_systemd_start --restart-after-upgrade
 
 override_dh_install:
 	dh_install
@@ -63,19 +84,16 @@ override_dh_install:
 	  -e 's!# launch=.*!&\nlaunch=!' \
 	  -e 's!# setgid=.*!setgid=pdns!' \
 	  -e 's!# setuid=.*!setuid=pdns!' \
-	  -e 's!# security-poll-suffix=.*!&\nsecurity-poll-suffix=!' \
-	  > debian/pdns-server/etc/powerdns/pdns.conf
+	  > debian/pdns-server/usr/share/pdns-server/pdns.conf
 
+# Verbose build (shows used compiler/linker and their flags)
+override_dh_auto_build-arch:
+	dh_auto_build -- V=1
+
+# Verbose tests (shows used compiler/linker and their flags)
 override_dh_auto_test:
-ifeq (,$(filter nocheck,$(DEB_BUILD_OPTIONS)))
-	echo Skipping make test, as dependencies are missing.
-	make check || (cat pdns/test-suite.log; false)
-endif
-
-override_dh_fixperms:
-	dh_fixperms
-	# these files often contain passwords.
-	chmod 0600 debian/pdns-server/etc/powerdns/pdns.conf
+	$(MAKE) -C pdns check || (cat pdns/test-suite.log && false)
+	#dh_auto_test -- V=1
 
 # restore moved files
 override_dh_clean:

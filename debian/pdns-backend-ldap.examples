@@ -1,1 +1,1 @@
-debian/config/ldap.conf
+debian/config/pdns.local.ldap.conf

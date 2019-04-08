@@ -1,4 +1,0 @@
-buildpackage:
-  image: registry.gitlab.com/eighthave/ci-image-git-buildpackage:latest
-  script:
-    - gitlab-ci-git-buildpackage-all

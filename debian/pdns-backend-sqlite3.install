@@ -1,2 +1,2 @@
-modules/gsqlite3backend/*.sql usr/share/pdns-backend-sqlite3/schema
 usr/lib/*/pdns/libgsqlite3backend.so*
+debian/config/pdns.local.gsqlite3.conf usr/share/pdns-backend-sqlite3

@@ -1,2 +1,2 @@
-modules/gpgsqlbackend/*.sql usr/share/pdns-backend-pgsql/schema/
 usr/lib/*/pdns/libgpgsqlbackend.so*
+debian/config/pdns.local.gpgsql.conf usr/share/pdns-backend-pgsql
