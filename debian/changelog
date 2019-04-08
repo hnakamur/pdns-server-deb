@@ -1,3 +1,9 @@
+pdns (4.1.8-1ppa1~ubuntu18.04.1) bionic; urgency=medium
+
+  * New upstream version 4.1.8
+
+ -- Hiroaki Nakamura <hnakamur@gmail.com>  Mon, 08 Apr 2019 13:48:47 +0900
+
 pdns (4.1.6-2ppa1~ubuntu18.04.1) bionic; urgency=medium
 
   * Backport to Ubuntu 18.04 LTS
